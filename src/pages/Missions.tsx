@@ -134,6 +134,49 @@ const Missions = () => {
     return completedMissions.some(cm => cm.missionId === missionId);
   };
 
+  const handleAddBook = () => {
+    if (!bookForm.title.trim() || !bookForm.author.trim() || !currentUser) {
+      toast({
+        title: "Erro",
+        description: "Preencha título e autor do livro",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newBook = {
+      id: Date.now().toString(),
+      title: bookForm.title,
+      author: bookForm.author,
+      dateRead: new Date().toISOString()
+    };
+
+    const updatedUser = {
+      ...currentUser,
+      booksRead: [...currentUser.booksRead, newBook],
+      points: currentUser.points + 5
+    };
+
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    setCurrentUser(updatedUser);
+
+    // Update user in users array
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userIndex = users.findIndex((u: any) => u.id === currentUser.id);
+    if (userIndex !== -1) {
+      users[userIndex] = updatedUser;
+      localStorage.setItem('users', JSON.stringify(users));
+    }
+
+    setBookForm({ title: '', author: '' });
+    setShowBookDialog(false);
+
+    toast({
+      title: "Livro adicionado!",
+      description: `Você ganhou 5 pontos por ler "${bookForm.title}"`,
+    });
+  };
+
   const toggleMission = (mission: Mission) => {
     if (!currentUser) return;
 

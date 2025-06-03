@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -465,7 +466,8 @@ const Admin = () => {
                               name: mission.name,
                               points: mission.points,
                               type: mission.type,
-                              description: mission.description || ""
+                              description: mission.description || "",
+                              targetAudience: mission.targetAudience || ["all"]
                             });
                           }}
                         >
@@ -621,7 +623,8 @@ const Admin = () => {
                               title: item.title,
                               description: item.description || "",
                               image: item.image || "",
-                              url: item.url || ""
+                              url: item.url || "",
+                              targetAudience: item.targetAudience || ["all"]
                             });
                           }}
                         >
