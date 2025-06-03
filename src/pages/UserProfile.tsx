@@ -70,9 +70,6 @@ const UserProfile = () => {
       if (!foundUser.booksRead || !Array.isArray(foundUser.booksRead)) {
         foundUser.booksRead = [];
       }
-      if (!foundUser.booksReading || !Array.isArray(foundUser.booksReading)) {
-        foundUser.booksReading = [];
-      }
       
       setUser(foundUser);
       loadUserActivities(userId!);
@@ -256,7 +253,6 @@ const UserProfile = () => {
             <BookLibrary
               userId={user.id}
               booksRead={user.booksRead}
-              booksReading={user.booksReading}
               onUpdateBooks={() => {}} // Read-only for other users
               readOnly={true}
             />
