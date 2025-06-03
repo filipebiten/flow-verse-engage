@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Trophy, Sparkles, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, Trophy, Sparkles, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Mission {
@@ -20,6 +18,9 @@ interface Mission {
   isActive: boolean;
   createdAt: string;
   targetAudience: string[];
+  author?: string;
+  image?: string;
+  school?: string;
 }
 
 interface CompletedMission {
@@ -34,10 +35,8 @@ interface User {
   phase: string;
   points: number;
   profilePhoto: string | null;
-  booksRead: string[];
-  booksReading: string[];
+  booksRead: any[];
   coursesCompleted: string[];
-  coursesInProgress: string[];
   gender: string;
   pgmRole: string;
   participatesFlowUp: boolean;
@@ -50,8 +49,8 @@ const Missions = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
-  const [showBookDialog, setShowBookDialog] = useState(false);
-  const [bookForm, setBookForm] = useState({ title: '', author: '' });
+  const [showPhaseModal, setShowPhaseModal] = useState(false);
+  const [newPhaseInfo, setNewPhaseInfo] = useState<any>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -66,7 +65,6 @@ const Missions = () => {
   }, [navigate]);
 
   const loadMissions = () => {
-    // Initialize default missions if none exist
     const storedMissions = localStorage.getItem('missions');
     if (!storedMissions) {
       const defaultMissions: Mission[] = [
@@ -134,49 +132,6 @@ const Missions = () => {
     return completedMissions.some(cm => cm.missionId === missionId);
   };
 
-  const handleAddBook = () => {
-    if (!bookForm.title.trim() || !bookForm.author.trim() || !currentUser) {
-      toast({
-        title: "Erro",
-        description: "Preencha título e autor do livro",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const newBook = {
-      id: Date.now().toString(),
-      title: bookForm.title,
-      author: bookForm.author,
-      dateRead: new Date().toISOString()
-    };
-
-    const updatedUser = {
-      ...currentUser,
-      booksRead: [...currentUser.booksRead, newBook],
-      points: currentUser.points + 5
-    };
-
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    setCurrentUser(updatedUser);
-
-    // Update user in users array
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userIndex = users.findIndex((u: any) => u.id === currentUser.id);
-    if (userIndex !== -1) {
-      users[userIndex] = updatedUser;
-      localStorage.setItem('users', JSON.stringify(users));
-    }
-
-    setBookForm({ title: '', author: '' });
-    setShowBookDialog(false);
-
-    toast({
-      title: "Livro adicionado!",
-      description: `Você ganhou 5 pontos por ler "${bookForm.title}"`,
-    });
-  };
-
   const toggleMission = (mission: Mission) => {
     if (!currentUser) return;
 
@@ -230,7 +185,31 @@ const Missions = () => {
       const oldPhase = currentUser.phase;
       const newPhase = calculatePhase(newPoints);
       
-      const updatedUser = { ...currentUser, points: newPoints, phase: newPhase };
+      let updatedUser = { ...currentUser, points: newPoints, phase: newPhase };
+
+      // Handle book completion
+      if (mission.type === 'Livro') {
+        const newBook = {
+          id: mission.id,
+          title: mission.name,
+          author: mission.author || 'Autor não informado',
+          dateRead: new Date().toISOString(),
+          image: mission.image
+        };
+        updatedUser = {
+          ...updatedUser,
+          booksRead: [...currentUser.booksRead, newBook]
+        };
+      }
+
+      // Handle course completion
+      if (mission.type === 'Curso') {
+        updatedUser = {
+          ...updatedUser,
+          coursesCompleted: [...currentUser.coursesCompleted, mission.name]
+        };
+      }
+
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
 
@@ -249,6 +228,7 @@ const Missions = () => {
         userId: currentUser.id,
         userName: currentUser.name,
         userPhoto: currentUser.profilePhoto,
+        type: 'mission',
         missionName: mission.name,
         points: mission.points,
         timestamp: new Date().toISOString()
@@ -264,21 +244,26 @@ const Missions = () => {
 
       // Check for phase change
       if (oldPhase !== newPhase) {
-        setTimeout(() => {
-          const phaseInfo = getPhaseInfo(newPhase);
-          toast({
-            title: `🌟 Nova Fase Desbloqueada!`,
-            description: `${phaseInfo.emoji} ${newPhase}: ${phaseInfo.phrase}`,
-            className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-          });
-        }, 1000);
-      }
+        // Add phase change to activities
+        const phaseActivities = JSON.parse(localStorage.getItem('phaseActivities') || '[]');
+        const phaseActivity = {
+          id: Date.now().toString() + '_phase',
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userPhoto: currentUser.profilePhoto,
+          type: 'phase',
+          oldPhase,
+          newPhase,
+          timestamp: new Date().toISOString()
+        };
+        phaseActivities.unshift(phaseActivity);
+        localStorage.setItem('phaseActivities', JSON.stringify(phaseActivities));
 
-      // Check if it's a book reading mission
-      if (mission.id === 'book-reading') {
+        const phaseInfo = getPhaseInfo(newPhase);
+        setNewPhaseInfo(phaseInfo);
         setTimeout(() => {
-          setShowBookDialog(true);
-        }, 1500);
+          setShowPhaseModal(true);
+        }, 1000);
       }
     }
   };
@@ -292,10 +277,10 @@ const Missions = () => {
 
   const getPhaseInfo = (phase: string) => {
     const phases = {
-      "Riacho": { emoji: "🌀", phrase: "Começando a fluir", description: "Início da caminhada com Deus e com a FLOW." },
-      "Correnteza": { emoji: "🌊", phrase: "Sendo levado por algo maior", description: "Engajado no PGM, abrindo-se ao mover de Deus." },
-      "Cachoeira": { emoji: "💥", phrase: "Entregue ao movimento de Deus", description: "Servindo com intensidade e sendo transformador." },
-      "Oceano": { emoji: "🌌", phrase: "Profundamente imerso em Deus", description: "Maturidade espiritual, liderança e profundidade." }
+      "Riacho": { emoji: "🌀", phrase: "Começando a fluir", description: "Início da caminhada com Deus e com a FLOW.", color: "from-green-400 to-blue-400" },
+      "Correnteza": { emoji: "🌊", phrase: "Sendo levado por algo maior", description: "Engajado no PGM, abrindo-se ao mover de Deus.", color: "from-blue-400 to-purple-400" },
+      "Cachoeira": { emoji: "💥", phrase: "Entregue ao movimento de Deus", description: "Servindo com intensidade e sendo transformador.", color: "from-purple-400 to-pink-400" },
+      "Oceano": { emoji: "🌌", phrase: "Profundamente imerso em Deus", description: "Maturidade espiritual, liderança e profundidade.", color: "from-gray-700 to-gray-900" }
     };
     return phases[phase as keyof typeof phases] || phases["Riacho"];
   };
@@ -306,12 +291,18 @@ const Missions = () => {
 
   const getDiscountProgress = () => {
     if (!currentUser) return 0;
-    return Math.min((currentUser.points / 10) % 100, 100);
+    const progressPoints = currentUser.points % 10;
+    return (progressPoints / 10) * 100;
   };
 
   const getDiscountPercentage = () => {
     if (!currentUser) return 0;
-    return Math.floor(currentUser.points / 10);
+    return Math.min(Math.floor(currentUser.points / 10), 100);
+  };
+
+  const isMaxDiscount = () => {
+    if (!currentUser) return false;
+    return Math.floor(currentUser.points / 10) >= 100;
   };
 
   const formatCompletionDate = (missionId: string) => {
@@ -333,7 +324,7 @@ const Missions = () => {
     { type: 'Mensal', color: 'bg-purple-100 text-purple-800', resetInfo: 'Missões Mensais' },
     { type: 'Semestral', color: 'bg-orange-100 text-orange-800', resetInfo: 'Missões Semestrais' },
     { type: 'Anual', color: 'bg-red-100 text-red-800', resetInfo: 'Missões Anuais' },
-    { type: 'Livro', color: 'bg-indigo-100 text-indigo-800', resetInfo: 'Leitura de Livros' },
+    { type: 'Livro', color: 'bg-indigo-100 text-indigo-800', resetInfo: 'Livros' },
     { type: 'Curso', color: 'bg-pink-100 text-pink-800', resetInfo: 'Cursos' },
   ];
 
@@ -385,10 +376,18 @@ const Missions = () => {
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span>Desconto atual: {getDiscountPercentage()}%</span>
-                <span>Próximo desconto: {Math.floor(currentUser.points / 10) + 1}% (faltam {10 - (currentUser.points % 10)} pontos)</span>
+                {!isMaxDiscount() ? (
+                  <span>Próximo desconto: {getDiscountPercentage() + 1}% (faltam {10 - (currentUser.points % 10)} pontos)</span>
+                ) : (
+                  <span className="text-green-600 font-medium">🎉 Desconto máximo alcançado!</span>
+                )}
               </div>
-              <Progress value={getDiscountProgress()} className="h-3" />
-              <p className="text-xs text-gray-600">A cada 10 pontos = 1% de desconto no OVERFLOW</p>
+              {!isMaxDiscount() && (
+                <Progress value={getDiscountProgress()} className="h-3" />
+              )}
+              <p className="text-xs text-gray-600">
+                {!isMaxDiscount() ? "A cada 10 pontos = 1% de desconto no OVERFLOW" : "Você alcançou o desconto máximo de 100%!"}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -423,9 +422,22 @@ const Missions = () => {
                       
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-gray-800'}`}>
-                            {mission.name}
-                          </h3>
+                          <div className="flex items-center space-x-3">
+                            {mission.image && (
+                              <img src={mission.image} alt={mission.name} className="w-12 h-12 object-cover rounded" />
+                            )}
+                            <div>
+                              <h3 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-gray-800'}`}>
+                                {mission.name}
+                              </h3>
+                              {mission.author && (
+                                <p className="text-sm text-gray-600">por {mission.author}</p>
+                              )}
+                              {mission.school && (
+                                <p className="text-sm text-gray-600">{mission.school}</p>
+                              )}
+                            </div>
+                          </div>
                           <div className="flex items-center space-x-2">
                             <Badge variant="secondary" className="bg-green-100 text-green-700">
                               +{mission.points}
@@ -451,42 +463,22 @@ const Missions = () => {
         })}
       </div>
 
-      {/* Book Dialog */}
-      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <BookOpen className="w-5 h-5 mr-2" />
-              Adicionar Livro Lido
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="bookTitle">Título do Livro</Label>
-              <Input
-                id="bookTitle"
-                value={bookForm.title}
-                onChange={(e) => setBookForm(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Digite o título do livro"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bookAuthor">Autor</Label>
-              <Input
-                id="bookAuthor"
-                value={bookForm.author}
-                onChange={(e) => setBookForm(prev => ({ ...prev, author: e.target.value }))}
-                placeholder="Digite o nome do autor"
-              />
-            </div>
-            <div className="flex space-x-2">
-              <Button onClick={handleAddBook} className="flex-1">
-                Adicionar à Biblioteca
-              </Button>
-              <Button variant="outline" onClick={() => setShowBookDialog(false)} className="flex-1">
-                Pular
-              </Button>
-            </div>
+      {/* Phase Change Modal */}
+      <Dialog open={showPhaseModal} onOpenChange={setShowPhaseModal}>
+        <DialogContent className="max-w-md mx-auto">
+          <div className={`p-8 rounded-lg text-center bg-gradient-to-br ${newPhaseInfo?.color || 'from-teal-400 to-blue-400'} text-white`}>
+            <div className="text-6xl mb-4">{newPhaseInfo?.emoji}</div>
+            <h2 className="text-2xl font-bold mb-2">🌟 Nova Fase Desbloqueada!</h2>
+            <h3 className="text-xl font-semibold mb-2">{currentUser.phase}</h3>
+            <p className="text-lg italic mb-4">"{newPhaseInfo?.phrase}"</p>
+            <p className="text-sm opacity-90">{newPhaseInfo?.description}</p>
+            <Button 
+              variant="secondary" 
+              className="mt-6 bg-white text-gray-800 hover:bg-gray-100"
+              onClick={() => setShowPhaseModal(false)}
+            >
+              Continuar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

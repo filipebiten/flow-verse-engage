@@ -1,56 +1,38 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, CheckSquare, Settings, ExternalLink, Trophy } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CheckSquare, User, Trophy, Menu, Sparkles, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  whatsapp: string;
-  pgm: string;
-  isAdmin: boolean;
-  phase: string;
-  points: number;
-  profilePhoto: string | null;
-  joinDate: string;
-  booksRead: string[];
-  coursesCompleted: string[];
-  coursesInProgress: string[];
-}
-
-interface NewsItem {
-  id: string;
-  title: string;
-  description?: string;
-  image?: string;
-  url?: string;
-  isActive: boolean;
-  createdAt: string;
-}
-
-interface MissionActivity {
+interface Activity {
   id: string;
   userId: string;
   userName: string;
   userPhoto: string | null;
-  missionName: string;
-  points: number;
+  type: 'mission' | 'phase';
+  missionName?: string;
+  points?: number;
+  oldPhase?: string;
+  newPhase?: string;
   timestamp: string;
 }
 
 const Feed = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [news, setNews] = useState<NewsItem[]>([]);
-  const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
-  const [showPhasesModal, setShowPhasesModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [showLevelsModal, setShowLevelsModal] = useState(false);
+
+  // Clear localStorage on component mount to delete database
+  useEffect(() => {
+    localStorage.clear();
+  }, []);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -60,20 +42,17 @@ const Feed = () => {
     }
     
     setCurrentUser(JSON.parse(user));
-    loadNews();
-    loadMissionActivities();
+    loadActivities();
   }, [navigate]);
 
-  const loadNews = () => {
-    const storedNews = JSON.parse(localStorage.getItem('news') || '[]');
-    setNews(storedNews.filter((item: NewsItem) => item.isActive));
-  };
-
-  const loadMissionActivities = () => {
-    const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
-    setMissionActivities(activities.sort((a: MissionActivity, b: MissionActivity) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    ));
+  const loadActivities = () => {
+    const missionActivities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+    const phaseActivities = JSON.parse(localStorage.getItem('phaseActivities') || '[]');
+    
+    const allActivities = [...missionActivities, ...phaseActivities]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    setActivities(allActivities);
   };
 
   const getPhaseInfo = (phase: string) => {
@@ -86,15 +65,6 @@ const Feed = () => {
     return phases[phase as keyof typeof phases] || phases["Riacho"];
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    navigate('/');
-    toast({
-      title: "Logout realizado",
-      description: "Até logo! Volte sempre à FLOW.",
-    });
-  };
-
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date();
     const time = new Date(timestamp);
@@ -103,14 +73,15 @@ const Feed = () => {
     if (diffInMinutes < 1) return "Agora";
     if (diffInMinutes < 60) return `${diffInMinutes}m`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
-    return `${Math.floor(diffInMinutes / 1440)}d`;
+    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d`;
+    return new Date(timestamp).toLocaleDateString('pt-BR');
   };
 
-  const phases = [
-    { name: "Riacho", minPoints: 0, maxPoints: 250, emoji: "🌀", phrase: "Começando a fluir", description: "Início da caminhada com Deus e com a FLOW.", color: "bg-green-100 text-green-800" },
-    { name: "Correnteza", minPoints: 251, maxPoints: 500, emoji: "🌊", phrase: "Sendo levado por algo maior", description: "Engajado no PGM, abrindo-se ao mover de Deus.", color: "bg-blue-100 text-blue-800" },
-    { name: "Cachoeira", minPoints: 501, maxPoints: 1000, emoji: "💥", phrase: "Entregue ao movimento de Deus", description: "Servindo com intensidade e sendo transformador.", color: "bg-purple-100 text-purple-800" },
-    { name: "Oceano", minPoints: 1001, maxPoints: null, emoji: "🌌", phrase: "Profundamente imerso em Deus", description: "Maturidade espiritual, liderança e profundidade.", color: "bg-gray-900 text-white" }
+  const levels = [
+    { name: "Riacho", emoji: "🌀", points: "0-250", phrase: "Começando a fluir", description: "Início da caminhada com Deus e com a FLOW." },
+    { name: "Correnteza", emoji: "🌊", points: "251-500", phrase: "Sendo levado por algo maior", description: "Engajado no PGM, abrindo-se ao mover de Deus." },
+    { name: "Cachoeira", emoji: "💥", points: "501-1000", phrase: "Entregue ao movimento de Deus", description: "Servindo com intensidade e sendo transformador." },
+    { name: "Oceano", emoji: "🌌", points: "1001+", phrase: "Profundamente imerso em Deus", description: "Maturidade espiritual, liderança e profundidade." }
   ];
 
   if (!currentUser) return null;
@@ -122,152 +93,78 @@ const Feed = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-teal-700">APP da Rede FLOW</h1>
-            <Dialog open={showPhasesModal} onOpenChange={setShowPhasesModal}>
-              <DialogTrigger asChild>
-                <Badge className={`${phaseInfo.color} cursor-pointer hover:opacity-80`}>
-                  {phaseInfo.emoji} {currentUser.phase}
-                </Badge>
-              </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="flex items-center">
-                    <Trophy className="w-5 h-5 mr-2" />
-                    Fases da FLOW
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {phases.map((phase) => {
-                    const isCurrentPhase = phase.name === currentUser.phase;
-                    const pointsNeeded = phase.minPoints > currentUser.points ? phase.minPoints - currentUser.points : 0;
-                    
-                    return (
-                      <div key={phase.name} className={`p-3 rounded-lg border ${isCurrentPhase ? 'ring-2 ring-teal-500 bg-teal-50' : 'bg-gray-50'}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="text-lg">{phase.emoji}</span>
-                            <span className="font-semibold">{phase.name}</span>
-                            {isCurrentPhase && <Badge className="bg-teal-100 text-teal-700">Atual</Badge>}
-                          </div>
-                          <span className="text-sm text-gray-600">
-                            {phase.minPoints}+ pontos
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-700 mb-1">"{phase.phrase}"</p>
-                        <p className="text-xs text-gray-600">{phase.description}</p>
-                        {pointsNeeded > 0 && (
-                          <p className="text-xs text-teal-600 mt-2">
-                            Faltam {pointsNeeded} pontos para desbloquear
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <h1 className="text-2xl font-bold text-teal-700">FLOW - POSTURA | IDENTIDADE | OBEDIÊNCIA</h1>
           
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
-              onClick={() => navigate('/missions')}
-              className="text-teal-600 border-teal-200"
+              onClick={() => setShowLevelsModal(true)}
+              className="text-teal-600"
             >
-              <CheckSquare className="w-4 h-4 mr-1" />
-              Missões
+              <Badge className={phaseInfo.color}>
+                {phaseInfo.emoji} {currentUser.phase}
+              </Badge>
             </Button>
+            <Badge className="bg-yellow-100 text-yellow-800">
+              <Trophy className="w-3 h-3 mr-1" />
+              {currentUser.points} pontos
+            </Badge>
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => navigate('/profile')}
-              className="text-teal-600 border-teal-200"
+              className="text-teal-600"
             >
-              <User className="w-4 h-4 mr-1" />
-              Perfil
-            </Button>
-            {currentUser.isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/admin')}
-                className="text-purple-600 border-purple-200"
-              >
-                <Settings className="w-4 h-4 mr-1" />
-                Admin
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-            >
-              Sair
+              <User className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* News Section */}
-        {news.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold text-gray-800">📰 Notícias</h2>
-            {news.map((item) => (
-              <Card key={item.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start space-x-4">
-                    {item.image && (
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        className="w-20 h-20 object-cover rounded-lg"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-800">{item.title}</h3>
-                      {item.description && (
-                        <p className="text-gray-600 text-sm mt-1">{item.description}</p>
-                      )}
-                      {item.url && (
-                        <Button
-                          variant="link"
-                          size="sm"
-                          className="text-teal-600 p-0 mt-2"
-                          onClick={() => window.open(item.url, '_blank')}
-                        >
-                          <ExternalLink className="w-3 h-3 mr-1" />
-                          Saiba Mais
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Community Missions Feed */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-800">🟡 Missões da Comunidade</h2>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/missions')}>
+            <CardContent className="p-4 flex items-center space-x-3">
+              <CheckSquare className="w-8 h-8 text-teal-600" />
+              <div>
+                <h3 className="font-medium">Missões</h3>
+                <p className="text-sm text-gray-600">Complete suas missões diárias</p>
+              </div>
+            </CardContent>
+          </Card>
           
-          {missionActivities.length === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center text-gray-500">
-                <p>Nenhuma missão foi concluída ainda.</p>
-                <p className="text-sm mt-1">Seja o primeiro a completar uma missão!</p>
-              </CardContent>
-            </Card>
-          ) : (
-            missionActivities.map((activity) => (
-              <Card key={activity.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
+          <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate('/profile')}>
+            <CardContent className="p-4 flex items-center space-x-3">
+              <User className="w-8 h-8 text-teal-600" />
+              <div>
+                <h3 className="font-medium">Meu Perfil</h3>
+                <p className="text-sm text-gray-600">Veja seu progresso</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Activity Feed */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Sparkles className="w-5 h-5 mr-2" />
+              Feed de Atividades
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {activities.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>Nenhuma atividade ainda. Complete suas primeiras missões!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activities.map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg border bg-white">
                     <Avatar 
-                      className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-teal-200"
+                      className="w-10 h-10 cursor-pointer" 
                       onClick={() => navigate(`/user/${activity.userId}`)}
                     >
                       <AvatarImage src={activity.userPhoto || ''} />
@@ -277,32 +174,100 @@ const Feed = () => {
                     </Avatar>
                     
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
-                          onClick={() => navigate(`/user/${activity.userId}`)}
-                        >
-                          {activity.userName}
-                        </span>
-                        <span className="text-gray-500">completou</span>
-                        <span className="font-medium text-teal-600">{activity.missionName}</span>
-                      </div>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="secondary" className="bg-green-100 text-green-700">
-                          +{activity.points} pontos
-                        </Badge>
-                        <span className="text-xs text-gray-400">
-                          {formatTimeAgo(activity.timestamp)}
-                        </span>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span 
+                            className="font-medium text-teal-700 cursor-pointer hover:underline"
+                            onClick={() => navigate(`/user/${activity.userId}`)}
+                          >
+                            {activity.userName}
+                          </span>
+                          {activity.type === 'mission' ? (
+                            <span className="text-gray-600"> completou a missão </span>
+                          ) : (
+                            <span className="text-gray-600"> mudou de fase de </span>
+                          )}
+                          {activity.type === 'mission' ? (
+                            <span className="font-medium text-gray-800">{activity.missionName}</span>
+                          ) : (
+                            <>
+                              <span className="font-medium text-gray-800">{activity.oldPhase}</span>
+                              <span className="text-gray-600"> para </span>
+                              <span className="font-medium text-gray-800">{activity.newPhase}</span>
+                              <TrendingUp className="w-4 h-4 inline ml-1 text-green-600" />
+                            </>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {activity.type === 'mission' && activity.points && (
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                              +{activity.points}
+                            </Badge>
+                          )}
+                          {activity.type === 'phase' && (
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                              🎉 Nova Fase!
+                            </Badge>
+                          )}
+                          <span className="text-xs text-gray-400">
+                            {formatTimeAgo(activity.timestamp)}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Levels Modal */}
+      <Dialog open={showLevelsModal} onOpenChange={setShowLevelsModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-bold">Níveis FLOW</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {levels.map((level, index) => {
+              const isCurrentLevel = level.name === currentUser.phase;
+              const isCompleted = levels.findIndex(l => l.name === currentUser.phase) > index;
+              
+              return (
+                <div 
+                  key={level.name} 
+                  className={`p-4 rounded-lg border-2 ${
+                    isCurrentLevel 
+                      ? 'border-teal-500 bg-teal-50' 
+                      : isCompleted 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200 bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">{level.emoji}</span>
+                      <div>
+                        <h3 className="font-bold text-lg">{level.name}</h3>
+                        <p className="text-sm text-gray-600">{level.points} pontos</p>
+                      </div>
+                    </div>
+                    {isCurrentLevel && (
+                      <Badge className="bg-teal-100 text-teal-800">Atual</Badge>
+                    )}
+                    {isCompleted && (
+                      <Badge className="bg-green-100 text-green-800">✓ Completo</Badge>
+                    )}
+                  </div>
+                  <p className="font-medium text-gray-700 mb-1">"{level.phrase}"</p>
+                  <p className="text-sm text-gray-600">{level.description}</p>
+                </div>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
