@@ -1,12 +1,14 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Trophy, Sparkles, Calendar } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, Trophy, Sparkles, Calendar, BookOpen } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Mission {
@@ -48,6 +50,8 @@ const Missions = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
+  const [showBookDialog, setShowBookDialog] = useState(false);
+  const [bookForm, setBookForm] = useState({ title: '', author: '' });
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -226,6 +230,13 @@ const Missions = () => {
           });
         }, 1000);
       }
+
+      // Check if it's a book reading mission
+      if (mission.id === 'book-reading') {
+        setTimeout(() => {
+          setShowBookDialog(true);
+        }, 1500);
+      }
     }
   };
 
@@ -396,6 +407,46 @@ const Missions = () => {
           );
         })}
       </div>
+
+      {/* Book Dialog */}
+      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center">
+              <BookOpen className="w-5 h-5 mr-2" />
+              Adicionar Livro Lido
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="bookTitle">Título do Livro</Label>
+              <Input
+                id="bookTitle"
+                value={bookForm.title}
+                onChange={(e) => setBookForm(prev => ({ ...prev, title: e.target.value }))}
+                placeholder="Digite o título do livro"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bookAuthor">Autor</Label>
+              <Input
+                id="bookAuthor"
+                value={bookForm.author}
+                onChange={(e) => setBookForm(prev => ({ ...prev, author: e.target.value }))}
+                placeholder="Digite o nome do autor"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <Button onClick={handleAddBook} className="flex-1">
+                Adicionar à Biblioteca
+              </Button>
+              <Button variant="outline" onClick={() => setShowBookDialog(false)} className="flex-1">
+                Pular
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

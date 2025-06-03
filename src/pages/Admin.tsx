@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Plus, Edit, Trash2, Search, Users, Newspaper, CheckSquare, Upload } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Plus, Edit, Trash2, Search, Users, Newspaper, CheckSquare, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Admin = () => {
@@ -19,15 +19,19 @@ const Admin = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [news, setNews] = useState<any[]>([]);
+  const [courses, setCourses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [filterRole, setFilterRole] = useState("");
+  const [filterSpecial, setFilterSpecial] = useState("");
   
   // Mission form
   const [missionForm, setMissionForm] = useState({
     name: "",
     points: 1,
     type: "Diária",
-    description: ""
+    description: "",
+    targetAudience: ["all"] as string[]
   });
   
   // News form
@@ -35,11 +39,21 @@ const Admin = () => {
     title: "",
     description: "",
     image: "",
-    url: ""
+    url: "",
+    targetAudience: ["all"] as string[]
+  });
+
+  // Course form
+  const [courseForm, setCourseForm] = useState({
+    name: "",
+    description: "",
+    school: "Escola do Discípulo",
+    targetAudience: ["all"] as string[]
   });
   
   const [editingMission, setEditingMission] = useState<any>(null);
   const [editingNews, setEditingNews] = useState<any>(null);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -57,6 +71,7 @@ const Admin = () => {
     setCurrentUser(parsedUser);
     loadMissions();
     loadNews();
+    loadCourses();
     loadUsers();
   }, [navigate]);
 
@@ -68,6 +83,11 @@ const Admin = () => {
   const loadNews = () => {
     const storedNews = JSON.parse(localStorage.getItem('news') || '[]');
     setNews(storedNews);
+  };
+
+  const loadCourses = () => {
+    const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+    setCourses(storedCourses);
   };
 
   const loadUsers = () => {
@@ -109,7 +129,7 @@ const Admin = () => {
       toast({ title: "Missão criada com sucesso!" });
     }
     
-    setMissionForm({ name: "", points: 1, type: "Diária", description: "" });
+    setMissionForm({ name: "", points: 1, type: "Diária", description: "", targetAudience: ["all"] });
     loadMissions();
   };
 
@@ -144,8 +164,43 @@ const Admin = () => {
       toast({ title: "Notícia criada com sucesso!" });
     }
     
-    setNewsForm({ title: "", description: "", image: "", url: "" });
+    setNewsForm({ title: "", description: "", image: "", url: "", targetAudience: ["all"] });
     loadNews();
+  };
+
+  const handleCourseSubmit = () => {
+    if (!courseForm.name.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome do curso é obrigatório",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+    
+    if (editingCourse) {
+      const updatedCourses = courses.map((c: any) => 
+        c.id === editingCourse.id ? { ...c, ...courseForm } : c
+      );
+      localStorage.setItem('courses', JSON.stringify(updatedCourses));
+      setEditingCourse(null);
+      toast({ title: "Curso atualizado com sucesso!" });
+    } else {
+      const newCourse = {
+        id: Date.now().toString(),
+        ...courseForm,
+        isActive: true,
+        createdAt: new Date().toISOString()
+      };
+      courses.push(newCourse);
+      localStorage.setItem('courses', JSON.stringify(courses));
+      toast({ title: "Curso criado com sucesso!" });
+    }
+    
+    setCourseForm({ name: "", description: "", school: "Escola do Discípulo", targetAudience: ["all"] });
+    loadCourses();
   };
 
   const deleteMission = (id: string) => {
@@ -191,12 +246,51 @@ const Admin = () => {
     toast({ title: "Usuário deletado com sucesso!" });
   };
 
-  const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.whatsapp.includes(searchTerm) ||
-    (user.pgm && user.pgm.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const toggleAudienceFilter = (audience: string, currentAudience: string[], setter: (audience: string[]) => void) => {
+    if (audience === 'all') {
+      setter(['all']);
+    } else {
+      let newAudience = currentAudience.filter(a => a !== 'all');
+      if (newAudience.includes(audience)) {
+        newAudience = newAudience.filter(a => a !== audience);
+      } else {
+        newAudience.push(audience);
+      }
+      if (newAudience.length === 0) {
+        newAudience = ['all'];
+      }
+      setter(newAudience);
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.whatsapp.includes(searchTerm) ||
+      (user.pgmNumber && user.pgmNumber.toLowerCase().includes(searchTerm.toLowerCase()));
+    
+    const matchesRole = filterRole === "" || user.pgmRole === filterRole;
+    
+    let matchesSpecial = true;
+    if (filterSpecial === "flowUp") {
+      matchesSpecial = user.participatesFlowUp;
+    } else if (filterSpecial === "irmandade") {
+      matchesSpecial = user.participatesIrmandade;
+    }
+
+    return matchesSearch && matchesRole && matchesSpecial;
+  });
+
+  const audienceOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'Participante', label: 'Participante' },
+    { value: 'Líder', label: 'Líder' },
+    { value: 'Supervisor', label: 'Supervisor' },
+    { value: 'Coordenador', label: 'Coordenador' },
+    { value: 'Pastor de Rede', label: 'Pastor de Rede' },
+    { value: 'flowUp', label: 'FLOW UP' },
+    { value: 'irmandade', label: 'IRMANDADE' }
+  ];
 
   const missionTypes = ['Diária', 'Semanal', 'Mensal', 'Semestral', 'Anual', 'Livro', 'Curso'];
 
@@ -228,7 +322,7 @@ const Admin = () => {
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         <Tabs defaultValue="missions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="missions" className="flex items-center">
               <CheckSquare className="w-4 h-4 mr-2" />
               Missões
@@ -236,6 +330,10 @@ const Admin = () => {
             <TabsTrigger value="news" className="flex items-center">
               <Newspaper className="w-4 h-4 mr-2" />
               Notícias
+            </TabsTrigger>
+            <TabsTrigger value="courses" className="flex items-center">
+              <GraduationCap className="w-4 h-4 mr-2" />
+              Cursos
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center">
               <Users className="w-4 h-4 mr-2" />
@@ -302,6 +400,21 @@ const Admin = () => {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label>Público Alvo</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {audienceOptions.map(option => (
+                      <div key={option.value} className="flex items-center space-x-2">
+                        <Checkbox
+                          checked={missionForm.targetAudience.includes(option.value)}
+                          onCheckedChange={() => toggleAudienceFilter(option.value, missionForm.targetAudience, (audience) => setMissionForm(prev => ({ ...prev, targetAudience: audience })))}
+                        />
+                        <Label className="text-sm">{option.label}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
                 
                 <div className="flex space-x-2">
                   <Button onClick={handleMissionSubmit} className="bg-purple-600 hover:bg-purple-700">
@@ -313,7 +426,7 @@ const Admin = () => {
                       variant="outline"
                       onClick={() => {
                         setEditingMission(null);
-                        setMissionForm({ name: "", points: 1, type: "Diária", description: "" });
+                        setMissionForm({ name: "", points: 1, type: "Diária", description: "", targetAudience: ["all"] });
                       }}
                     >
                       Cancelar
@@ -426,6 +539,21 @@ const Admin = () => {
                       placeholder="https://exemplo.com (opcional)"
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label>Público Alvo</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {audienceOptions.map(option => (
+                        <div key={option.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={newsForm.targetAudience.includes(option.value)}
+                            onCheckedChange={() => toggleAudienceFilter(option.value, newsForm.targetAudience, (audience) => setNewsForm(prev => ({ ...prev, targetAudience: audience })))}
+                          />
+                          <Label className="text-sm">{option.label}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="flex space-x-2">
@@ -438,7 +566,7 @@ const Admin = () => {
                       variant="outline"
                       onClick={() => {
                         setEditingNews(null);
-                        setNewsForm({ title: "", description: "", image: "", url: "" });
+                        setNewsForm({ title: "", description: "", image: "", url: "", targetAudience: ["all"] });
                       }}
                     >
                       Cancelar
@@ -517,6 +645,154 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          {/* Courses Tab */}
+          <TabsContent value="courses" className="space-y-6">
+            {/* Add/Edit Course Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {editingCourse ? "Editar Curso" : "Adicionar Novo Curso"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="courseName">Nome *</Label>
+                    <Input
+                      id="courseName"
+                      value={courseForm.name}
+                      onChange={(e) => setCourseForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Nome do curso"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="courseDescription">Descrição</Label>
+                    <Textarea
+                      id="courseDescription"
+                      value={courseForm.description}
+                      onChange={(e) => setCourseForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Descrição do curso (opcional)"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="courseSchool">Escola *</Label>
+                    <Select
+                      value={courseForm.school}
+                      onValueChange={(value) => setCourseForm(prev => ({ ...prev, school: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Escola do Discípulo">Escola do Discípulo</SelectItem>
+                        <SelectItem value="Universidade da Família">Universidade da Família</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Público Alvo</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {audienceOptions.map(option => (
+                        <div key={option.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={courseForm.targetAudience.includes(option.value)}
+                            onCheckedChange={() => toggleAudienceFilter(option.value, courseForm.targetAudience, (audience) => setCourseForm(prev => ({ ...prev, targetAudience: audience })))}
+                          />
+                          <Label className="text-sm">{option.label}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button onClick={handleCourseSubmit} className="bg-purple-600 hover:bg-purple-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    {editingCourse ? "Atualizar" : "Criar"} Curso
+                  </Button>
+                  {editingCourse && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingCourse(null);
+                        setCourseForm({ name: "", description: "", school: "Escola do Discípulo", targetAudience: ["all"] });
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Courses List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Cursos Existentes ({courses.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {courses.map((course) => (
+                    <div key={course.id} className="flex items-start justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-medium">{course.name}</h3>
+                          <Badge variant="secondary">{course.school}</Badge>
+                        </div>
+                        {course.description && (
+                          <p className="text-sm text-gray-600 mt-1">{course.description}</p>
+                        )}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {course.targetAudience.map((audience: string) => (
+                            <Badge key={audience} variant="outline" className="text-xs">
+                              {audienceOptions.find(opt => opt.value === audience)?.label || audience}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingCourse(course);
+                            setCourseForm({
+                              name: course.name,
+                              description: course.description || "",
+                              school: course.school,
+                              targetAudience: course.targetAudience
+                            });
+                          }}
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+                            const updatedCourses = courses.filter((c: any) => c.id !== course.id);
+                            localStorage.setItem('courses', JSON.stringify(updatedCourses));
+                            loadCourses();
+                            toast({ title: "Curso deletado com sucesso!" });
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {courses.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">Nenhum curso cadastrado</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
             {/* Search Users */}
@@ -524,7 +800,7 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Buscar Usuários</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                   <Input
@@ -533,6 +809,39 @@ const Admin = () => {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Filtrar por Função</Label>
+                    <Select value={filterRole} onValueChange={setFilterRole}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todas as funções" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todas as funções</SelectItem>
+                        <SelectItem value="Participante">Participante</SelectItem>
+                        <SelectItem value="Líder">Líder</SelectItem>
+                        <SelectItem value="Supervisor">Supervisor</SelectItem>
+                        <SelectItem value="Coordenador">Coordenador</SelectItem>
+                        <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label>Filtrar por Grupo Especial</Label>
+                    <Select value={filterSpecial} onValueChange={setFilterSpecial}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos os grupos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todos os grupos</SelectItem>
+                        <SelectItem value="flowUp">FLOW UP</SelectItem>
+                        <SelectItem value="irmandade">IRMANDADE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -562,10 +871,16 @@ const Admin = () => {
                             {user.isAdmin && (
                               <Badge className="bg-purple-100 text-purple-800">Admin</Badge>
                             )}
+                            {user.participatesFlowUp && (
+                              <Badge className="bg-blue-100 text-blue-800">FLOW UP</Badge>
+                            )}
+                            {user.participatesIrmandade && (
+                              <Badge className="bg-green-100 text-green-800">IRMANDADE</Badge>
+                            )}
                           </div>
                           <div className="text-sm text-gray-600">
                             <p>{user.email} | {user.whatsapp}</p>
-                            {user.pgm && <p>PGM: {user.pgm}</p>}
+                            <p>Função: {user.pgmRole}{user.pgmNumber ? ` | PGM: ${user.pgmNumber}` : ''}</p>
                             <p>Fase: {user.phase} | {user.points} pontos</p>
                           </div>
                         </div>
@@ -593,7 +908,7 @@ const Admin = () => {
                   ))}
                   {filteredUsers.length === 0 && (
                     <p className="text-center text-gray-500 py-4">
-                      {searchTerm ? "Nenhum usuário encontrado" : "Nenhum usuário cadastrado"}
+                      {searchTerm || filterRole || filterSpecial ? "Nenhum usuário encontrado" : "Nenhum usuário cadastrado"}
                     </p>
                   )}
                 </div>

@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, CheckSquare, Settings, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { User, CheckSquare, Settings, ExternalLink, Trophy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -50,6 +50,7 @@ const Feed = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
+  const [showPhasesModal, setShowPhasesModal] = useState(false);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -105,6 +106,13 @@ const Feed = () => {
     return `${Math.floor(diffInMinutes / 1440)}d`;
   };
 
+  const phases = [
+    { name: "Riacho", minPoints: 0, maxPoints: 250, emoji: "🌀", phrase: "Começando a fluir", description: "Início da caminhada com Deus e com a FLOW.", color: "bg-green-100 text-green-800" },
+    { name: "Correnteza", minPoints: 251, maxPoints: 500, emoji: "🌊", phrase: "Sendo levado por algo maior", description: "Engajado no PGM, abrindo-se ao mover de Deus.", color: "bg-blue-100 text-blue-800" },
+    { name: "Cachoeira", minPoints: 501, maxPoints: 1000, emoji: "💥", phrase: "Entregue ao movimento de Deus", description: "Servindo com intensidade e sendo transformador.", color: "bg-purple-100 text-purple-800" },
+    { name: "Oceano", minPoints: 1001, maxPoints: null, emoji: "🌌", phrase: "Profundamente imerso em Deus", description: "Maturidade espiritual, liderança e profundidade.", color: "bg-gray-900 text-white" }
+  ];
+
   if (!currentUser) return null;
 
   const phaseInfo = getPhaseInfo(currentUser.phase);
@@ -115,10 +123,50 @@ const Feed = () => {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-teal-700">FLOW</h1>
-            <Badge className={phaseInfo.color}>
-              {phaseInfo.emoji} {currentUser.phase}
-            </Badge>
+            <h1 className="text-2xl font-bold text-teal-700">APP da Rede FLOW</h1>
+            <Dialog open={showPhasesModal} onOpenChange={setShowPhasesModal}>
+              <DialogTrigger asChild>
+                <Badge className={`${phaseInfo.color} cursor-pointer hover:opacity-80`}>
+                  {phaseInfo.emoji} {currentUser.phase}
+                </Badge>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center">
+                    <Trophy className="w-5 h-5 mr-2" />
+                    Fases da FLOW
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {phases.map((phase) => {
+                    const isCurrentPhase = phase.name === currentUser.phase;
+                    const pointsNeeded = phase.minPoints > currentUser.points ? phase.minPoints - currentUser.points : 0;
+                    
+                    return (
+                      <div key={phase.name} className={`p-3 rounded-lg border ${isCurrentPhase ? 'ring-2 ring-teal-500 bg-teal-50' : 'bg-gray-50'}`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-lg">{phase.emoji}</span>
+                            <span className="font-semibold">{phase.name}</span>
+                            {isCurrentPhase && <Badge className="bg-teal-100 text-teal-700">Atual</Badge>}
+                          </div>
+                          <span className="text-sm text-gray-600">
+                            {phase.minPoints}+ pontos
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-700 mb-1">"{phase.phrase}"</p>
+                        <p className="text-xs text-gray-600">{phase.description}</p>
+                        {pointsNeeded > 0 && (
+                          <p className="text-xs text-teal-600 mt-2">
+                            Faltam {pointsNeeded} pontos para desbloquear
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           
           <div className="flex items-center space-x-2">

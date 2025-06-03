@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,19 +51,85 @@ const BookLibrary = ({ userId, booksRead, booksReading, onUpdateBooks, readOnly 
 
     if (bookType === 'read') {
       newBooksRead.push(newBook);
+      
+      // Add points for reading a book
+      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      if (currentUser.id === userId) {
+        const newPoints = currentUser.points + 5; // 5 points for reading a book
+        const newPhase = calculatePhase(newPoints);
+        const oldPhase = currentUser.phase;
+        
+        const updatedUser = { ...currentUser, points: newPoints, phase: newPhase };
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+        
+        // Update user in users array
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const userIndex = users.findIndex((u: any) => u.id === userId);
+        if (userIndex !== -1) {
+          users[userIndex] = updatedUser;
+          localStorage.setItem('users', JSON.stringify(users));
+        }
+
+        // Add to mission activities
+        const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+        const newActivity = {
+          id: Date.now().toString(),
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userPhoto: currentUser.profilePhoto,
+          missionName: 'Leitura de Livro',
+          points: 5,
+          timestamp: new Date().toISOString()
+        };
+        activities.unshift(newActivity);
+        localStorage.setItem('missionActivities', JSON.stringify(activities));
+
+        toast({
+          title: "🎉 Livro adicionado!",
+          description: `"${newBook.title}" foi adicionado e você ganhou 5 pontos!`,
+        });
+
+        // Check for phase change
+        if (oldPhase !== newPhase) {
+          setTimeout(() => {
+            const phaseInfo = getPhaseInfo(newPhase);
+            toast({
+              title: `🌟 Nova Fase Desbloqueada!`,
+              description: `${phaseInfo.emoji} ${newPhase}: ${phaseInfo.phrase}`,
+              className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+            });
+          }, 1000);
+        }
+      }
     } else {
       newBooksReading.push(newBook);
+      toast({
+        title: "Livro adicionado!",
+        description: `"${newBook.title}" foi adicionado à sua lista de leitura.`,
+      });
     }
 
     onUpdateBooks(newBooksRead, newBooksReading);
 
     setBookForm({ title: '', author: '' });
     setIsAddingBook(false);
+  };
 
-    toast({
-      title: "Livro adicionado!",
-      description: `"${newBook.title}" foi adicionado à sua biblioteca.`,
-    });
+  const calculatePhase = (points: number): string => {
+    if (points >= 1001) return "Oceano";
+    if (points >= 501) return "Cachoeira";
+    if (points >= 251) return "Correnteza";
+    return "Riacho";
+  };
+
+  const getPhaseInfo = (phase: string) => {
+    const phases = {
+      "Riacho": { emoji: "🌀", phrase: "Começando a fluir" },
+      "Correnteza": { emoji: "🌊", phrase: "Sendo levado por algo maior" },
+      "Cachoeira": { emoji: "💥", phrase: "Entregue ao movimento de Deus" },
+      "Oceano": { emoji: "🌌", phrase: "Profundamente imerso em Deus" }
+    };
+    return phases[phase as keyof typeof phases] || phases["Riacho"];
   };
 
   const handleRemoveBook = (bookId: string, type: 'reading' | 'read') => {
