@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Eye, EyeOff, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -16,6 +17,10 @@ const Index = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [age, setAge] = useState<number | null>(null);
+  const [showFlowUp, setShowFlowUp] = useState(false);
+  const [showIrmandade, setShowIrmandade] = useState(false);
+  const [showPgmNumber, setShowPgmNumber] = useState(false);
   
   const [formData, setFormData] = useState({
     email: "",
@@ -23,19 +28,54 @@ const Index = () => {
     confirmPassword: "",
     name: "",
     whatsapp: "",
-    pgm: "",
+    birthDate: "",
+    gender: "",
+    pgmRole: "",
+    pgmNumber: "",
+    participatesFlowUp: false,
+    participatesIrmandade: false,
     profilePhoto: null as File | null
   });
 
   useEffect(() => {
+    // Clear localStorage to start fresh
+    if (!isLogin) {
+      localStorage.clear();
+    }
+    
     // Check if user is already logged in
     const currentUser = localStorage.getItem('currentUser');
     if (currentUser) {
       navigate('/feed');
     }
-  }, [navigate]);
+  }, [navigate, isLogin]);
 
-  const handleInputChange = (field: string, value: string) => {
+  useEffect(() => {
+    if (formData.birthDate) {
+      const birthYear = new Date(formData.birthDate).getFullYear();
+      const currentYear = new Date().getFullYear();
+      const userAge = currentYear - birthYear;
+      setAge(userAge);
+      setShowFlowUp(userAge > 25);
+    }
+  }, [formData.birthDate]);
+
+  useEffect(() => {
+    setShowIrmandade(formData.gender === "Masculino");
+    if (formData.gender !== "Masculino") {
+      setFormData(prev => ({ ...prev, participatesIrmandade: false }));
+    }
+  }, [formData.gender]);
+
+  useEffect(() => {
+    const needsPgmNumber = formData.pgmRole === "Participante" || formData.pgmRole === "Líder";
+    setShowPgmNumber(needsPgmNumber);
+    if (!needsPgmNumber) {
+      setFormData(prev => ({ ...prev, pgmNumber: "" }));
+    }
+  }, [formData.pgmRole]);
+
+  const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -54,13 +94,19 @@ const Index = () => {
         name: "Filipe Admin",
         email: "filipebiten@gmail.com",
         whatsapp: "",
-        pgm: "",
+        birthDate: "",
+        gender: "",
+        pgmRole: "Pastor de Rede",
+        pgmNumber: "",
+        participatesFlowUp: false,
+        participatesIrmandade: false,
         isAdmin: true,
         phase: "Oceano",
         points: 1500,
         profilePhoto: null,
         joinDate: new Date().toISOString(),
         booksRead: [],
+        booksReading: [],
         coursesCompleted: [],
         coursesInProgress: []
       };
@@ -100,10 +146,19 @@ const Index = () => {
       return;
     }
 
-    if (!formData.name || !formData.email || !formData.password || !formData.whatsapp) {
+    if (!formData.name || !formData.email || !formData.password || !formData.whatsapp || !formData.birthDate || !formData.gender || !formData.pgmRole) {
       toast({
         title: "Erro no cadastro",
         description: "Preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (showPgmNumber && !formData.pgmNumber) {
+      toast({
+        title: "Erro no cadastro",
+        description: "Por favor, informe o número do PGM.",
         variant: "destructive",
       });
       return;
@@ -128,13 +183,19 @@ const Index = () => {
       email: formData.email,
       password: formData.password,
       whatsapp: formData.whatsapp,
-      pgm: formData.pgm,
+      birthDate: formData.birthDate,
+      gender: formData.gender,
+      pgmRole: formData.pgmRole,
+      pgmNumber: formData.pgmNumber,
+      participatesFlowUp: formData.participatesFlowUp,
+      participatesIrmandade: formData.participatesIrmandade,
       isAdmin: isAdmin,
       phase: "Riacho",
       points: 0,
       profilePhoto: formData.profilePhoto ? URL.createObjectURL(formData.profilePhoto) : null,
       joinDate: new Date().toISOString(),
       booksRead: [],
+      booksReading: [],
       coursesCompleted: [],
       coursesInProgress: []
     };
@@ -187,15 +248,78 @@ const Index = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="pgm">PGM (ou coordenador/supervisor)</Label>
+                <Label htmlFor="birthDate">Data de Nascimento *</Label>
                 <Input
-                  id="pgm"
-                  type="text"
-                  value={formData.pgm}
-                  onChange={(e) => handleInputChange("pgm", e.target.value)}
-                  placeholder="Nome do seu PGM"
+                  id="birthDate"
+                  type="date"
+                  value={formData.birthDate}
+                  onChange={(e) => handleInputChange("birthDate", e.target.value)}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="gender">Gênero *</Label>
+                <Select value={formData.gender} onValueChange={(value) => handleInputChange("gender", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione seu gênero" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Masculino">Masculino</SelectItem>
+                    <SelectItem value="Feminino">Feminino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="pgmRole">Situação no PGM *</Label>
+                <Select value={formData.pgmRole} onValueChange={(value) => handleInputChange("pgmRole", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione sua situação" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Participante">Participante</SelectItem>
+                    <SelectItem value="Líder">Líder</SelectItem>
+                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                    <SelectItem value="Coordenador">Coordenador</SelectItem>
+                    <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {showPgmNumber && (
+                <div className="space-y-2">
+                  <Label htmlFor="pgmNumber">Número do PGM *</Label>
+                  <Input
+                    id="pgmNumber"
+                    type="text"
+                    value={formData.pgmNumber}
+                    onChange={(e) => handleInputChange("pgmNumber", e.target.value)}
+                    placeholder="Ex: PGM 001"
+                  />
+                </div>
+              )}
+
+              {showFlowUp && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="flowUp"
+                    checked={formData.participatesFlowUp}
+                    onCheckedChange={(checked) => handleInputChange("participatesFlowUp", checked as boolean)}
+                  />
+                  <Label htmlFor="flowUp">Participa do FLOW UP</Label>
+                </div>
+              )}
+
+              {showIrmandade && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="irmandade"
+                    checked={formData.participatesIrmandade}
+                    onCheckedChange={(checked) => handleInputChange("participatesIrmandade", checked as boolean)}
+                  />
+                  <Label htmlFor="irmandade">Participa da IRMANDADE</Label>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="photo">Foto de Perfil (opcional)</Label>

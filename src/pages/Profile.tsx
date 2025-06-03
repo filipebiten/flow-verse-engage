@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,20 +5,35 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Settings, BookOpen, GraduationCap, Sparkles } from "lucide-react";
+import BookLibrary from "@/components/BookLibrary";
+
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  addedAt: string;
+}
 
 interface User {
   id: string;
   name: string;
   email: string;
   whatsapp: string;
-  pgm: string;
+  birthDate: string;
+  gender: string;
+  pgmRole: string;
+  pgmNumber: string;
+  participatesFlowUp: boolean;
+  participatesIrmandade: boolean;
   isAdmin: boolean;
   phase: string;
   points: number;
   profilePhoto: string | null;
   joinDate: string;
-  booksRead: string[];
+  booksRead: Book[];
+  booksReading: Book[];
   coursesCompleted: string[];
   coursesInProgress: string[];
 }
@@ -35,8 +49,33 @@ const Profile = () => {
       return;
     }
     
-    setCurrentUser(JSON.parse(user));
+    const userData = JSON.parse(user);
+    // Ensure books are arrays with proper structure
+    if (!userData.booksRead || !Array.isArray(userData.booksRead)) {
+      userData.booksRead = [];
+    }
+    if (!userData.booksReading || !Array.isArray(userData.booksReading)) {
+      userData.booksReading = [];
+    }
+    
+    setCurrentUser(userData);
   }, [navigate]);
+
+  const handleUpdateBooks = (booksRead: Book[], booksReading: Book[]) => {
+    if (!currentUser) return;
+
+    const updatedUser = { ...currentUser, booksRead, booksReading };
+    setCurrentUser(updatedUser);
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+    // Update user in users array
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userIndex = users.findIndex((u: any) => u.id === currentUser.id);
+    if (userIndex !== -1) {
+      users[userIndex] = updatedUser;
+      localStorage.setItem('users', JSON.stringify(users));
+    }
+  };
 
   const getPhaseInfo = (phase: string) => {
     const phases = {
@@ -160,13 +199,13 @@ const Profile = () => {
                   {currentUser.whatsapp && (
                     <p className="text-gray-600">WhatsApp: {currentUser.whatsapp}</p>
                   )}
-                  {currentUser.pgm && (
-                    <p className="text-gray-600">PGM: {currentUser.pgm}</p>
-                  )}
+                  <p className="text-gray-600">
+                    {currentUser.pgmRole} {currentUser.pgmNumber && `- ${currentUser.pgmNumber}`}
+                  </p>
                   <p className="text-sm text-gray-500">Membro desde {formatJoinDate(currentUser.joinDate)}</p>
                 </div>
                 
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-3 flex-wrap">
                   <Badge className={phaseInfo.color}>
                     {phaseInfo.emoji} {currentUser.phase}
                   </Badge>
@@ -176,6 +215,16 @@ const Profile = () => {
                   {currentUser.isAdmin && (
                     <Badge variant="secondary" className="bg-purple-100 text-purple-800">
                       Administrador
+                    </Badge>
+                  )}
+                  {currentUser.participatesFlowUp && (
+                    <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+                      FLOW UP
+                    </Badge>
+                  )}
+                  {currentUser.participatesIrmandade && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      IRMANDADE
                     </Badge>
                   )}
                 </div>
@@ -241,80 +290,72 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* Books and Courses */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Books Read */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <BookOpen className="w-5 h-5 mr-2" />
-                Biblioteca ({currentUser.booksRead.length} livros)
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {currentUser.booksRead.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Nenhum livro lido ainda</p>
-              ) : (
-                <div className="space-y-2">
-                  {currentUser.booksRead.map((book, index) => (
-                    <div key={index} className="p-2 bg-gray-50 rounded">
-                      <span className="text-sm">{book}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Courses */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <GraduationCap className="w-5 h-5 mr-2" />
-                Cursos ({currentUser.coursesCompleted.length} concluídos)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {currentUser.coursesCompleted.length === 0 && currentUser.coursesInProgress.length === 0 ? (
-                <p className="text-gray-500 text-center py-4">Nenhum curso iniciado ainda</p>
-              ) : (
-                <>
-                  {currentUser.coursesCompleted.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-green-700 mb-2">Concluídos:</h4>
-                      <div className="space-y-2">
-                        {currentUser.coursesCompleted.map((course, index) => (
-                          <div key={index} className="p-2 bg-green-50 rounded flex items-center">
-                            <span className="text-sm flex-1">{course}</span>
-                            <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-                              ✓
-                            </Badge>
-                          </div>
-                        ))}
+        {/* Books and Courses Tabs */}
+        <Tabs defaultValue="books" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="books">Biblioteca</TabsTrigger>
+            <TabsTrigger value="courses">Cursos</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="books">
+            <BookLibrary
+              userId={currentUser.id}
+              booksRead={currentUser.booksRead}
+              booksReading={currentUser.booksReading}
+              onUpdateBooks={handleUpdateBooks}
+            />
+          </TabsContent>
+          
+          <TabsContent value="courses">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <GraduationCap className="w-5 h-5 mr-2" />
+                  Cursos ({currentUser.coursesCompleted.length} concluídos)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {currentUser.coursesCompleted.length === 0 && currentUser.coursesInProgress.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">Nenhum curso iniciado ainda</p>
+                ) : (
+                  <>
+                    {currentUser.coursesCompleted.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-green-700 mb-2">Concluídos:</h4>
+                        <div className="space-y-2">
+                          {currentUser.coursesCompleted.map((course, index) => (
+                            <div key={index} className="p-2 bg-green-50 rounded flex items-center">
+                              <span className="text-sm flex-1">{course}</span>
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                                ✓
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  
-                  {currentUser.coursesInProgress.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-blue-700 mb-2">Em andamento:</h4>
-                      <div className="space-y-2">
-                        {currentUser.coursesInProgress.map((course, index) => (
-                          <div key={index} className="p-2 bg-blue-50 rounded flex items-center">
-                            <span className="text-sm flex-1">{course}</span>
-                            <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
-                              📖
-                            </Badge>
-                          </div>
-                        ))}
+                    )}
+                    
+                    {currentUser.coursesInProgress.length > 0 && (
+                      <div>
+                        <h4 className="font-medium text-blue-700 mb-2">Em andamento:</h4>
+                        <div className="space-y-2">
+                          {currentUser.coursesInProgress.map((course, index) => (
+                            <div key={index} className="p-2 bg-blue-50 rounded flex items-center">
+                              <span className="text-sm flex-1">{course}</span>
+                              <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
+                                📖
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
