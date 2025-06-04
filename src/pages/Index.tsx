@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +46,8 @@ const Index = () => {
   });
 
   const handleLogin = () => {
+    console.log("Tentativa de login com:", loginForm);
+    
     if (!loginForm.identifier.trim() || !loginForm.password) {
       toast({
         title: "Erro",
@@ -73,7 +74,6 @@ const Index = () => {
         profilePhoto: null,
         joinDate: new Date().toISOString(),
         booksRead: [],
-        booksReading: [],
         coursesCompleted: [],
         coursesInProgress: [],
         participatesFlowUp: false,
@@ -88,10 +88,17 @@ const Index = () => {
 
     // Check existing users
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const user = users.find((u: any) => 
-      (u.email === loginForm.identifier || u.whatsapp === loginForm.identifier) && 
-      u.password === loginForm.password
-    );
+    console.log("Usuários no localStorage:", users);
+    
+    const user = users.find((u: any) => {
+      const emailMatch = u.email && u.email.toLowerCase() === loginForm.identifier.toLowerCase();
+      const whatsappMatch = u.whatsapp && u.whatsapp === loginForm.identifier;
+      const passwordMatch = u.password === loginForm.password;
+      
+      console.log("Verificando usuário:", u.email, "Email match:", emailMatch, "WhatsApp match:", whatsappMatch, "Password match:", passwordMatch);
+      
+      return (emailMatch || whatsappMatch) && passwordMatch;
+    });
 
     if (user) {
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -103,13 +110,15 @@ const Index = () => {
     } else {
       toast({
         title: "Erro",
-        description: "Credenciais inválidas.",
+        description: "Credenciais inválidas. Verifique seu email/WhatsApp e senha.",
         variant: "destructive",
       });
     }
   };
 
   const handleRegister = () => {
+    console.log("Tentativa de registro com:", registerForm);
+    
     if (!registerForm.name.trim() || !registerForm.email.trim() || !registerForm.whatsapp.trim() || 
         !registerForm.birthDate || !registerForm.gender || !registerForm.pgmRole || !registerForm.password) {
       toast({
@@ -140,7 +149,10 @@ const Index = () => {
 
     // Check if user already exists
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userExists = users.some((u: any) => u.email === registerForm.email || u.whatsapp === registerForm.whatsapp);
+    const userExists = users.some((u: any) => 
+      u.email.toLowerCase() === registerForm.email.toLowerCase() || 
+      u.whatsapp === registerForm.whatsapp
+    );
     
     if (userExists) {
       toast({
@@ -176,7 +188,6 @@ const Index = () => {
       profilePhoto: previewUrl,
       joinDate: new Date().toISOString(),
       booksRead: [],
-      booksReading: [],
       coursesCompleted: [],
       coursesInProgress: [],
       participatesFlowUp: age >= 25 ? registerForm.participatesFlowUp : false,
@@ -185,13 +196,17 @@ const Index = () => {
 
     users.push(newUser);
     localStorage.setItem('users', JSON.stringify(users));
-    localStorage.setItem('currentUser', JSON.stringify(newUser));
+    console.log("Usuário registrado:", newUser);
+    console.log("Todos os usuários após registro:", users);
 
-    navigate('/feed');
     toast({
       title: "Cadastro realizado!",
-      description: `Bem-vindo à FLOW, ${newUser.name}!`,
+      description: `Bem-vindo à FLOW, ${newUser.name}! Agora você pode fazer login.`,
     });
+
+    // Switch to login tab after successful registration
+    setActiveTab("login");
+    setLoginForm({ identifier: newUser.email, password: "" });
   };
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -218,7 +233,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-teal-700">APP da Rede FLOW</CardTitle>
