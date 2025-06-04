@@ -33,6 +33,7 @@ interface User {
   profilePhoto: string | null;
   joinDate: string;
   booksRead: Book[];
+  booksReading: Book[];
   coursesCompleted: string[];
   coursesInProgress: string[];
 }
@@ -53,13 +54,27 @@ const Profile = () => {
     if (!userData.booksRead || !Array.isArray(userData.booksRead)) {
       userData.booksRead = [];
     }
+    if (!userData.booksReading || !Array.isArray(userData.booksReading)) {
+      userData.booksReading = [];
+    }
     
     setCurrentUser(userData);
   }, [navigate]);
 
-  const handleUpdateBooks = () => {
-    // This function is kept for compatibility but doesn't need to do anything
-    // since books are managed by admin only now
+  const handleUpdateBooks = (booksRead: Book[], booksReading: Book[]) => {
+    if (!currentUser) return;
+
+    const updatedUser = { ...currentUser, booksRead, booksReading };
+    setCurrentUser(updatedUser);
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+    // Update user in users array
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userIndex = users.findIndex((u: any) => u.id === currentUser.id);
+    if (userIndex !== -1) {
+      users[userIndex] = updatedUser;
+      localStorage.setItem('users', JSON.stringify(users));
+    }
   };
 
   const getPhaseInfo = (phase: string) => {
@@ -286,6 +301,7 @@ const Profile = () => {
             <BookLibrary
               userId={currentUser.id}
               booksRead={currentUser.booksRead}
+              booksReading={currentUser.booksReading}
               onUpdateBooks={handleUpdateBooks}
             />
           </TabsContent>

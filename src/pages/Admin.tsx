@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Edit, Trash2, Search, Users, Newspaper, CheckSquare, GraduationCap, BookOpen } from "lucide-react";
+import { ArrowLeft, Plus, Edit, Trash2, Search, Users, Newspaper, CheckSquare, GraduationCap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Admin = () => {
@@ -20,7 +21,6 @@ const Admin = () => {
   const [missions, setMissions] = useState<any[]>([]);
   const [news, setNews] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
-  const [books, setBooks] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("");
@@ -49,23 +49,12 @@ const Admin = () => {
     name: "",
     description: "",
     school: "Escola do Discípulo",
-    points: 10,
-    targetAudience: ["all"] as string[]
-  });
-
-  // Book form
-  const [bookForm, setBookForm] = useState({
-    name: "",
-    author: "",
-    image: "",
-    points: 5,
     targetAudience: ["all"] as string[]
   });
   
   const [editingMission, setEditingMission] = useState<any>(null);
   const [editingNews, setEditingNews] = useState<any>(null);
   const [editingCourse, setEditingCourse] = useState<any>(null);
-  const [editingBook, setEditingBook] = useState<any>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -84,7 +73,6 @@ const Admin = () => {
     loadMissions();
     loadNews();
     loadCourses();
-    loadBooks();
     loadUsers();
   }, [navigate]);
 
@@ -101,11 +89,6 @@ const Admin = () => {
   const loadCourses = () => {
     const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
     setCourses(storedCourses);
-  };
-
-  const loadBooks = () => {
-    const storedBooks = JSON.parse(localStorage.getItem('books') || '[]');
-    setBooks(storedBooks);
   };
 
   const loadUsers = () => {
@@ -151,148 +134,6 @@ const Admin = () => {
     loadMissions();
   };
 
-  const handleCourseSubmit = () => {
-    if (!courseForm.name.trim()) {
-      toast({
-        title: "Erro",
-        description: "Nome do curso é obrigatório",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const courses = JSON.parse(localStorage.getItem('courses') || '[]');
-    const missions = JSON.parse(localStorage.getItem('missions') || '[]');
-    
-    if (editingCourse) {
-      const updatedCourses = courses.map((c: any) => 
-        c.id === editingCourse.id ? { ...c, ...courseForm, points: Number(courseForm.points) } : c
-      );
-      localStorage.setItem('courses', JSON.stringify(updatedCourses));
-      
-      // Update corresponding mission
-      const updatedMissions = missions.map((m: any) => 
-        m.id === `course_${editingCourse.id}` 
-          ? { 
-              ...m, 
-              name: courseForm.name,
-              description: courseForm.description,
-              points: Number(courseForm.points),
-              targetAudience: courseForm.targetAudience,
-              school: courseForm.school
-            }
-          : m
-      );
-      localStorage.setItem('missions', JSON.stringify(updatedMissions));
-      
-      setEditingCourse(null);
-      toast({ title: "Curso atualizado com sucesso!" });
-    } else {
-      const newCourse = {
-        id: Date.now().toString(),
-        ...courseForm,
-        points: Number(courseForm.points),
-        isActive: true,
-        createdAt: new Date().toISOString()
-      };
-      courses.push(newCourse);
-      localStorage.setItem('courses', JSON.stringify(courses));
-
-      // Create corresponding mission
-      const newMission = {
-        id: `course_${newCourse.id}`,
-        name: courseForm.name,
-        points: Number(courseForm.points),
-        type: 'Curso',
-        description: courseForm.description,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        targetAudience: courseForm.targetAudience,
-        school: courseForm.school
-      };
-      missions.push(newMission);
-      localStorage.setItem('missions', JSON.stringify(missions));
-      
-      toast({ title: "Curso criado com sucesso!" });
-    }
-    
-    setCourseForm({ name: "", description: "", school: "Escola do Discípulo", points: 10, targetAudience: ["all"] });
-    loadCourses();
-    loadMissions();
-  };
-
-  const handleBookSubmit = () => {
-    if (!bookForm.name.trim() || !bookForm.author.trim()) {
-      toast({
-        title: "Erro",
-        description: "Nome e autor do livro são obrigatórios",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const books = JSON.parse(localStorage.getItem('books') || '[]');
-    const missions = JSON.parse(localStorage.getItem('missions') || '[]');
-    
-    if (editingBook) {
-      const updatedBooks = books.map((b: any) => 
-        b.id === editingBook.id ? { ...b, ...bookForm, points: Number(bookForm.points) } : b
-      );
-      localStorage.setItem('books', JSON.stringify(updatedBooks));
-      
-      // Update corresponding mission
-      const updatedMissions = missions.map((m: any) => 
-        m.id === `book_${editingBook.id}` 
-          ? { 
-              ...m, 
-              name: bookForm.name,
-              description: `Livro: ${bookForm.name} por ${bookForm.author}`,
-              points: Number(bookForm.points),
-              targetAudience: bookForm.targetAudience,
-              author: bookForm.author,
-              image: bookForm.image
-            }
-          : m
-      );
-      localStorage.setItem('missions', JSON.stringify(updatedMissions));
-      
-      setEditingBook(null);
-      toast({ title: "Livro atualizado com sucesso!" });
-    } else {
-      const newBook = {
-        id: Date.now().toString(),
-        ...bookForm,
-        points: Number(bookForm.points),
-        isActive: true,
-        createdAt: new Date().toISOString()
-      };
-      books.push(newBook);
-      localStorage.setItem('books', JSON.stringify(books));
-
-      // Create corresponding mission
-      const newMission = {
-        id: `book_${newBook.id}`,
-        name: bookForm.name,
-        points: Number(bookForm.points),
-        type: 'Livro',
-        description: `Livro: ${bookForm.name} por ${bookForm.author}`,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        targetAudience: bookForm.targetAudience,
-        author: bookForm.author,
-        image: bookForm.image
-      };
-      missions.push(newMission);
-      localStorage.setItem('missions', JSON.stringify(missions));
-      
-      toast({ title: "Livro criado com sucesso!" });
-    }
-    
-    setBookForm({ name: "", author: "", image: "", points: 5, targetAudience: ["all"] });
-    loadBooks();
-    loadMissions();
-  };
-
   const handleNewsSubmit = () => {
     if (!newsForm.title.trim()) {
       toast({
@@ -326,6 +167,41 @@ const Admin = () => {
     
     setNewsForm({ title: "", description: "", image: "", url: "", targetAudience: ["all"] });
     loadNews();
+  };
+
+  const handleCourseSubmit = () => {
+    if (!courseForm.name.trim()) {
+      toast({
+        title: "Erro",
+        description: "Nome do curso é obrigatório",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+    
+    if (editingCourse) {
+      const updatedCourses = courses.map((c: any) => 
+        c.id === editingCourse.id ? { ...c, ...courseForm } : c
+      );
+      localStorage.setItem('courses', JSON.stringify(updatedCourses));
+      setEditingCourse(null);
+      toast({ title: "Curso atualizado com sucesso!" });
+    } else {
+      const newCourse = {
+        id: Date.now().toString(),
+        ...courseForm,
+        isActive: true,
+        createdAt: new Date().toISOString()
+      };
+      courses.push(newCourse);
+      localStorage.setItem('courses', JSON.stringify(courses));
+      toast({ title: "Curso criado com sucesso!" });
+    }
+    
+    setCourseForm({ name: "", description: "", school: "Escola do Discípulo", targetAudience: ["all"] });
+    loadCourses();
   };
 
   const deleteMission = (id: string) => {
@@ -447,357 +323,24 @@ const Admin = () => {
 
       <div className="max-w-6xl mx-auto px-4 py-6">
         <Tabs defaultValue="missions" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="missions" className="flex items-center">
               <CheckSquare className="w-4 h-4 mr-2" />
               Missões
             </TabsTrigger>
-            <TabsTrigger value="books" className="flex items-center">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Livros
+            <TabsTrigger value="news" className="flex items-center">
+              <Newspaper className="w-4 h-4 mr-2" />
+              Notícias
             </TabsTrigger>
             <TabsTrigger value="courses" className="flex items-center">
               <GraduationCap className="w-4 h-4 mr-2" />
               Cursos
-            </TabsTrigger>
-            <TabsTrigger value="news" className="flex items-center">
-              <Newspaper className="w-4 h-4 mr-2" />
-              Notícias
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center">
               <Users className="w-4 h-4 mr-2" />
               Usuários
             </TabsTrigger>
           </TabsList>
-
-          {/* Books Tab */}
-          <TabsContent value="books" className="space-y-6">
-            {/* Add/Edit Book Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingBook ? "Editar Livro" : "Adicionar Novo Livro"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bookName">Nome do Livro *</Label>
-                    <Input
-                      id="bookName"
-                      value={bookForm.name}
-                      onChange={(e) => setBookForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Nome do livro"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="bookAuthor">Autor *</Label>
-                    <Input
-                      id="bookAuthor"
-                      value={bookForm.author}
-                      onChange={(e) => setBookForm(prev => ({ ...prev, author: e.target.value }))}
-                      placeholder="Nome do autor"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="bookImage">URL da Imagem</Label>
-                    <Input
-                      id="bookImage"
-                      value={bookForm.image}
-                      onChange={(e) => setBookForm(prev => ({ ...prev, image: e.target.value }))}
-                      placeholder="https://exemplo.com/imagem.jpg"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="bookPoints">Pontos *</Label>
-                    <Input
-                      id="bookPoints"
-                      type="number"
-                      min="1"
-                      value={bookForm.points}
-                      onChange={(e) => setBookForm(prev => ({ ...prev, points: parseInt(e.target.value) || 5 }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Público Alvo</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {audienceOptions.map(option => (
-                      <div key={option.value} className="flex items-center space-x-2">
-                        <Checkbox
-                          checked={bookForm.targetAudience.includes(option.value)}
-                          onCheckedChange={() => toggleAudienceFilter(option.value, bookForm.targetAudience, (audience) => setBookForm(prev => ({ ...prev, targetAudience: audience })))}
-                        />
-                        <Label className="text-sm">{option.label}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Button onClick={handleBookSubmit} className="bg-purple-600 hover:bg-purple-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    {editingBook ? "Atualizar" : "Criar"} Livro
-                  </Button>
-                  {editingBook && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditingBook(null);
-                        setBookForm({ name: "", author: "", image: "", points: 5, targetAudience: ["all"] });
-                      }}
-                    >
-                      Cancelar
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Books List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Livros Existentes ({books.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {books.map((book) => (
-                    <div key={book.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-3 flex-1">
-                        {book.image && (
-                          <img src={book.image} alt={book.name} className="w-12 h-12 object-cover rounded" />
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <h3 className="font-medium">{book.name}</h3>
-                            <Badge className="bg-green-100 text-green-700">+{book.points}</Badge>
-                          </div>
-                          <p className="text-sm text-gray-600">por {book.author}</p>
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingBook(book);
-                            setBookForm({
-                              name: book.name,
-                              author: book.author,
-                              image: book.image || "",
-                              points: book.points,
-                              targetAudience: book.targetAudience || ["all"]
-                            });
-                          }}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            // Delete book and corresponding mission
-                            const books = JSON.parse(localStorage.getItem('books') || '[]');
-                            const missions = JSON.parse(localStorage.getItem('missions') || '[]');
-                            
-                            const updatedBooks = books.filter((b: any) => b.id !== book.id);
-                            const updatedMissions = missions.filter((m: any) => m.id !== `book_${book.id}`);
-                            
-                            localStorage.setItem('books', JSON.stringify(updatedBooks));
-                            localStorage.setItem('missions', JSON.stringify(updatedMissions));
-                            
-                            loadBooks();
-                            loadMissions();
-                            toast({ title: "Livro deletado com sucesso!" });
-                          }}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {books.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">Nenhum livro cadastrado</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Courses Tab */}
-          <TabsContent value="courses" className="space-y-6">
-            {/* Add/Edit Course Form */}
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {editingCourse ? "Editar Curso" : "Adicionar Novo Curso"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="courseName">Nome *</Label>
-                    <Input
-                      id="courseName"
-                      value={courseForm.name}
-                      onChange={(e) => setCourseForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Nome do curso"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="courseDescription">Descrição</Label>
-                    <Textarea
-                      id="courseDescription"
-                      value={courseForm.description}
-                      onChange={(e) => setCourseForm(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Descrição do curso (opcional)"
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="courseSchool">Escola *</Label>
-                      <Select
-                        value={courseForm.school}
-                        onValueChange={(value) => setCourseForm(prev => ({ ...prev, school: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Escola do Discípulo">Escola do Discípulo</SelectItem>
-                          <SelectItem value="Universidade da Família">Universidade da Família</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="coursePoints">Pontos *</Label>
-                      <Input
-                        id="coursePoints"
-                        type="number"
-                        min="1"
-                        value={courseForm.points}
-                        onChange={(e) => setCourseForm(prev => ({ ...prev, points: parseInt(e.target.value) || 10 }))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Público Alvo</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {audienceOptions.map(option => (
-                        <div key={option.value} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={courseForm.targetAudience.includes(option.value)}
-                            onCheckedChange={() => toggleAudienceFilter(option.value, courseForm.targetAudience, (audience) => setCourseForm(prev => ({ ...prev, targetAudience: audience })))}
-                          />
-                          <Label className="text-sm">{option.label}</Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex space-x-2">
-                  <Button onClick={handleCourseSubmit} className="bg-purple-600 hover:bg-purple-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    {editingCourse ? "Atualizar" : "Criar"} Curso
-                  </Button>
-                  {editingCourse && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditingCourse(null);
-                        setCourseForm({ name: "", description: "", school: "Escola do Discípulo", points: 10, targetAudience: ["all"] });
-                      }}
-                    >
-                      Cancelar
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Courses List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Cursos Existentes ({courses.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {courses.map((course) => (
-                    <div key={course.id} className="flex items-start justify-between p-3 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-medium">{course.name}</h3>
-                          <Badge variant="secondary">{course.school}</Badge>
-                          <Badge className="bg-green-100 text-green-700">+{course.points}</Badge>
-                        </div>
-                        {course.description && (
-                          <p className="text-sm text-gray-600 mt-1">{course.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {course.targetAudience.map((audience: string) => (
-                            <Badge key={audience} variant="outline" className="text-xs">
-                              {audienceOptions.find(opt => opt.value === audience)?.label || audience}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setEditingCourse(course);
-                            setCourseForm({
-                              name: course.name,
-                              description: course.description || "",
-                              school: course.school,
-                              points: course.points,
-                              targetAudience: course.targetAudience
-                            });
-                          }}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => {
-                            // Delete course and corresponding mission
-                            const courses = JSON.parse(localStorage.getItem('courses') || '[]');
-                            const missions = JSON.parse(localStorage.getItem('missions') || '[]');
-                            
-                            const updatedCourses = courses.filter((c: any) => c.id !== course.id);
-                            const updatedMissions = missions.filter((m: any) => m.id !== `course_${course.id}`);
-                            
-                            localStorage.setItem('courses', JSON.stringify(updatedCourses));
-                            localStorage.setItem('missions', JSON.stringify(updatedMissions));
-                            
-                            loadCourses();
-                            loadMissions();
-                            toast({ title: "Curso deletado com sucesso!" });
-                          }}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  {courses.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">Nenhum curso cadastrado</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
 
           {/* Missions Tab */}
           <TabsContent value="missions" className="space-y-6">
@@ -1105,6 +648,154 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          {/* Courses Tab */}
+          <TabsContent value="courses" className="space-y-6">
+            {/* Add/Edit Course Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {editingCourse ? "Editar Curso" : "Adicionar Novo Curso"}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="courseName">Nome *</Label>
+                    <Input
+                      id="courseName"
+                      value={courseForm.name}
+                      onChange={(e) => setCourseForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Nome do curso"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="courseDescription">Descrição</Label>
+                    <Textarea
+                      id="courseDescription"
+                      value={courseForm.description}
+                      onChange={(e) => setCourseForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Descrição do curso (opcional)"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="courseSchool">Escola *</Label>
+                    <Select
+                      value={courseForm.school}
+                      onValueChange={(value) => setCourseForm(prev => ({ ...prev, school: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Escola do Discípulo">Escola do Discípulo</SelectItem>
+                        <SelectItem value="Universidade da Família">Universidade da Família</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Público Alvo</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {audienceOptions.map(option => (
+                        <div key={option.value} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={courseForm.targetAudience.includes(option.value)}
+                            onCheckedChange={() => toggleAudienceFilter(option.value, courseForm.targetAudience, (audience) => setCourseForm(prev => ({ ...prev, targetAudience: audience })))}
+                          />
+                          <Label className="text-sm">{option.label}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex space-x-2">
+                  <Button onClick={handleCourseSubmit} className="bg-purple-600 hover:bg-purple-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    {editingCourse ? "Atualizar" : "Criar"} Curso
+                  </Button>
+                  {editingCourse && (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditingCourse(null);
+                        setCourseForm({ name: "", description: "", school: "Escola do Discípulo", targetAudience: ["all"] });
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Courses List */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Cursos Existentes ({courses.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {courses.map((course) => (
+                    <div key={course.id} className="flex items-start justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-medium">{course.name}</h3>
+                          <Badge variant="secondary">{course.school}</Badge>
+                        </div>
+                        {course.description && (
+                          <p className="text-sm text-gray-600 mt-1">{course.description}</p>
+                        )}
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {course.targetAudience.map((audience: string) => (
+                            <Badge key={audience} variant="outline" className="text-xs">
+                              {audienceOptions.find(opt => opt.value === audience)?.label || audience}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingCourse(course);
+                            setCourseForm({
+                              name: course.name,
+                              description: course.description || "",
+                              school: course.school,
+                              targetAudience: course.targetAudience
+                            });
+                          }}
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => {
+                            const courses = JSON.parse(localStorage.getItem('courses') || '[]');
+                            const updatedCourses = courses.filter((c: any) => c.id !== course.id);
+                            localStorage.setItem('courses', JSON.stringify(updatedCourses));
+                            loadCourses();
+                            toast({ title: "Curso deletado com sucesso!" });
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  {courses.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">Nenhum curso cadastrado</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
             {/* Search Users */}
@@ -1142,7 +833,7 @@ const Admin = () => {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label>Filtrar por Público Alvo</Label>
+                    <Label>Filtrar por Grupo Especial</Label>
                     <Select value={filterSpecial} onValueChange={setFilterSpecial}>
                       <SelectTrigger>
                         <SelectValue placeholder="Todos os grupos" />

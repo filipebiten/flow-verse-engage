@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,8 +47,6 @@ const Index = () => {
   });
 
   const handleLogin = () => {
-    console.log("Tentativa de login com:", loginForm);
-    
     if (!loginForm.identifier.trim() || !loginForm.password) {
       toast({
         title: "Erro",
@@ -74,6 +73,7 @@ const Index = () => {
         profilePhoto: null,
         joinDate: new Date().toISOString(),
         booksRead: [],
+        booksReading: [],
         coursesCompleted: [],
         coursesInProgress: [],
         participatesFlowUp: false,
@@ -86,41 +86,12 @@ const Index = () => {
       return;
     }
 
-    // Check existing users with better debugging
-    const usersData = localStorage.getItem('users');
-    console.log("Dados brutos do localStorage:", usersData);
-    
-    if (!usersData) {
-      toast({
-        title: "Erro",
-        description: "Nenhum usuário encontrado. Faça o cadastro primeiro.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const users = JSON.parse(usersData);
-    console.log("Usuários parseados:", users);
-    
-    const user = users.find((u: any) => {
-      console.log("Verificando usuário:", {
-        userEmail: u.email,
-        userWhatsapp: u.whatsapp,
-        inputIdentifier: loginForm.identifier,
-        userPassword: u.password,
-        inputPassword: loginForm.password
-      });
-
-      const emailMatch = u.email && u.email.toLowerCase().trim() === loginForm.identifier.toLowerCase().trim();
-      const whatsappMatch = u.whatsapp && u.whatsapp.trim() === loginForm.identifier.trim();
-      const passwordMatch = u.password === loginForm.password;
-      
-      console.log("Matches:", { emailMatch, whatsappMatch, passwordMatch });
-      
-      return (emailMatch || whatsappMatch) && passwordMatch;
-    });
-
-    console.log("Usuário encontrado:", user);
+    // Check existing users
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const user = users.find((u: any) => 
+      (u.email === loginForm.identifier || u.whatsapp === loginForm.identifier) && 
+      u.password === loginForm.password
+    );
 
     if (user) {
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -132,15 +103,13 @@ const Index = () => {
     } else {
       toast({
         title: "Erro",
-        description: "Credenciais inválidas. Verifique seu email/WhatsApp e senha.",
+        description: "Credenciais inválidas.",
         variant: "destructive",
       });
     }
   };
 
   const handleRegister = () => {
-    console.log("Tentativa de registro com:", registerForm);
-    
     if (!registerForm.name.trim() || !registerForm.email.trim() || !registerForm.whatsapp.trim() || 
         !registerForm.birthDate || !registerForm.gender || !registerForm.pgmRole || !registerForm.password) {
       toast({
@@ -171,10 +140,7 @@ const Index = () => {
 
     // Check if user already exists
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userExists = users.some((u: any) => 
-      u.email.toLowerCase() === registerForm.email.toLowerCase() || 
-      u.whatsapp === registerForm.whatsapp
-    );
+    const userExists = users.some((u: any) => u.email === registerForm.email || u.whatsapp === registerForm.whatsapp);
     
     if (userExists) {
       toast({
@@ -210,6 +176,7 @@ const Index = () => {
       profilePhoto: previewUrl,
       joinDate: new Date().toISOString(),
       booksRead: [],
+      booksReading: [],
       coursesCompleted: [],
       coursesInProgress: [],
       participatesFlowUp: age >= 25 ? registerForm.participatesFlowUp : false,
@@ -218,17 +185,13 @@ const Index = () => {
 
     users.push(newUser);
     localStorage.setItem('users', JSON.stringify(users));
-    console.log("Usuário registrado:", newUser);
-    console.log("Todos os usuários após registro:", users);
+    localStorage.setItem('currentUser', JSON.stringify(newUser));
 
+    navigate('/feed');
     toast({
       title: "Cadastro realizado!",
-      description: `Bem-vindo à FLOW, ${newUser.name}! Agora você pode fazer login.`,
+      description: `Bem-vindo à FLOW, ${newUser.name}!`,
     });
-
-    // Switch to login tab after successful registration
-    setActiveTab("login");
-    setLoginForm({ identifier: newUser.email, password: "" });
   };
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,7 +218,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-teal-700">APP da Rede FLOW</CardTitle>
