@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, CheckSquare, Settings, ExternalLink, Trophy } from "lucide-react";
+import { User, CheckSquare, Settings, ExternalLink, Trophy, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -22,6 +23,7 @@ interface User {
   booksRead: string[];
   coursesCompleted: string[];
   coursesInProgress: string[];
+  badges: string[];
 }
 
 interface NewsItem {
@@ -44,12 +46,23 @@ interface MissionActivity {
   timestamp: string;
 }
 
+interface PhaseChangeActivity {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto: string | null;
+  oldPhase: string;
+  newPhase: string;
+  timestamp: string;
+}
+
 const Feed = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [news, setNews] = useState<NewsItem[]>([]);
   const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
+  const [phaseChanges, setPhaseChanges] = useState<PhaseChangeActivity[]>([]);
   const [showPhasesModal, setShowPhasesModal] = useState(false);
 
   useEffect(() => {
@@ -62,6 +75,7 @@ const Feed = () => {
     setCurrentUser(JSON.parse(user));
     loadNews();
     loadMissionActivities();
+    loadPhaseChanges();
   }, [navigate]);
 
   const loadNews = () => {
@@ -72,6 +86,13 @@ const Feed = () => {
   const loadMissionActivities = () => {
     const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
     setMissionActivities(activities.sort((a: MissionActivity, b: MissionActivity) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    ));
+  };
+
+  const loadPhaseChanges = () => {
+    const changes = JSON.parse(localStorage.getItem('phaseChanges') || '[]');
+    setPhaseChanges(changes.sort((a: PhaseChangeActivity, b: PhaseChangeActivity) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     ));
   };
@@ -113,6 +134,12 @@ const Feed = () => {
     { name: "Oceano", minPoints: 1001, maxPoints: null, emoji: "🌌", phrase: "Profundamente imerso em Deus", description: "Maturidade espiritual, liderança e profundidade.", color: "bg-gray-900 text-white" }
   ];
 
+  // Combine and sort all activities
+  const allActivities = [
+    ...missionActivities.map(activity => ({ ...activity, type: 'mission' })),
+    ...phaseChanges.map(change => ({ ...change, type: 'phase' }))
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
   if (!currentUser) return null;
 
   const phaseInfo = getPhaseInfo(currentUser.phase);
@@ -123,7 +150,7 @@ const Feed = () => {
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-teal-700">APP da Rede FLOW</h1>
+            <h1 className="text-2xl font-bold text-teal-700">FLOW - POSTURA | IDENTIDADE | OBEDIÊNCIA</h1>
             <Dialog open={showPhasesModal} onOpenChange={setShowPhasesModal}>
               <DialogTrigger asChild>
                 <Badge className={`${phaseInfo.color} cursor-pointer hover:opacity-80`}>
@@ -250,19 +277,19 @@ const Feed = () => {
           </div>
         )}
 
-        {/* Community Missions Feed */}
+        {/* Community Feed */}
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-800">🟡 Missões da Comunidade</h2>
+          <h2 className="text-xl font-semibold text-gray-800">🟡 Atividades da Comunidade</h2>
           
-          {missionActivities.length === 0 ? (
+          {allActivities.length === 0 ? (
             <Card>
               <CardContent className="p-6 text-center text-gray-500">
-                <p>Nenhuma missão foi concluída ainda.</p>
+                <p>Nenhuma atividade foi registrada ainda.</p>
                 <p className="text-sm mt-1">Seja o primeiro a completar uma missão!</p>
               </CardContent>
             </Card>
           ) : (
-            missionActivities.map((activity) => (
+            allActivities.map((activity) => (
               <Card key={activity.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-3">
@@ -277,20 +304,40 @@ const Feed = () => {
                     </Avatar>
                     
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
-                          onClick={() => navigate(`/user/${activity.userId}`)}
-                        >
-                          {activity.userName}
-                        </span>
-                        <span className="text-gray-500">completou</span>
-                        <span className="font-medium text-teal-600">{activity.missionName}</span>
-                      </div>
+                      {activity.type === 'mission' ? (
+                        <div className="flex items-center space-x-2">
+                          <span
+                            className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
+                            onClick={() => navigate(`/user/${activity.userId}`)}
+                          >
+                            {activity.userName}
+                          </span>
+                          <span className="text-gray-500">completou</span>
+                          <span className="font-medium text-teal-600">{(activity as any).missionName}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <span
+                            className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
+                            onClick={() => navigate(`/user/${activity.userId}`)}
+                          >
+                            {activity.userName}
+                          </span>
+                          <span className="text-gray-500">avançou para</span>
+                          <span className="font-medium text-purple-600">{(activity as any).newPhase}</span>
+                          <TrendingUp className="w-4 h-4 text-purple-600" />
+                        </div>
+                      )}
                       <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="secondary" className="bg-green-100 text-green-700">
-                          +{activity.points} pontos
-                        </Badge>
+                        {activity.type === 'mission' ? (
+                          <Badge variant="secondary" className="bg-green-100 text-green-700">
+                            +{(activity as any).points} pontos
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                            Nova fase alcançada!
+                          </Badge>
+                        )}
                         <span className="text-xs text-gray-400">
                           {formatTimeAgo(activity.timestamp)}
                         </span>

@@ -6,15 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Settings, BookOpen, GraduationCap, Sparkles } from "lucide-react";
+import { ArrowLeft, Settings, BookOpen, GraduationCap, Sparkles, Award } from "lucide-react";
 import BookLibrary from "@/components/BookLibrary";
-
-interface Book {
-  id: string;
-  title: string;
-  author: string;
-  addedAt: string;
-}
 
 interface User {
   id: string;
@@ -32,10 +25,10 @@ interface User {
   points: number;
   profilePhoto: string | null;
   joinDate: string;
-  booksRead: Book[];
-  booksReading: Book[];
+  booksRead: string[];
   coursesCompleted: string[];
   coursesInProgress: string[];
+  badges: string[];
 }
 
 const Profile = () => {
@@ -54,28 +47,12 @@ const Profile = () => {
     if (!userData.booksRead || !Array.isArray(userData.booksRead)) {
       userData.booksRead = [];
     }
-    if (!userData.booksReading || !Array.isArray(userData.booksReading)) {
-      userData.booksReading = [];
+    if (!userData.badges || !Array.isArray(userData.badges)) {
+      userData.badges = [];
     }
     
     setCurrentUser(userData);
   }, [navigate]);
-
-  const handleUpdateBooks = (booksRead: Book[], booksReading: Book[]) => {
-    if (!currentUser) return;
-
-    const updatedUser = { ...currentUser, booksRead, booksReading };
-    setCurrentUser(updatedUser);
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-    // Update user in users array
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userIndex = users.findIndex((u: any) => u.id === currentUser.id);
-    if (userIndex !== -1) {
-      users[userIndex] = updatedUser;
-      localStorage.setItem('users', JSON.stringify(users));
-    }
-  };
 
   const getPhaseInfo = (phase: string) => {
     const phases = {
@@ -133,7 +110,7 @@ const Profile = () => {
 
   const getDiscountPercentage = () => {
     if (!currentUser) return 0;
-    return Math.floor(currentUser.points / 10);
+    return Math.min(Math.floor(currentUser.points / 10), 100);
   };
 
   const formatJoinDate = (dateString: string) => {
@@ -142,6 +119,20 @@ const Profile = () => {
       month: '2-digit',
       year: 'numeric'
     });
+  };
+
+  const getBadgeInfo = (badgeId: string) => {
+    const badges = {
+      'reader-1': { name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.' },
+      'reader-2': { name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.' },
+      'reader-3': { name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.' },
+      'reader-4': { name: 'Mente Brilhante', icon: '🧠✨', description: 'Um verdadeiro devorador de sabedoria.' },
+      'course-1': { name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.' },
+      'course-2': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.' },
+      'course-3': { name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para grandes responsabilidades.' },
+      'course-4': { name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Um veterano na trilha do aprendizado.' },
+    };
+    return badges[badgeId as keyof typeof badges];
   };
 
   if (!currentUser) return null;
@@ -233,6 +224,36 @@ const Profile = () => {
           </CardContent>
         </Card>
 
+        {/* Badges Section */}
+        {currentUser.badges.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Award className="w-5 h-5 mr-2" />
+                Badges Conquistados ({currentUser.badges.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {currentUser.badges.map((badgeId) => {
+                  const badge = getBadgeInfo(badgeId);
+                  if (!badge) return null;
+                  
+                  return (
+                    <div key={badgeId} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                      <div className="text-2xl">{badge.icon}</div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-purple-700">{badge.name}</h4>
+                        <p className="text-sm text-gray-600">{badge.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Phase Progress */}
         <Card>
           <CardHeader>
@@ -280,12 +301,18 @@ const Profile = () => {
             <div className="text-center space-y-2">
               <div className="text-3xl font-bold text-orange-600">{getDiscountPercentage()}%</div>
               <p className="text-gray-600">Desconto acumulado para o OVERFLOW</p>
-              <div className="bg-white p-3 rounded-lg">
-                <Progress value={Math.min((currentUser.points % 10) * 10, 100)} className="h-2" />
-                <p className="text-xs text-gray-500 mt-1">
-                  Próximo 1%: {10 - (currentUser.points % 10)} pontos restantes
-                </p>
-              </div>
+              {getDiscountPercentage() < 100 ? (
+                <div className="bg-white p-3 rounded-lg">
+                  <Progress value={Math.min((currentUser.points % 10) * 10, 100)} className="h-2" />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Próximo 1%: {10 - (currentUser.points % 10)} pontos restantes
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white p-3 rounded-lg">
+                  <p className="text-green-600 font-semibold">Desconto máximo alcançado!</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -298,12 +325,31 @@ const Profile = () => {
           </TabsList>
           
           <TabsContent value="books">
-            <BookLibrary
-              userId={currentUser.id}
-              booksRead={currentUser.booksRead}
-              booksReading={currentUser.booksReading}
-              onUpdateBooks={handleUpdateBooks}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BookOpen className="w-5 h-5 mr-2" />
+                  Livros Lidos ({currentUser.booksRead.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {currentUser.booksRead.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">Nenhum livro lido ainda</p>
+                ) : (
+                  <div className="space-y-2">
+                    {currentUser.booksRead.map((book, index) => (
+                      <div key={index} className="p-3 bg-green-50 rounded flex items-center">
+                        <BookOpen className="w-4 h-4 text-green-600 mr-2" />
+                        <span className="text-sm flex-1">{book}</span>
+                        <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                          ✓ Lido
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           
           <TabsContent value="courses">

@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, Trophy, Sparkles, Calendar, BookOpen } from "lucide-react";
+import { ArrowLeft, Trophy, Sparkles, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Mission {
@@ -20,6 +18,10 @@ interface Mission {
   isActive: boolean;
   createdAt: string;
   targetAudience: string[];
+  bookTitle?: string;
+  bookAuthor?: string;
+  bookImage?: string;
+  courseTitle?: string;
 }
 
 interface CompletedMission {
@@ -35,13 +37,21 @@ interface User {
   points: number;
   profilePhoto: string | null;
   booksRead: string[];
-  booksReading: string[];
   coursesCompleted: string[];
   coursesInProgress: string[];
   gender: string;
   pgmRole: string;
   participatesFlowUp: boolean;
   participatesIrmandade: boolean;
+  badges: string[];
+}
+
+interface Badge {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  category: string;
 }
 
 const Missions = () => {
@@ -50,8 +60,8 @@ const Missions = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
-  const [showBookDialog, setShowBookDialog] = useState(false);
-  const [bookForm, setBookForm] = useState({ title: '', author: '' });
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
+  const [newBadge, setNewBadge] = useState<Badge | null>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -98,10 +108,6 @@ const Missions = () => {
         
         // Especiais Irmandade
         { id: 'irmandade-1', name: 'Encontro da Irmandade', points: 8, type: 'Mensal', description: 'Participar do encontro mensal da Irmandade', isActive: true, createdAt: new Date().toISOString(), targetAudience: ['irmandade'] },
-        
-        // Especiais
-        { id: 'book-reading', name: 'Leitura de Livro', points: 5, type: 'Livro', description: 'Ler um livro cristão completo', isActive: true, createdAt: new Date().toISOString(), targetAudience: ['all'] },
-        { id: 'disciple-course', name: 'Escola do Discípulo', points: 10, type: 'Curso', description: 'Completar curso da Escola do Discípulo', isActive: true, createdAt: new Date().toISOString(), targetAudience: ['all'] },
       ];
       
       localStorage.setItem('missions', JSON.stringify(defaultMissions));
@@ -134,47 +140,44 @@ const Missions = () => {
     return completedMissions.some(cm => cm.missionId === missionId);
   };
 
-  const handleAddBook = () => {
-    if (!bookForm.title.trim() || !bookForm.author.trim() || !currentUser) {
-      toast({
-        title: "Erro",
-        description: "Preencha título e autor do livro",
-        variant: "destructive"
-      });
-      return;
+  const checkForNewBadges = (newUser: User) => {
+    const badges = [
+      // Reading badges
+      { id: 'reader-1', name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.', category: 'reading', requirement: 1 },
+      { id: 'reader-2', name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.', category: 'reading', requirement: 5 },
+      { id: 'reader-3', name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.', category: 'reading', requirement: 10 },
+      { id: 'reader-4', name: 'Mente Brilhante', icon: '🧠✨', description: 'Um verdadeiro devorador de sabedoria.', category: 'reading', requirement: 20 },
+      
+      // Course badges
+      { id: 'course-1', name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.', category: 'course', requirement: 1 },
+      { id: 'course-2', name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.', category: 'course', requirement: 3 },
+      { id: 'course-3', name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para grandes responsabilidades.', category: 'course', requirement: 5 },
+      { id: 'course-4', name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Um veterano na trilha do aprendizado.', category: 'course', requirement: 8 },
+    ];
+
+    for (const badge of badges) {
+      if (!newUser.badges.includes(badge.id)) {
+        let count = 0;
+        if (badge.category === 'reading') {
+          count = newUser.booksRead.length;
+        } else if (badge.category === 'course') {
+          count = newUser.coursesCompleted.length;
+        }
+
+        if (count >= badge.requirement) {
+          newUser.badges.push(badge.id);
+          setNewBadge(badge);
+          setShowCelebrationModal(true);
+          
+          toast({
+            title: `🏆 Novo Badge Conquistado!`,
+            description: `${badge.icon} ${badge.name}`,
+            className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+          });
+          break;
+        }
+      }
     }
-
-    const newBook = {
-      id: Date.now().toString(),
-      title: bookForm.title,
-      author: bookForm.author,
-      dateRead: new Date().toISOString()
-    };
-
-    const updatedUser = {
-      ...currentUser,
-      booksRead: [...currentUser.booksRead, newBook],
-      points: currentUser.points + 5
-    };
-
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-    setCurrentUser(updatedUser);
-
-    // Update user in users array
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const userIndex = users.findIndex((u: any) => u.id === currentUser.id);
-    if (userIndex !== -1) {
-      users[userIndex] = updatedUser;
-      localStorage.setItem('users', JSON.stringify(users));
-    }
-
-    setBookForm({ title: '', author: '' });
-    setShowBookDialog(false);
-
-    toast({
-      title: "Livro adicionado!",
-      description: `Você ganhou 5 pontos por ler "${bookForm.title}"`,
-    });
   };
 
   const toggleMission = (mission: Mission) => {
@@ -184,16 +187,23 @@ const Missions = () => {
     const userId = currentUser.id;
     
     if (isCompleted) {
-      // Unmark mission
       const newCompleted = completedMissions.filter(cm => cm.missionId !== mission.id);
       localStorage.setItem(`completedMissions_${userId}`, JSON.stringify(newCompleted));
       setCompletedMissions(newCompleted);
 
-      // Remove points
+      // Remove points and update user
       const newPoints = Math.max(0, currentUser.points - mission.points);
       const newPhase = calculatePhase(newPoints);
       
-      const updatedUser = { ...currentUser, points: newPoints, phase: newPhase };
+      let updatedUser = { ...currentUser, points: newPoints, phase: newPhase };
+
+      // Remove from book/course lists if applicable
+      if (mission.type === 'Livro' && mission.bookTitle) {
+        updatedUser.booksRead = updatedUser.booksRead.filter(book => book !== mission.bookTitle);
+      } else if (mission.type === 'Curso' && mission.courseTitle) {
+        updatedUser.coursesCompleted = updatedUser.coursesCompleted.filter(course => course !== mission.courseTitle);
+      }
+
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
 
@@ -230,7 +240,22 @@ const Missions = () => {
       const oldPhase = currentUser.phase;
       const newPhase = calculatePhase(newPoints);
       
-      const updatedUser = { ...currentUser, points: newPoints, phase: newPhase };
+      let updatedUser = { ...currentUser, points: newPoints, phase: newPhase };
+
+      // Add to book/course lists if applicable
+      if (mission.type === 'Livro' && mission.bookTitle) {
+        if (!updatedUser.booksRead.includes(mission.bookTitle)) {
+          updatedUser.booksRead = [...updatedUser.booksRead, mission.bookTitle];
+        }
+      } else if (mission.type === 'Curso' && mission.courseTitle) {
+        if (!updatedUser.coursesCompleted.includes(mission.courseTitle)) {
+          updatedUser.coursesCompleted = [...updatedUser.coursesCompleted, mission.courseTitle];
+        }
+      }
+
+      // Check for new badges
+      checkForNewBadges(updatedUser);
+
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
       setCurrentUser(updatedUser);
 
@@ -264,6 +289,20 @@ const Missions = () => {
 
       // Check for phase change
       if (oldPhase !== newPhase) {
+        // Add phase change to feed
+        const phaseChanges = JSON.parse(localStorage.getItem('phaseChanges') || '[]');
+        const phaseChange = {
+          id: Date.now().toString() + '_phase',
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userPhoto: currentUser.profilePhoto,
+          oldPhase,
+          newPhase,
+          timestamp: new Date().toISOString()
+        };
+        phaseChanges.unshift(phaseChange);
+        localStorage.setItem('phaseChanges', JSON.stringify(phaseChanges));
+
         setTimeout(() => {
           const phaseInfo = getPhaseInfo(newPhase);
           toast({
@@ -272,13 +311,6 @@ const Missions = () => {
             className: "bg-gradient-to-r from-purple-500 to-pink-500 text-white"
           });
         }, 1000);
-      }
-
-      // Check if it's a book reading mission
-      if (mission.id === 'book-reading') {
-        setTimeout(() => {
-          setShowBookDialog(true);
-        }, 1500);
       }
     }
   };
@@ -306,12 +338,14 @@ const Missions = () => {
 
   const getDiscountProgress = () => {
     if (!currentUser) return 0;
-    return Math.min((currentUser.points / 10) % 100, 100);
+    const discountEarned = Math.floor(currentUser.points / 10);
+    if (discountEarned >= 100) return 100;
+    return (currentUser.points % 10) * 10;
   };
 
   const getDiscountPercentage = () => {
     if (!currentUser) return 0;
-    return Math.floor(currentUser.points / 10);
+    return Math.min(Math.floor(currentUser.points / 10), 100);
   };
 
   const formatCompletionDate = (missionId: string) => {
@@ -338,6 +372,8 @@ const Missions = () => {
   ];
 
   const phaseInfo = getPhaseInfo(currentUser.phase);
+  const discountPercentage = getDiscountPercentage();
+  const isMaxDiscount = discountPercentage >= 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50">
@@ -384,11 +420,20 @@ const Missions = () => {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span>Desconto atual: {getDiscountPercentage()}%</span>
-                <span>Próximo desconto: {Math.floor(currentUser.points / 10) + 1}% (faltam {10 - (currentUser.points % 10)} pontos)</span>
+                <span>Desconto atual: {discountPercentage}%</span>
+                {isMaxDiscount ? (
+                  <span className="text-green-600 font-semibold">Desconto máximo alcançado!</span>
+                ) : (
+                  <span>Próximo desconto: {discountPercentage + 1}% (faltam {10 - (currentUser.points % 10)} pontos)</span>
+                )}
               </div>
               <Progress value={getDiscountProgress()} className="h-3" />
-              <p className="text-xs text-gray-600">A cada 10 pontos = 1% de desconto no OVERFLOW</p>
+              <p className="text-xs text-gray-600">
+                {isMaxDiscount 
+                  ? "Você alcançou o desconto máximo de 100% para o OVERFLOW!"
+                  : "A cada 10 pontos = 1% de desconto no OVERFLOW"
+                }
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -423,9 +468,24 @@ const Missions = () => {
                       
                       <div className="flex-1">
                         <div className="flex items-center justify-between">
-                          <h3 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-gray-800'}`}>
-                            {mission.name}
-                          </h3>
+                          <div className="flex-1">
+                            <h3 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-gray-800'}`}>
+                              {mission.name}
+                            </h3>
+                            {mission.description && (
+                              <p className="text-sm text-gray-600 mt-1">{mission.description}</p>
+                            )}
+                            {mission.bookTitle && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                📖 {mission.bookTitle} - {mission.bookAuthor}
+                              </p>
+                            )}
+                            {mission.courseTitle && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                🎓 {mission.courseTitle}
+                              </p>
+                            )}
+                          </div>
                           <div className="flex items-center space-x-2">
                             <Badge variant="secondary" className="bg-green-100 text-green-700">
                               +{mission.points}
@@ -438,9 +498,6 @@ const Missions = () => {
                             )}
                           </div>
                         </div>
-                        {mission.description && (
-                          <p className="text-sm text-gray-600 mt-1">{mission.description}</p>
-                        )}
                       </div>
                     </div>
                   );
@@ -451,43 +508,30 @@ const Missions = () => {
         })}
       </div>
 
-      {/* Book Dialog */}
-      <Dialog open={showBookDialog} onOpenChange={setShowBookDialog}>
-        <DialogContent>
+      {/* Badge Celebration Modal */}
+      <Dialog open={showCelebrationModal} onOpenChange={setShowCelebrationModal}>
+        <DialogContent className="max-w-md text-center">
           <DialogHeader>
-            <DialogTitle className="flex items-center">
-              <BookOpen className="w-5 h-5 mr-2" />
-              Adicionar Livro Lido
-            </DialogTitle>
+            <DialogTitle className="text-2xl text-center">🎉 Parabéns!</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="bookTitle">Título do Livro</Label>
-              <Input
-                id="bookTitle"
-                value={bookForm.title}
-                onChange={(e) => setBookForm(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Digite o título do livro"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="bookAuthor">Autor</Label>
-              <Input
-                id="bookAuthor"
-                value={bookForm.author}
-                onChange={(e) => setBookForm(prev => ({ ...prev, author: e.target.value }))}
-                placeholder="Digite o nome do autor"
-              />
-            </div>
-            <div className="flex space-x-2">
-              <Button onClick={handleAddBook} className="flex-1">
-                Adicionar à Biblioteca
-              </Button>
-              <Button variant="outline" onClick={() => setShowBookDialog(false)} className="flex-1">
-                Pular
+          {newBadge && (
+            <div className="space-y-4 py-4">
+              <div className="text-6xl">{newBadge.icon}</div>
+              <div>
+                <h3 className="text-xl font-bold text-purple-600">{newBadge.name}</h3>
+                <p className="text-gray-600 mt-2">{newBadge.description}</p>
+              </div>
+              <Button 
+                onClick={() => {
+                  setShowCelebrationModal(false);
+                  setNewBadge(null);
+                }}
+                className="w-full bg-purple-600 hover:bg-purple-700"
+              >
+                Continuar
               </Button>
             </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,11 +72,11 @@ const Index = () => {
         profilePhoto: null,
         joinDate: new Date().toISOString(),
         booksRead: [],
-        booksReading: [],
         coursesCompleted: [],
         coursesInProgress: [],
         participatesFlowUp: false,
-        participatesIrmandade: false
+        participatesIrmandade: false,
+        badges: []
       };
 
       localStorage.setItem('currentUser', JSON.stringify(adminUser));
@@ -176,11 +175,11 @@ const Index = () => {
       profilePhoto: previewUrl,
       joinDate: new Date().toISOString(),
       booksRead: [],
-      booksReading: [],
       coursesCompleted: [],
       coursesInProgress: [],
       participatesFlowUp: age >= 25 ? registerForm.participatesFlowUp : false,
-      participatesIrmandade: registerForm.gender === "Masculino" ? registerForm.participatesIrmandade : false
+      participatesIrmandade: registerForm.gender === "Masculino" ? registerForm.participatesIrmandade : false,
+      badges: []
     };
 
     users.push(newUser);
@@ -218,10 +217,10 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-900 to-teal-800 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-teal-700">APP da Rede FLOW</CardTitle>
+          <CardTitle className="text-2xl font-bold text-teal-700">FLOW - POSTURA | IDENTIDADE | OBEDIÊNCIA</CardTitle>
           <div className="flex items-center justify-center space-x-2 mt-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
             <AlertCircle className="w-4 h-4 text-yellow-600" />
             <p className="text-sm text-yellow-700">App em fase de testes</p>
