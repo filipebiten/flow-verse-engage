@@ -24,6 +24,7 @@ const Admin = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterRole, setFilterRole] = useState("");
   const [filterSpecial, setFilterSpecial] = useState("");
+  const [filterGender, setFilterGender] = useState("");
   
   // Mission form
   const [missionForm, setMissionForm] = useState({
@@ -43,11 +44,12 @@ const Admin = () => {
     targetAudience: ["all"] as string[]
   });
 
-  // Course form
+  // Course form - FIXED: Added points field
   const [courseForm, setCourseForm] = useState({
     name: "",
     description: "",
     school: "Escola do Discípulo",
+    points: 10,
     targetAudience: ["all"] as string[]
   });
   
@@ -317,6 +319,7 @@ const Admin = () => {
     }
   };
 
+  // FIXED: Updated user filtering with better search and filters
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -324,6 +327,7 @@ const Admin = () => {
       (user.pgmNumber && user.pgmNumber.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesRole = filterRole === "" || user.pgmRole === filterRole;
+    const matchesGender = filterGender === "" || user.gender === filterGender;
     
     let matchesSpecial = true;
     if (filterSpecial === "flowUp") {
@@ -332,7 +336,7 @@ const Admin = () => {
       matchesSpecial = user.participatesIrmandade;
     }
 
-    return matchesSearch && matchesRole && matchesSpecial;
+    return matchesSearch && matchesRole && matchesSpecial && matchesGender;
   });
 
   const audienceOptions = [
@@ -1043,7 +1047,7 @@ const Admin = () => {
                   />
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Filtrar por Função</Label>
                     <Select value={filterRole} onValueChange={setFilterRole}>
@@ -1071,6 +1075,20 @@ const Admin = () => {
                         <SelectItem value="">Todos os grupos</SelectItem>
                         <SelectItem value="flowUp">FLOW UP</SelectItem>
                         <SelectItem value="irmandade">IRMANDADE</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Filtrar por Gênero</Label>
+                    <Select value={filterGender} onValueChange={setFilterGender}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos os gêneros" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Todos os gêneros</SelectItem>
+                        <SelectItem value="Masculino">Masculino</SelectItem>
+                        <SelectItem value="Feminino">Feminino</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1113,7 +1131,7 @@ const Admin = () => {
                           <div className="text-sm text-gray-600">
                             <p>{user.email} | {user.whatsapp}</p>
                             <p>Função: {user.pgmRole}{user.pgmNumber ? ` | PGM: ${user.pgmNumber}` : ''}</p>
-                            <p>Fase: {user.phase} | {user.points} pontos</p>
+                            <p>Fase: {user.phase} | {user.points} pontos | Gênero: {user.gender}</p>
                           </div>
                         </div>
                       </div>
@@ -1140,7 +1158,7 @@ const Admin = () => {
                   ))}
                   {filteredUsers.length === 0 && (
                     <p className="text-center text-gray-500 py-4">
-                      {searchTerm || filterRole || filterSpecial ? "Nenhum usuário encontrado" : "Nenhum usuário cadastrado"}
+                      {searchTerm || filterRole || filterSpecial || filterGender ? "Nenhum usuário encontrado" : "Nenhum usuário cadastrado"}
                     </p>
                   )}
                 </div>

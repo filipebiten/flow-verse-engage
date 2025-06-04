@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -5,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, CheckSquare, Settings, ExternalLink, Trophy, TrendingUp } from "lucide-react";
+import { User, CheckSquare, Settings, ExternalLink, Trophy, TrendingUp, Award } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -55,6 +56,15 @@ interface PhaseChangeActivity {
   timestamp: string;
 }
 
+interface BadgeActivity {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto: string | null;
+  badges: string[];
+  timestamp: string;
+}
+
 const Feed = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -62,6 +72,7 @@ const Feed = () => {
   const [news, setNews] = useState<NewsItem[]>([]);
   const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
   const [phaseChanges, setPhaseChanges] = useState<PhaseChangeActivity[]>([]);
+  const [badgeActivities, setBadgeActivities] = useState<BadgeActivity[]>([]);
   const [showPhasesModal, setShowPhasesModal] = useState(false);
 
   useEffect(() => {
@@ -75,6 +86,7 @@ const Feed = () => {
     loadNews();
     loadMissionActivities();
     loadPhaseChanges();
+    loadBadgeActivities();
   }, [navigate]);
 
   const loadNews = () => {
@@ -96,6 +108,13 @@ const Feed = () => {
     ));
   };
 
+  const loadBadgeActivities = () => {
+    const activities = JSON.parse(localStorage.getItem('badgeActivities') || '[]');
+    setBadgeActivities(activities.sort((a: BadgeActivity, b: BadgeActivity) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    ));
+  };
+
   const getPhaseInfo = (phase: string) => {
     const phases = {
       "Riacho": { emoji: "🌀", color: "bg-green-100 text-green-800", phrase: "Começando a fluir" },
@@ -106,12 +125,26 @@ const Feed = () => {
     return phases[phase as keyof typeof phases] || phases["Riacho"];
   };
 
+  const getBadgeInfo = (badgeId: string) => {
+    const badges = {
+      'reader-1': { name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.' },
+      'reader-2': { name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.' },
+      'reader-3': { name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.' },
+      'reader-4': { name: 'Mente Brilhante', icon: '🧠✨', description: 'Um verdadeiro devorador de sabedoria.' },
+      'course-1': { name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.' },
+      'course-2': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.' },
+      'course-3': { name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para grandes responsabilidades.' },
+      'course-4': { name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Um veterano na trilha do aprendizado.' },
+    };
+    return badges[badgeId as keyof typeof badges];
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
     navigate('/');
     toast({
       title: "Logout realizado",
-      description: "Até logo! Volte sempre à FLOW.",
+      description: "Até logo! Volte sempre à REDE FLOW.",
     });
   };
 
@@ -136,7 +169,8 @@ const Feed = () => {
   // Combine and sort all activities
   const allActivities = [
     ...missionActivities.map(activity => ({ ...activity, type: 'mission' })),
-    ...phaseChanges.map(change => ({ ...change, type: 'phase' }))
+    ...phaseChanges.map(change => ({ ...change, type: 'phase' })),
+    ...badgeActivities.map(activity => ({ ...activity, type: 'badge' }))
   ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   if (!currentUser) return null;
@@ -276,7 +310,7 @@ const Feed = () => {
                           <span className="text-gray-500">completou</span>
                           <span className="font-medium text-teal-600">{(activity as any).missionName}</span>
                         </div>
-                      ) : (
+                      ) : activity.type === 'phase' ? (
                         <div className="flex items-center space-x-2">
                           <span
                             className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
@@ -288,16 +322,38 @@ const Feed = () => {
                           <span className="font-medium text-purple-600">{(activity as any).newPhase}</span>
                           <TrendingUp className="w-4 h-4 text-purple-600" />
                         </div>
+                      ) : (
+                        <div className="flex items-center space-x-2">
+                          <span
+                            className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
+                            onClick={() => navigate(`/user/${activity.userId}`)}
+                          >
+                            {activity.userName}
+                          </span>
+                          <span className="text-gray-500">conquistou novos badges</span>
+                          <Award className="w-4 h-4 text-yellow-600" />
+                        </div>
                       )}
                       <div className="flex items-center space-x-2 mt-1">
                         {activity.type === 'mission' ? (
                           <Badge variant="secondary" className="bg-green-100 text-green-700">
                             +{(activity as any).points} pontos
                           </Badge>
-                        ) : (
+                        ) : activity.type === 'phase' ? (
                           <Badge variant="secondary" className="bg-purple-100 text-purple-700">
                             Nova fase alcançada!
                           </Badge>
+                        ) : (
+                          <div className="flex flex-wrap gap-1">
+                            {(activity as any).badges.map((badgeId: string) => {
+                              const badge = getBadgeInfo(badgeId);
+                              return badge ? (
+                                <Badge key={badgeId} variant="secondary" className="bg-yellow-100 text-yellow-700">
+                                  {badge.icon} {badge.name}
+                                </Badge>
+                              ) : null;
+                            })}
+                          </div>
                         )}
                         <span className="text-xs text-gray-400">
                           {formatTimeAgo(activity.timestamp)}
