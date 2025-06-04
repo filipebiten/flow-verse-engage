@@ -86,19 +86,41 @@ const Index = () => {
       return;
     }
 
-    // Check existing users
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    console.log("Usuários no localStorage:", users);
+    // Check existing users with better debugging
+    const usersData = localStorage.getItem('users');
+    console.log("Dados brutos do localStorage:", usersData);
+    
+    if (!usersData) {
+      toast({
+        title: "Erro",
+        description: "Nenhum usuário encontrado. Faça o cadastro primeiro.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const users = JSON.parse(usersData);
+    console.log("Usuários parseados:", users);
     
     const user = users.find((u: any) => {
-      const emailMatch = u.email && u.email.toLowerCase() === loginForm.identifier.toLowerCase();
-      const whatsappMatch = u.whatsapp && u.whatsapp === loginForm.identifier;
+      console.log("Verificando usuário:", {
+        userEmail: u.email,
+        userWhatsapp: u.whatsapp,
+        inputIdentifier: loginForm.identifier,
+        userPassword: u.password,
+        inputPassword: loginForm.password
+      });
+
+      const emailMatch = u.email && u.email.toLowerCase().trim() === loginForm.identifier.toLowerCase().trim();
+      const whatsappMatch = u.whatsapp && u.whatsapp.trim() === loginForm.identifier.trim();
       const passwordMatch = u.password === loginForm.password;
       
-      console.log("Verificando usuário:", u.email, "Email match:", emailMatch, "WhatsApp match:", whatsappMatch, "Password match:", passwordMatch);
+      console.log("Matches:", { emailMatch, whatsappMatch, passwordMatch });
       
       return (emailMatch || whatsappMatch) && passwordMatch;
     });
+
+    console.log("Usuário encontrado:", user);
 
     if (user) {
       localStorage.setItem('currentUser', JSON.stringify(user));
@@ -233,7 +255,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-800 to-green-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-teal-700">APP da Rede FLOW</CardTitle>
