@@ -154,7 +154,9 @@ const Profile = () => {
               <ArrowLeft className="w-4 h-4 mr-1" />
               Feed
             </Button>
-            <h1 className="text-2xl font-bold text-teal-700">Meu Perfil</h1>
+            <div>
+              <h1 className="text-2xl font-bold text-teal-700">Meu Perfil</h1>
+            </div>
           </div>
           
           {currentUser.isAdmin && (

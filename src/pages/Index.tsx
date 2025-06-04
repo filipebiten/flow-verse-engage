@@ -217,254 +217,268 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-900 to-teal-800 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-teal-700">FLOW - POSTURA | IDENTIDADE | OBEDIÊNCIA</CardTitle>
-          <div className="flex items-center justify-center space-x-2 mt-2 p-2 bg-yellow-50 rounded-lg border border-yellow-200">
-            <AlertCircle className="w-4 h-4 text-yellow-600" />
-            <p className="text-sm text-yellow-700">App em fase de testes</p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Cadastro</TabsTrigger>
-            </TabsList>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 via-green-800 to-teal-900"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(34,197,94,0.3),transparent_50%)]"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.2),transparent_50%)]"></div>
+        <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(45deg,transparent_40%,rgba(255,255,255,0.05)_50%,transparent_60%)]"></div>
+      </div>
 
-            <TabsContent value="login" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="identifier">WhatsApp ou E-mail</Label>
-                <Input
-                  id="identifier"
-                  value={loginForm.identifier}
-                  onChange={(e) => setLoginForm(prev => ({ ...prev, identifier: e.target.value }))}
-                  placeholder="Digite seu WhatsApp ou e-mail"
-                />
-              </div>
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+        <Card className="w-full max-w-md backdrop-blur-sm bg-white/95 shadow-2xl border-0">
+          <CardHeader className="space-y-1 pb-6">
+            <div className="text-center space-y-2">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                REDE FLOW
+              </h1>
+              <p className="text-sm text-gray-600 font-medium">
+                POSTURA | IDENTIDADE | OBEDIÊNCIA
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="register">Cadastro</TabsTrigger>
+              </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="password">Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Digite sua senha"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <Button onClick={handleLogin} className="w-full bg-teal-600 hover:bg-teal-700">
-                Entrar
-              </Button>
-
-              <Button variant="link" className="w-full text-sm text-gray-600">
-                Esqueci minha senha
-              </Button>
-            </TabsContent>
-
-            <TabsContent value="register" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome Completo *</Label>
-                <Input
-                  id="name"
-                  value={registerForm.name}
-                  onChange={(e) => setRegisterForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Digite seu nome completo"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="email">E-mail *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={registerForm.email}
-                  onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Digite seu e-mail"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="whatsapp">WhatsApp *</Label>
-                <Input
-                  id="whatsapp"
-                  value={registerForm.whatsapp}
-                  onChange={(e) => setRegisterForm(prev => ({ ...prev, whatsapp: e.target.value }))}
-                  placeholder="Digite seu WhatsApp"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="birthDate">Data de Nascimento *</Label>
-                <Input
-                  id="birthDate"
-                  type="date"
-                  value={registerForm.birthDate}
-                  onChange={(e) => setRegisterForm(prev => ({ ...prev, birthDate: e.target.value }))}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="gender">Gênero *</Label>
-                <Select
-                  value={registerForm.gender}
-                  onValueChange={(value) => setRegisterForm(prev => ({ ...prev, gender: value, participatesIrmandade: value === "Masculino" ? prev.participatesIrmandade : false }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione seu gênero" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Masculino">Masculino</SelectItem>
-                    <SelectItem value="Feminino">Feminino</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="pgmRole">Situação no PGM *</Label>
-                <Select
-                  value={registerForm.pgmRole}
-                  onValueChange={(value) => setRegisterForm(prev => ({ ...prev, pgmRole: value, pgmNumber: "" }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione sua situação" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Participante">Participante</SelectItem>
-                    <SelectItem value="Líder">Líder</SelectItem>
-                    <SelectItem value="Supervisor">Supervisor</SelectItem>
-                    <SelectItem value="Coordenador">Coordenador</SelectItem>
-                    <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {(registerForm.pgmRole === "Participante" || registerForm.pgmRole === "Líder") && (
+              <TabsContent value="login" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="pgmNumber">Número do PGM *</Label>
+                  <Label htmlFor="identifier">WhatsApp ou E-mail</Label>
                   <Input
-                    id="pgmNumber"
-                    value={registerForm.pgmNumber}
-                    onChange={(e) => setRegisterForm(prev => ({ ...prev, pgmNumber: e.target.value }))}
-                    placeholder="Digite o número do seu PGM"
+                    id="identifier"
+                    value={loginForm.identifier}
+                    onChange={(e) => setLoginForm(prev => ({ ...prev, identifier: e.target.value }))}
+                    placeholder="Digite seu WhatsApp ou e-mail"
                   />
                 </div>
-              )}
 
-              {registerForm.birthDate && calculateAge(registerForm.birthDate) >= 25 && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={loginForm.password}
+                      onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Digite sua senha"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <Button onClick={handleLogin} className="w-full bg-teal-600 hover:bg-teal-700">
+                  Entrar
+                </Button>
+
+                <Button variant="link" className="w-full text-sm text-gray-600">
+                  Esqueci minha senha
+                </Button>
+              </TabsContent>
+
+              <TabsContent value="register" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome Completo *</Label>
+                  <Input
+                    id="name"
+                    value={registerForm.name}
+                    onChange={(e) => setRegisterForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Digite seu nome completo"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">E-mail *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={registerForm.email}
+                    onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Digite seu e-mail"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="whatsapp">WhatsApp *</Label>
+                  <Input
+                    id="whatsapp"
+                    value={registerForm.whatsapp}
+                    onChange={(e) => setRegisterForm(prev => ({ ...prev, whatsapp: e.target.value }))}
+                    placeholder="Digite seu WhatsApp"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="birthDate">Data de Nascimento *</Label>
+                  <Input
+                    id="birthDate"
+                    type="date"
+                    value={registerForm.birthDate}
+                    onChange={(e) => setRegisterForm(prev => ({ ...prev, birthDate: e.target.value }))}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gênero *</Label>
+                  <Select
+                    value={registerForm.gender}
+                    onValueChange={(value) => setRegisterForm(prev => ({ ...prev, gender: value, participatesIrmandade: value === "Masculino" ? prev.participatesIrmandade : false }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione seu gênero" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Masculino">Masculino</SelectItem>
+                      <SelectItem value="Feminino">Feminino</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pgmRole">Situação no PGM *</Label>
+                  <Select
+                    value={registerForm.pgmRole}
+                    onValueChange={(value) => setRegisterForm(prev => ({ ...prev, pgmRole: value, pgmNumber: "" }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione sua situação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Participante">Participante</SelectItem>
+                      <SelectItem value="Líder">Líder</SelectItem>
+                      <SelectItem value="Supervisor">Supervisor</SelectItem>
+                      <SelectItem value="Coordenador">Coordenador</SelectItem>
+                      <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {(registerForm.pgmRole === "Participante" || registerForm.pgmRole === "Líder") && (
+                  <div className="space-y-2">
+                    <Label htmlFor="pgmNumber">Número do PGM *</Label>
+                    <Input
+                      id="pgmNumber"
+                      value={registerForm.pgmNumber}
+                      onChange={(e) => setRegisterForm(prev => ({ ...prev, pgmNumber: e.target.value }))}
+                      placeholder="Digite o número do seu PGM"
+                    />
+                  </div>
+                )}
+
+                {registerForm.birthDate && calculateAge(registerForm.birthDate) >= 25 && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flowUp"
+                      checked={registerForm.participatesFlowUp}
+                      onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, participatesFlowUp: !!checked }))}
+                    />
+                    <Label htmlFor="flowUp" className="text-sm">Participa do FLOW UP</Label>
+                  </div>
+                )}
+
+                {registerForm.gender === "Masculino" && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="irmandade"
+                      checked={registerForm.participatesIrmandade}
+                      onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, participatesIrmandade: !!checked }))}
+                    />
+                    <Label htmlFor="irmandade" className="text-sm">Participa da IRMANDADE</Label>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="photo">Foto de Perfil (Opcional)</Label>
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src={previewUrl} />
+                      <AvatarFallback className="bg-teal-100 text-teal-700">
+                        <Upload className="w-6 h-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <Input
+                      id="photo"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="registerPassword">Senha *</Label>
+                  <div className="relative">
+                    <Input
+                      id="registerPassword"
+                      type={showPassword ? "text" : "password"}
+                      value={registerForm.password}
+                      onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Digite sua senha"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={registerForm.confirmPassword}
+                      onChange={(e) => setRegisterForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      placeholder="Confirme sua senha"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
-                    id="flowUp"
-                    checked={registerForm.participatesFlowUp}
-                    onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, participatesFlowUp: !!checked }))}
+                    id="admin"
+                    checked={registerForm.isAdmin}
+                    onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, isAdmin: !!checked }))}
                   />
-                  <Label htmlFor="flowUp" className="text-sm">Participa do FLOW UP</Label>
+                  <Label htmlFor="admin" className="text-sm">Sou administrador</Label>
                 </div>
-              )}
 
-              {registerForm.gender === "Masculino" && (
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="irmandade"
-                    checked={registerForm.participatesIrmandade}
-                    onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, participatesIrmandade: !!checked }))}
-                  />
-                  <Label htmlFor="irmandade" className="text-sm">Participa da IRMANDADE</Label>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <Label htmlFor="photo">Foto de Perfil (Opcional)</Label>
-                <div className="flex items-center space-x-4">
-                  <Avatar className="w-16 h-16">
-                    <AvatarImage src={previewUrl} />
-                    <AvatarFallback className="bg-teal-100 text-teal-700">
-                      <Upload className="w-6 h-6" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <Input
-                    id="photo"
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="registerPassword">Senha *</Label>
-                <div className="relative">
-                  <Input
-                    id="registerPassword"
-                    type={showPassword ? "text" : "password"}
-                    value={registerForm.password}
-                    onChange={(e) => setRegisterForm(prev => ({ ...prev, password: e.target.value }))}
-                    placeholder="Digite sua senha"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar Senha *</Label>
-                <div className="relative">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={registerForm.confirmPassword}
-                    onChange={(e) => setRegisterForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    placeholder="Confirme sua senha"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin"
-                  checked={registerForm.isAdmin}
-                  onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, isAdmin: !!checked }))}
-                />
-                <Label htmlFor="admin" className="text-sm">Sou administrador</Label>
-              </div>
-
-              <Button onClick={handleRegister} className="w-full bg-teal-600 hover:bg-teal-700">
-                Cadastrar
-              </Button>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                <Button onClick={handleRegister} className="w-full bg-teal-600 hover:bg-teal-700">
+                  Cadastrar
+                </Button>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
