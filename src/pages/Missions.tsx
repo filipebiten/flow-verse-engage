@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,7 +111,7 @@ const Missions = () => {
   const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
   const [showPhaseDialog, setShowPhaseDialog] = useState(false);
   const [previousPoints, setPreviousPoints] = useState(0);
-  const [currentView, setCurrentView<'overview' | 'myMissions'>('overview');
+  const [currentView, setCurrentView] = useState<'overview' | 'myMissions'>('overview');
 
   // Apply phase colors based on user points
   usePhaseColors(currentUser?.points || 0);
@@ -269,6 +270,71 @@ const Missions = () => {
     return missions.filter(mission => mission.type === type);
   };
 
+  const renderMissionCategory = (title: string, items: (Mission | Book | Course)[], icon: string) => {
+    if (!items.length) return null;
+
+    return (
+      <Card key={title}>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <span>{icon}</span>
+            <span>{title}</span>
+            <Badge variant="secondary">{items.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {items.map((item) => {
+              const mission = item as Mission;
+              const book = item as Book;
+              const course = item as Course;
+              
+              const isBook = 'author' in item;
+              const isCourse = 'school' in item;
+              const type: 'mission' | 'book' | 'course' = isBook ? 'book' : isCourse ? 'course' : 'mission';
+              
+              const isCompleted = isMissionCompleted(mission, type);
+              
+              return (
+                <div key={mission.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                  <Checkbox
+                    checked={isCompleted}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        completeMission(mission, type);
+                      } else {
+                        uncompleteMission(mission, type);
+                      }
+                    }}
+                  />
+                  
+                  <div className="flex-1">
+                    <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : ''}`}>
+                      {mission.name || mission.title}
+                    </h4>
+                    {mission.description && (
+                      <p className="text-sm text-gray-600">{mission.description}</p>
+                    )}
+                    {isBook && book.author && (
+                      <p className="text-sm text-gray-600">por {book.author}</p>
+                    )}
+                    {isCourse && course.school && (
+                      <p className="text-sm text-gray-600">{course.school}</p>
+                    )}
+                  </div>
+                  
+                  <Badge className="bg-green-100 text-green-700">
+                    +{mission.points} pts
+                  </Badge>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (!currentUser) return null;
 
   const currentPhase = getUserPhase(currentUser.points);
@@ -414,71 +480,6 @@ const Missions = () => {
       />
     </div>
   );
-
-  function renderMissionCategory(title: string, items: (Mission | Book | Course)[], icon: string) {
-    if (!items.length) return null;
-
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <span>{icon}</span>
-            <span>{title}</span>
-            <Badge variant="secondary">{items.length}</Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {items.map((item) => {
-              const mission = item as Mission;
-              const book = item as Book;
-              const course = item as Course;
-              
-              const isBook = 'author' in item;
-              const isCourse = 'school' in item;
-              const type: 'mission' | 'book' | 'course' = isBook ? 'book' : isCourse ? 'course' : 'mission';
-              
-              const isCompleted = isMissionCompleted(mission, type);
-              
-              return (
-                <div key={mission.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
-                  <Checkbox
-                    checked={isCompleted}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        completeMission(mission, type);
-                      } else {
-                        uncompleteMission(mission, type);
-                      }
-                    }}
-                  />
-                  
-                  <div className="flex-1">
-                    <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : ''}`}>
-                      {mission.name || mission.title}
-                    </h4>
-                    {mission.description && (
-                      <p className="text-sm text-gray-600">{mission.description}</p>
-                    )}
-                    {isBook && book.author && (
-                      <p className="text-sm text-gray-600">por {book.author}</p>
-                    )}
-                    {isCourse && course.school && (
-                      <p className="text-sm text-gray-600">{course.school}</p>
-                    )}
-                  </div>
-                  
-                  <Badge className="bg-green-100 text-green-700">
-                    +{mission.points} pts
-                  </Badge>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 };
 
 export default Missions;
