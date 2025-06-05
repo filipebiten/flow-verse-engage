@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,7 +38,6 @@ interface MissionActivity {
   missionName: string;
   points: number;
   timestamp: string;
-  completedAt?: string;
   type?: string;
   period?: string;
 }
@@ -81,7 +81,7 @@ const UserProfile = () => {
     const userActivities = activities
       .filter((activity: MissionActivity) => activity.userId === userId)
       .sort((a: MissionActivity, b: MissionActivity) => 
-        new Date(b.completedAt || b.timestamp).getTime() - new Date(a.completedAt || a.timestamp).getTime()
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
     setUserActivities(userActivities);
   };
@@ -284,7 +284,7 @@ const UserProfile = () => {
                           <div className="flex items-center space-x-2 text-sm text-gray-500">
                             <span>Tipo: {activity.type === 'mission' ? 'Missão' : activity.type === 'book' ? 'Livro' : 'Curso'}</span>
                             <span>•</span>
-                            <span>{formatTimeAgo(activity.completedAt || activity.timestamp)}</span>
+                            <span>{formatTimeAgo(activity.timestamp)}</span>
                           </div>
                           {activity.period && (
                             <div className="text-xs text-gray-400 mt-1">
@@ -323,7 +323,7 @@ const UserProfile = () => {
                                 +{activity.points}
                               </Badge>
                               <span className="text-xs text-gray-400">
-                                {formatTimeAgo(activity.completedAt || activity.timestamp)}
+                                {formatTimeAgo(activity.timestamp)}
                               </span>
                             </div>
                           </div>

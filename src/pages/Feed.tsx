@@ -73,7 +73,6 @@ const Feed = () => {
   const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
   const [phaseChanges, setPhaseChanges] = useState<PhaseChangeActivity[]>([]);
   const [badgeActivities, setBadgeActivities] = useState<BadgeActivity[]>([]);
-  const [showPhasesModal, setShowPhasesModal] = useState(false);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -97,7 +96,7 @@ const Feed = () => {
   const loadMissionActivities = () => {
     const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
     setMissionActivities(activities.sort((a: MissionActivity, b: MissionActivity) => 
-      new Date(b.timestamp || b.completedAt).getTime() - new Date(a.timestamp || a.completedAt).getTime()
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     ));
   };
 
@@ -159,19 +158,12 @@ const Feed = () => {
     return `${Math.floor(diffInMinutes / 1440)}d`;
   };
 
-  const phases = [
-    { name: "Riacho", minPoints: 0, maxPoints: 250, emoji: "🌀", phrase: "Começando a fluir", description: "Início da caminhada com Deus e com a FLOW.", color: "bg-green-100 text-green-800" },
-    { name: "Correnteza", minPoints: 251, maxPoints: 500, emoji: "🌊", phrase: "Sendo levado por algo maior", description: "Engajado no PGM, abrindo-se ao mover de Deus.", color: "bg-blue-100 text-blue-800" },
-    { name: "Cachoeira", minPoints: 501, maxPoints: 1000, emoji: "💥", phrase: "Entregue ao movimento de Deus", description: "Servindo com intensidade e sendo transformador.", color: "bg-purple-100 text-purple-800" },
-    { name: "Oceano", minPoints: 1001, maxPoints: null, emoji: "🌌", phrase: "Profundamente imerso em Deus", description: "Maturidade espiritual, liderança e profundidade.", color: "bg-gray-900 text-white" }
-  ];
-
   // Combine and sort all activities
   const allActivities = [
     ...missionActivities.map(activity => ({ ...activity, type: 'mission' })),
     ...phaseChanges.map(change => ({ ...change, type: 'phase' })),
     ...badgeActivities.map(activity => ({ ...activity, type: 'badge' }))
-  ].sort((a, b) => new Date(b.timestamp || b.completedAt).getTime() - new Date(a.timestamp || a.completedAt).getTime());
+  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   if (!currentUser) return null;
 
@@ -356,7 +348,7 @@ const Feed = () => {
                           </div>
                         )}
                         <span className="text-xs text-gray-400">
-                          {formatTimeAgo(activity.timestamp || activity.completedAt)}
+                          {formatTimeAgo(activity.timestamp)}
                         </span>
                       </div>
                     </div>

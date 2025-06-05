@@ -152,7 +152,7 @@ const Missions = () => {
     setMissionActivities(userActivities);
   };
 
-  const completeMission = (mission: Mission, type: 'mission' | 'book' | 'course') => {
+  const completeMission = (mission: Mission | Book | Course, type: 'mission' | 'book' | 'course') => {
     if (!currentUser) return;
 
     try {
@@ -161,19 +161,18 @@ const Missions = () => {
         id: activityId,
         userId: currentUser.id,
         missionId: mission.id,
-        missionName: mission.name || (mission as any).title,
+        missionName: (mission as Mission).name || (mission as Book).title || (mission as Course).name,
         type,
         points: mission.points,
-        completedAt: new Date().toISOString(),
-        period: getCurrentPeriod(mission.type || 'Outras Missões')
+        timestamp: new Date().toISOString(),
+        period: getCurrentPeriod((mission as Mission).type || 'Outras Missões')
       };
 
       const updatedActivities = [...missionActivities, activity];
       
-      // Check localStorage size before saving
+      // Save to localStorage with size check
       const dataSize = JSON.stringify(updatedActivities).length;
       if (dataSize > 4900000) { // ~5MB limit with buffer
-        // Keep only recent activities (last 1000)
         const recentActivities = updatedActivities.slice(-1000);
         localStorage.setItem('missionActivities', JSON.stringify(recentActivities));
         setMissionActivities(recentActivities);
@@ -182,29 +181,80 @@ const Missions = () => {
         setMissionActivities(updatedActivities);
       }
 
+      // Store global mission activities for feed
+      const globalActivities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+      const globalActivity = {
+        ...activity,
+        userName: currentUser.name,
+        userPhoto: currentUser.profilePhoto
+      };
+      globalActivities.push(globalActivity);
+      localStorage.setItem('missionActivities', JSON.stringify(globalActivities));
+
       setPreviousPoints(currentUser.points);
       const newPoints = currentUser.points + mission.points;
-      const updatedUser = { ...currentUser, points: newPoints };
+      
+      // Check for new badges
+      const newBadges = checkForNewBadges(currentUser, type);
+      
+      const updatedUser = { 
+        ...currentUser, 
+        points: newPoints,
+        badges: [...currentUser.badges, ...newBadges]
+      };
       
       setCurrentUser(updatedUser);
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
 
+      // Update users array
       const users = JSON.parse(localStorage.getItem('users') || '[]');
       const updatedUsers = users.map((user: User) => 
         user.id === currentUser.id ? updatedUser : user
       );
       localStorage.setItem('users', JSON.stringify(updatedUsers));
 
+      // Save badge activity if new badges were earned
+      if (newBadges.length > 0) {
+        const badgeActivities = JSON.parse(localStorage.getItem('badgeActivities') || '[]');
+        const badgeActivity = {
+          id: `badge-${Date.now()}`,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userPhoto: currentUser.profilePhoto,
+          badges: newBadges,
+          timestamp: new Date().toISOString()
+        };
+        badgeActivities.push(badgeActivity);
+        localStorage.setItem('badgeActivities', JSON.stringify(badgeActivities));
+
+        // Show badge notification
+        toast({
+          title: "🏆 Novo Badge Conquistado!",
+          description: `Você ganhou ${newBadges.length} novo(s) badge(s)!`
+        });
+      }
+
       // Check for phase change
       const oldPhase = getUserPhase(currentUser.points);
       const newPhase = getUserPhase(newPoints);
       
       if (oldPhase.name !== newPhase.name) {
+        // Save phase change activity
+        const phaseChanges = JSON.parse(localStorage.getItem('phaseChanges') || '[]');
+        const phaseChange = {
+          id: `phase-${Date.now()}`,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          userPhoto: currentUser.profilePhoto,
+          oldPhase: oldPhase.name,
+          newPhase: newPhase.name,
+          timestamp: new Date().toISOString()
+        };
+        phaseChanges.push(phaseChange);
+        localStorage.setItem('phaseChanges', JSON.stringify(phaseChanges));
+        
         setShowPhaseDialog(true);
       }
-
-      // Check for new badges
-      checkAndAwardBadges(updatedUser);
 
       toast({
         title: "🎉 Missão Concluída!",
@@ -221,47 +271,46 @@ const Missions = () => {
     }
   };
 
-  const checkAndAwardBadges = (user: User) => {
+  const checkForNewBadges = (user: User, type: 'mission' | 'book' | 'course'): string[] => {
     const newBadges: string[] = [];
-    const currentBadges = user.badges || [];
-
-    // Reading badges
-    const booksRead = user.booksRead?.length || 0;
-    if (booksRead >= 1 && !currentBadges.includes('reader-1')) newBadges.push('reader-1');
-    if (booksRead >= 3 && !currentBadges.includes('reader-2')) newBadges.push('reader-2');
-    if (booksRead >= 7 && !currentBadges.includes('reader-3')) newBadges.push('reader-3');
-    if (booksRead >= 15 && !currentBadges.includes('reader-4')) newBadges.push('reader-4');
-
-    // Course badges
-    const coursesCompleted = user.coursesCompleted?.length || 0;
-    if (coursesCompleted >= 1 && !currentBadges.includes('course-1')) newBadges.push('course-1');
-    if (coursesCompleted >= 3 && !currentBadges.includes('course-2')) newBadges.push('course-2');
-    if (coursesCompleted >= 7 && !currentBadges.includes('course-3')) newBadges.push('course-3');
-    if (coursesCompleted >= 15 && !currentBadges.includes('course-4')) newBadges.push('course-4');
-
-    if (newBadges.length > 0) {
-      const updatedUser = { ...user, badges: [...currentBadges, ...newBadges] };
-      setCurrentUser(updatedUser);
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const updatedUsers = users.map((u: User) => 
-        u.id === user.id ? updatedUser : u
-      );
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-
-      // Show badge notification
-      toast({
-        title: "🏆 Novo Badge Conquistado!",
-        description: `Você ganhou ${newBadges.length} novo(s) badge(s)!`
-      });
+    
+    if (type === 'book') {
+      const booksRead = user.booksRead?.length || 0;
+      const newBookCount = booksRead + 1;
+      
+      if (newBookCount === 1 && !user.badges.includes('reader-1')) {
+        newBadges.push('reader-1');
+      } else if (newBookCount === 5 && !user.badges.includes('reader-2')) {
+        newBadges.push('reader-2');
+      } else if (newBookCount === 10 && !user.badges.includes('reader-3')) {
+        newBadges.push('reader-3');
+      } else if (newBookCount === 20 && !user.badges.includes('reader-4')) {
+        newBadges.push('reader-4');
+      }
     }
+    
+    if (type === 'course') {
+      const coursesCompleted = user.coursesCompleted?.length || 0;
+      const newCourseCount = coursesCompleted + 1;
+      
+      if (newCourseCount === 1 && !user.badges.includes('course-1')) {
+        newBadges.push('course-1');
+      } else if (newCourseCount === 3 && !user.badges.includes('course-2')) {
+        newBadges.push('course-2');
+      } else if (newCourseCount === 5 && !user.badges.includes('course-3')) {
+        newBadges.push('course-3');
+      } else if (newCourseCount === 8 && !user.badges.includes('course-4')) {
+        newBadges.push('course-4');
+      }
+    }
+    
+    return newBadges;
   };
 
-  const uncompleteMission = (mission: Mission, type: 'mission' | 'book' | 'course') => {
+  const uncompleteMission = (mission: Mission | Book | Course, type: 'mission' | 'book' | 'course') => {
     if (!currentUser) return;
 
-    const period = getCurrentPeriod(mission.type || 'Outras Missões');
+    const period = getCurrentPeriod((mission as Mission).type || 'Outras Missões');
     const activityToRemove = missionActivities.find(activity => 
       activity.userId === currentUser.id && 
       activity.missionId === mission.id && 
@@ -293,10 +342,10 @@ const Missions = () => {
     }
   };
 
-  const isMissionCompleted = (mission: Mission, type: 'mission' | 'book' | 'course'): boolean => {
+  const isMissionCompleted = (mission: Mission | Book | Course, type: 'mission' | 'book' | 'course'): boolean => {
     if (!currentUser) return false;
   
-    const period = getCurrentPeriod(mission.type || 'Outras Missões');
+    const period = getCurrentPeriod((mission as Mission).type || 'Outras Missões');
     return missionActivities.some(activity =>
       activity.userId === currentUser.id &&
       activity.missionId === mission.id &&
@@ -309,62 +358,70 @@ const Missions = () => {
     return missions.filter(mission => mission.type === type);
   };
 
-  const renderMissionCategory = (title: string, items: (Mission | Book | Course)[], icon: string) => {
+  function renderMissionCategory(title: string, items: (Mission | Book | Course)[], icon: string) {
     if (!items.length) return null;
 
     return (
       <Card key={title}>
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <span>{icon}</span>
-            <span>{title}</span>
-            <Badge variant="secondary">{items.length}</Badge>
+          <CardTitle className="flex items-center">
+            <span className="mr-2">{icon}</span>
+            {title} ({items.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             {items.map((item) => {
-              const mission = item as Mission;
-              const book = item as Book;
-              const course = item as Course;
-              
-              const isBook = 'author' in item;
-              const isCourse = 'school' in item;
-              const type: 'mission' | 'book' | 'course' = isBook ? 'book' : isCourse ? 'course' : 'mission';
-              
-              const isCompleted = isMissionCompleted(mission, type);
+              const isCompleted = isMissionCompleted(item, 
+                title.includes('Livros') ? 'book' : 
+                title.includes('Cursos') ? 'course' : 'mission'
+              );
               
               return (
-                <div key={mission.id} className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-gray-50">
+                <div key={item.id} className="flex items-start space-x-3 p-3 border rounded-lg">
                   <Checkbox
                     checked={isCompleted}
                     onCheckedChange={(checked) => {
+                      const type = title.includes('Livros') ? 'book' : 
+                                  title.includes('Cursos') ? 'course' : 'mission';
                       if (checked) {
-                        completeMission(mission, type);
+                        completeMission(item, type);
                       } else {
-                        uncompleteMission(mission, type);
+                        uncompleteMission(item, type);
                       }
                     }}
+                    className="mt-1"
                   />
-                  
                   <div className="flex-1">
                     <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : ''}`}>
-                      {mission.name || (mission as any).title}
+                      {(item as Mission).name || (item as Book).title || (item as Course).name}
                     </h4>
-                    {mission.description && (
-                      <p className="text-sm text-gray-600">{mission.description}</p>
+                    {(item as Mission).description && (
+                      <p className={`text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-600'}`}>
+                        {(item as Mission).description}
+                      </p>
                     )}
-                    {isBook && book.author && (
-                      <p className="text-sm text-gray-600">por {book.author}</p>
+                    {(item as Book).author && (
+                      <p className={`text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-600'}`}>
+                        por {(item as Book).author}
+                      </p>
                     )}
-                    {isCourse && course.school && (
-                      <p className="text-sm text-gray-600">{course.school}</p>
+                    {(item as Course).school && (
+                      <p className={`text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-600'}`}>
+                        {(item as Course).school}
+                      </p>
                     )}
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                        {item.points} pontos
+                      </Badge>
+                      {item.targetAudience.map((audience) => (
+                        <Badge key={audience} variant="outline" className="text-xs">
+                          {audience}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  
-                  <Badge className="bg-green-100 text-green-700">
-                    +{mission.points} pts
-                  </Badge>
                 </div>
               );
             })}
