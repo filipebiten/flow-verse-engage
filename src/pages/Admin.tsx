@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,8 +40,48 @@ const Admin = () => {
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  // States for missions, news, books, courses would be here if needed
-  // For this snippet, focusing on users and search
+  // Mission states
+  const [missions, setMissions] = useState<any[]>([]);
+  const [missionForm, setMissionForm] = useState({
+    name: '',
+    description: '',
+    points: '',
+    type: '',
+    targetAudience: [] as string[]
+  });
+  const [editingMission, setEditingMission] = useState<any>(null);
+
+  // News states
+  const [news, setNews] = useState<any[]>([]);
+  const [newsForm, setNewsForm] = useState({
+    title: '',
+    description: '',
+    image: '',
+    url: '',
+    isActive: true
+  });
+  const [editingNews, setEditingNews] = useState<any>(null);
+
+  // Book states
+  const [books, setBooks] = useState<any[]>([]);
+  const [bookForm, setBookForm] = useState({
+    title: '',
+    author: '',
+    points: '',
+    targetAudience: [] as string[]
+  });
+  const [editingBook, setEditingBook] = useState<any>(null);
+
+  // Course states
+  const [courses, setCourses] = useState<any[]>([]);
+  const [courseForm, setCourseForm] = useState({
+    name: '',
+    school: '',
+    description: '',
+    points: '',
+    targetAudience: [] as string[]
+  });
+  const [editingCourse, setEditingCourse] = useState<any>(null);
 
   // User search states
   const [users, setUsers] = useState<User[]>([]);
@@ -64,9 +105,32 @@ const Admin = () => {
     }
     
     setCurrentUser(userData);
-    // Load other data if needed
+    loadMissions();
+    loadNews();
+    loadBooks();
+    loadCourses();
     loadUsers();
   }, [navigate]);
+
+  const loadMissions = () => {
+    const storedMissions = JSON.parse(localStorage.getItem('missions') || '[]');
+    setMissions(storedMissions);
+  };
+
+  const loadNews = () => {
+    const storedNews = JSON.parse(localStorage.getItem('news') || '[]');
+    setNews(storedNews);
+  };
+
+  const loadBooks = () => {
+    const storedBooks = JSON.parse(localStorage.getItem('books') || '[]');
+    setBooks(storedBooks);
+  };
+
+  const loadCourses = () => {
+    const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
+    setCourses(storedCourses);
+  };
 
   const loadUsers = () => {
     try {
@@ -76,6 +140,201 @@ const Admin = () => {
       console.error('Error loading users:', error);
       setUsers([]);
     }
+  };
+
+  // Mission functions
+  const saveMission = () => {
+    if (!missionForm.name || !missionForm.points || !missionForm.type) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const mission = {
+      id: editingMission?.id || Date.now().toString(),
+      ...missionForm,
+      points: parseInt(missionForm.points),
+      createdAt: editingMission?.createdAt || new Date().toISOString()
+    };
+
+    let updatedMissions;
+    if (editingMission) {
+      updatedMissions = missions.map(m => m.id === editingMission.id ? mission : m);
+    } else {
+      updatedMissions = [...missions, mission];
+    }
+
+    setMissions(updatedMissions);
+    localStorage.setItem('missions', JSON.stringify(updatedMissions));
+    
+    setMissionForm({ name: '', description: '', points: '', type: '', targetAudience: [] });
+    setEditingMission(null);
+    
+    toast({
+      title: editingMission ? "Missão atualizada" : "Missão criada",
+      description: "A missão foi salva com sucesso!"
+    });
+  };
+
+  const deleteMission = (id: string) => {
+    const updatedMissions = missions.filter(m => m.id !== id);
+    setMissions(updatedMissions);
+    localStorage.setItem('missions', JSON.stringify(updatedMissions));
+    toast({
+      title: "Missão removida",
+      description: "A missão foi removida com sucesso!"
+    });
+  };
+
+  // News functions
+  const saveNews = () => {
+    if (!newsForm.title) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha o título da notícia.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const newsItem = {
+      id: editingNews?.id || Date.now().toString(),
+      ...newsForm,
+      createdAt: editingNews?.createdAt || new Date().toISOString()
+    };
+
+    let updatedNews;
+    if (editingNews) {
+      updatedNews = news.map(n => n.id === editingNews.id ? newsItem : n);
+    } else {
+      updatedNews = [...news, newsItem];
+    }
+
+    setNews(updatedNews);
+    localStorage.setItem('news', JSON.stringify(updatedNews));
+    
+    setNewsForm({ title: '', description: '', image: '', url: '', isActive: true });
+    setEditingNews(null);
+    
+    toast({
+      title: editingNews ? "Notícia atualizada" : "Notícia criada",
+      description: "A notícia foi salva com sucesso!"
+    });
+  };
+
+  const deleteNews = (id: string) => {
+    const updatedNews = news.filter(n => n.id !== id);
+    setNews(updatedNews);
+    localStorage.setItem('news', JSON.stringify(updatedNews));
+    toast({
+      title: "Notícia removida",
+      description: "A notícia foi removida com sucesso!"
+    });
+  };
+
+  // Book functions
+  const saveBook = () => {
+    if (!bookForm.title || !bookForm.points) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const book = {
+      id: editingBook?.id || Date.now().toString(),
+      ...bookForm,
+      points: parseInt(bookForm.points),
+      createdAt: editingBook?.createdAt || new Date().toISOString()
+    };
+
+    let updatedBooks;
+    if (editingBook) {
+      updatedBooks = books.map(b => b.id === editingBook.id ? book : b);
+    } else {
+      updatedBooks = [...books, book];
+    }
+
+    setBooks(updatedBooks);
+    localStorage.setItem('books', JSON.stringify(updatedBooks));
+    
+    setBookForm({ title: '', author: '', points: '', targetAudience: [] });
+    setEditingBook(null);
+    
+    toast({
+      title: editingBook ? "Livro atualizado" : "Livro adicionado",
+      description: "O livro foi salvo com sucesso!"
+    });
+  };
+
+  const deleteBook = (id: string) => {
+    const updatedBooks = books.filter(b => b.id !== id);
+    setBooks(updatedBooks);
+    localStorage.setItem('books', JSON.stringify(updatedBooks));
+    toast({
+      title: "Livro removido",
+      description: "O livro foi removido com sucesso!"
+    });
+  };
+
+  // Course functions
+  const saveCourse = () => {
+    if (!courseForm.name || !courseForm.points) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos obrigatórios.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const course = {
+      id: editingCourse?.id || Date.now().toString(),
+      ...courseForm,
+      points: parseInt(courseForm.points),
+      createdAt: editingCourse?.createdAt || new Date().toISOString()
+    };
+
+    let updatedCourses;
+    if (editingCourse) {
+      updatedCourses = courses.map(c => c.id === editingCourse.id ? course : c);
+    } else {
+      updatedCourses = [...courses, course];
+    }
+
+    setCourses(updatedCourses);
+    localStorage.setItem('courses', JSON.stringify(updatedCourses));
+    
+    setCourseForm({ name: '', school: '', description: '', points: '', targetAudience: [] });
+    setEditingCourse(null);
+    
+    toast({
+      title: editingCourse ? "Curso atualizado" : "Curso adicionado",
+      description: "O curso foi salvo com sucesso!"
+    });
+  };
+
+  const deleteCourse = (id: string) => {
+    const updatedCourses = courses.filter(c => c.id !== id);
+    setCourses(updatedCourses);
+    localStorage.setItem('courses', JSON.stringify(updatedCourses));
+    toast({
+      title: "Curso removido",
+      description: "O curso foi removido com sucesso!"
+    });
+  };
+
+  // Helper functions
+  const handleTargetAudienceChange = (value: string, currentAudience: string[], setForm: any) => {
+    const newAudience = currentAudience.includes(value)
+      ? currentAudience.filter(item => item !== value)
+      : [...currentAudience, value];
+    setForm((prev: any) => ({ ...prev, targetAudience: newAudience }));
   };
 
   // Filtering users based on search and filters
@@ -130,8 +389,454 @@ const Admin = () => {
             <TabsTrigger value="users">Usuários</TabsTrigger>
           </TabsList>
 
-          {/* Missions, Books, Courses, News tabs content would be here */}
+          {/* Missions Tab */}
+          <TabsContent value="missions">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Add/Edit Mission Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{editingMission ? 'Editar Missão' : 'Nova Missão'}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Input
+                    placeholder="Nome da missão"
+                    value={missionForm.name}
+                    onChange={(e) => setMissionForm({...missionForm, name: e.target.value})}
+                  />
+                  <Textarea
+                    placeholder="Descrição da missão"
+                    value={missionForm.description}
+                    onChange={(e) => setMissionForm({...missionForm, description: e.target.value})}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Pontos"
+                    value={missionForm.points}
+                    onChange={(e) => setMissionForm({...missionForm, points: e.target.value})}
+                  />
+                  <Select value={missionForm.type} onValueChange={(value) => setMissionForm({...missionForm, type: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Tipo da missão" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Missões Diárias">Missões Diárias</SelectItem>
+                      <SelectItem value="Missões Semanais">Missões Semanais</SelectItem>
+                      <SelectItem value="Missões Mensais">Missões Mensais</SelectItem>
+                      <SelectItem value="Missões Semestrais">Missões Semestrais</SelectItem>
+                      <SelectItem value="Missões Anuais">Missões Anuais</SelectItem>
+                      <SelectItem value="Outras Missões">Outras Missões</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Público Alvo:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['all', 'Líder', 'Vice-líder', 'Membro', 'flowUp', 'irmandade'].map((audience) => (
+                        <div key={audience} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={missionForm.targetAudience.includes(audience)}
+                            onCheckedChange={() => handleTargetAudienceChange(audience, missionForm.targetAudience, setMissionForm)}
+                          />
+                          <label className="text-sm">
+                            {audience === 'all' ? 'Todos' : 
+                             audience === 'flowUp' ? 'Flow Up' : 
+                             audience === 'irmandade' ? 'Irmandade' : audience}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button onClick={saveMission} className="flex-1">
+                      {editingMission ? 'Atualizar' : 'Criar'} Missão
+                    </Button>
+                    {editingMission && (
+                      <Button variant="outline" onClick={() => {
+                        setEditingMission(null);
+                        setMissionForm({ name: '', description: '', points: '', type: '', targetAudience: [] });
+                      }}>
+                        Cancelar
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
+              {/* Missions List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Missões Cadastradas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {missions.map((mission) => (
+                      <div key={mission.id} className="flex items-center justify-between p-3 border rounded">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{mission.name}</h4>
+                          <p className="text-sm text-gray-600">{mission.description}</p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Badge variant="secondary">{mission.type}</Badge>
+                            <Badge className="bg-green-100 text-green-700">+{mission.points} pontos</Badge>
+                          </div>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingMission(mission);
+                              setMissionForm({
+                                name: mission.name,
+                                description: mission.description,
+                                points: mission.points.toString(),
+                                type: mission.type,
+                                targetAudience: mission.targetAudience || []
+                              });
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteMission(mission.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Books Tab */}
+          <TabsContent value="books">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Add/Edit Book Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{editingBook ? 'Editar Livro' : 'Novo Livro'}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Input
+                    placeholder="Título do livro"
+                    value={bookForm.title}
+                    onChange={(e) => setBookForm({...bookForm, title: e.target.value})}
+                  />
+                  <Input
+                    placeholder="Autor"
+                    value={bookForm.author}
+                    onChange={(e) => setBookForm({...bookForm, author: e.target.value})}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Pontos"
+                    value={bookForm.points}
+                    onChange={(e) => setBookForm({...bookForm, points: e.target.value})}
+                  />
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Público Alvo:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['all', 'Líder', 'Vice-líder', 'Membro', 'flowUp', 'irmandade'].map((audience) => (
+                        <div key={audience} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={bookForm.targetAudience.includes(audience)}
+                            onCheckedChange={() => handleTargetAudienceChange(audience, bookForm.targetAudience, setBookForm)}
+                          />
+                          <label className="text-sm">
+                            {audience === 'all' ? 'Todos' : 
+                             audience === 'flowUp' ? 'Flow Up' : 
+                             audience === 'irmandade' ? 'Irmandade' : audience}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button onClick={saveBook} className="flex-1">
+                      {editingBook ? 'Atualizar' : 'Adicionar'} Livro
+                    </Button>
+                    {editingBook && (
+                      <Button variant="outline" onClick={() => {
+                        setEditingBook(null);
+                        setBookForm({ title: '', author: '', points: '', targetAudience: [] });
+                      }}>
+                        Cancelar
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Books List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Livros Cadastrados</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {books.map((book) => (
+                      <div key={book.id} className="flex items-center justify-between p-3 border rounded">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{book.title}</h4>
+                          {book.author && <p className="text-sm text-gray-600">por {book.author}</p>}
+                          <Badge className="bg-green-100 text-green-700">+{book.points} pontos</Badge>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingBook(book);
+                              setBookForm({
+                                title: book.title,
+                                author: book.author || '',
+                                points: book.points.toString(),
+                                targetAudience: book.targetAudience || []
+                              });
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteBook(book.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Courses Tab */}
+          <TabsContent value="courses">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Add/Edit Course Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{editingCourse ? 'Editar Curso' : 'Novo Curso'}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Input
+                    placeholder="Nome do curso"
+                    value={courseForm.name}
+                    onChange={(e) => setCourseForm({...courseForm, name: e.target.value})}
+                  />
+                  <Input
+                    placeholder="Escola/Instituição"
+                    value={courseForm.school}
+                    onChange={(e) => setCourseForm({...courseForm, school: e.target.value})}
+                  />
+                  <Textarea
+                    placeholder="Descrição do curso"
+                    value={courseForm.description}
+                    onChange={(e) => setCourseForm({...courseForm, description: e.target.value})}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Pontos"
+                    value={courseForm.points}
+                    onChange={(e) => setCourseForm({...courseForm, points: e.target.value})}
+                  />
+                  
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Público Alvo:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['all', 'Líder', 'Vice-líder', 'Membro', 'flowUp', 'irmandade'].map((audience) => (
+                        <div key={audience} className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={courseForm.targetAudience.includes(audience)}
+                            onCheckedChange={() => handleTargetAudienceChange(audience, courseForm.targetAudience, setCourseForm)}
+                          />
+                          <label className="text-sm">
+                            {audience === 'all' ? 'Todos' : 
+                             audience === 'flowUp' ? 'Flow Up' : 
+                             audience === 'irmandade' ? 'Irmandade' : audience}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button onClick={saveCourse} className="flex-1">
+                      {editingCourse ? 'Atualizar' : 'Adicionar'} Curso
+                    </Button>
+                    {editingCourse && (
+                      <Button variant="outline" onClick={() => {
+                        setEditingCourse(null);
+                        setCourseForm({ name: '', school: '', description: '', points: '', targetAudience: [] });
+                      }}>
+                        Cancelar
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Courses List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cursos Cadastrados</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {courses.map((course) => (
+                      <div key={course.id} className="flex items-center justify-between p-3 border rounded">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{course.name}</h4>
+                          {course.school && <p className="text-sm text-gray-600">{course.school}</p>}
+                          {course.description && <p className="text-xs text-gray-500">{course.description}</p>}
+                          <Badge className="bg-green-100 text-green-700">+{course.points} pontos</Badge>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingCourse(course);
+                              setCourseForm({
+                                name: course.name,
+                                school: course.school || '',
+                                description: course.description || '',
+                                points: course.points.toString(),
+                                targetAudience: course.targetAudience || []
+                              });
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteCourse(course.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* News Tab */}
+          <TabsContent value="news">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Add/Edit News Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{editingNews ? 'Editar Notícia' : 'Nova Notícia'}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Input
+                    placeholder="Título da notícia"
+                    value={newsForm.title}
+                    onChange={(e) => setNewsForm({...newsForm, title: e.target.value})}
+                  />
+                  <Textarea
+                    placeholder="Descrição"
+                    value={newsForm.description}
+                    onChange={(e) => setNewsForm({...newsForm, description: e.target.value})}
+                  />
+                  <Input
+                    placeholder="URL da imagem (opcional)"
+                    value={newsForm.image}
+                    onChange={(e) => setNewsForm({...newsForm, image: e.target.value})}
+                  />
+                  <Input
+                    placeholder="Link externo (opcional)"
+                    value={newsForm.url}
+                    onChange={(e) => setNewsForm({...newsForm, url: e.target.value})}
+                  />
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={newsForm.isActive}
+                      onCheckedChange={(checked) => setNewsForm({...newsForm, isActive: !!checked})}
+                    />
+                    <label className="text-sm">Notícia ativa</label>
+                  </div>
+                  
+                  <div className="flex space-x-2">
+                    <Button onClick={saveNews} className="flex-1">
+                      {editingNews ? 'Atualizar' : 'Criar'} Notícia
+                    </Button>
+                    {editingNews && (
+                      <Button variant="outline" onClick={() => {
+                        setEditingNews(null);
+                        setNewsForm({ title: '', description: '', image: '', url: '', isActive: true });
+                      }}>
+                        Cancelar
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* News List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notícias Cadastradas</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {news.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between p-3 border rounded">
+                        <div className="flex-1">
+                          <h4 className="font-medium">{item.title}</h4>
+                          {item.description && <p className="text-sm text-gray-600">{item.description}</p>}
+                          <Badge variant={item.isActive ? "default" : "secondary"}>
+                            {item.isActive ? 'Ativa' : 'Inativa'}
+                          </Badge>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingNews(item);
+                              setNewsForm({
+                                title: item.title,
+                                description: item.description || '',
+                                image: item.image || '',
+                                url: item.url || '',
+                                isActive: item.isActive
+                              });
+                            }}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteNews(item.id)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Users Tab */}
           <TabsContent value="users">
             <Card>
               <CardHeader>
