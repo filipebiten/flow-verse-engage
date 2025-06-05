@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Settings, BookOpen, GraduationCap, Sparkles, Award } from "lucide-react";
+import { ArrowLeft, Settings, BookOpen, GraduationCap, Sparkles, Award, TrendingUp, Calendar } from "lucide-react";
 import BookLibrary from "@/components/BookLibrary";
 
 interface User {
@@ -135,9 +135,64 @@ const Profile = () => {
     return badges[badgeId as keyof typeof badges];
   };
 
+  const getNextBadges = () => {
+    if (!currentUser) return [];
+    
+    const nextBadges = [];
+    
+    // Reading badges
+    const booksRead = currentUser.booksRead.length;
+    if (booksRead < 1 && !currentUser.badges.includes('reader-1')) {
+      nextBadges.push({ id: 'reader-1', name: 'Leitor Iniciante', icon: '📖', requirement: `Leia 1 livro (${1 - booksRead} restante)`, type: 'reading' });
+    } else if (booksRead < 5 && !currentUser.badges.includes('reader-2')) {
+      nextBadges.push({ id: 'reader-2', name: 'Leitor Fluente', icon: '📚', requirement: `Leia 5 livros (${5 - booksRead} restantes)`, type: 'reading' });
+    } else if (booksRead < 10 && !currentUser.badges.includes('reader-3')) {
+      nextBadges.push({ id: 'reader-3', name: 'Leitor Voraz', icon: '🔥📚', requirement: `Leia 10 livros (${10 - booksRead} restantes)`, type: 'reading' });
+    } else if (booksRead < 20 && !currentUser.badges.includes('reader-4')) {
+      nextBadges.push({ id: 'reader-4', name: 'Mente Brilhante', icon: '🧠✨', requirement: `Leia 20 livros (${20 - booksRead} restantes)`, type: 'reading' });
+    }
+    
+    // Course badges
+    const coursesCompleted = currentUser.coursesCompleted.length;
+    if (coursesCompleted < 1 && !currentUser.badges.includes('course-1')) {
+      nextBadges.push({ id: 'course-1', name: 'Discípulo em Formação', icon: '🎓', requirement: `Complete 1 curso (${1 - coursesCompleted} restante)`, type: 'course' });
+    } else if (coursesCompleted < 3 && !currentUser.badges.includes('course-2')) {
+      nextBadges.push({ id: 'course-2', name: 'Aprendiz Dedicado', icon: '📘🎓', requirement: `Complete 3 cursos (${3 - coursesCompleted} restantes)`, type: 'course' });
+    } else if (coursesCompleted < 5 && !currentUser.badges.includes('course-3')) {
+      nextBadges.push({ id: 'course-3', name: 'Líder em Construção', icon: '🛠️🎓', requirement: `Complete 5 cursos (${5 - coursesCompleted} restantes)`, type: 'course' });
+    } else if (coursesCompleted < 8 && !currentUser.badges.includes('course-4')) {
+      nextBadges.push({ id: 'course-4', name: 'Mestre da Jornada', icon: '🧙‍♂️📘', requirement: `Complete 8 cursos (${8 - coursesCompleted} restantes)`, type: 'course' });
+    }
+    
+    return nextBadges.slice(0, 4); // Show max 4 next badges
+  };
+
+  const getDaysInJourney = () => {
+    if (!currentUser?.joinDate) return 0;
+    const joinDate = new Date(currentUser.joinDate);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - joinDate.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const getStatistics = () => {
+    if (!currentUser) return {};
+    
+    return {
+      totalPoints: currentUser.points,
+      booksRead: currentUser.booksRead.length,
+      coursesCompleted: currentUser.coursesCompleted.length,
+      daysInJourney: getDaysInJourney(),
+      badgesEarned: currentUser.badges.length,
+      currentPhase: currentUser.phase
+    };
+  };
+
   if (!currentUser) return null;
 
   const phaseInfo = getPhaseInfo(currentUser.phase);
+  const nextBadges = getNextBadges();
+  const stats = getStatistics();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50">
@@ -225,6 +280,72 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Statistics Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <TrendingUp className="w-5 h-5 mr-2" />
+              Estatísticas da Jornada
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-yellow-600">{stats.totalPoints}</div>
+                <p className="text-gray-600 text-sm">Pontos Totais</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600">{stats.booksRead}</div>
+                <p className="text-gray-600 text-sm">Livros Lidos</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600">{stats.coursesCompleted}</div>
+                <p className="text-gray-600 text-sm">Cursos Concluídos</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-purple-600">{stats.daysInJourney}</div>
+                <p className="text-gray-600 text-sm">Dias de Jornada</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-pink-600">{stats.badgesEarned}</div>
+                <p className="text-gray-600 text-sm">Badges Conquistados</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-teal-600">{phaseInfo.emoji}</div>
+                <p className="text-gray-600 text-sm">{stats.currentPhase}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Next Badges */}
+        {nextBadges.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Award className="w-5 h-5 mr-2" />
+                Próximos Badges
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {nextBadges.map((badge) => (
+                  <div key={badge.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                    <div className="text-2xl">{badge.icon}</div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-700">{badge.name}</h4>
+                      <p className="text-sm text-gray-600">{badge.requirement}</p>
+                      <Badge variant="outline" className="mt-1 text-xs">
+                        {badge.type === 'reading' ? 'Leitura' : 'Curso'}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Badges Section */}
         {currentUser.badges.length > 0 && (

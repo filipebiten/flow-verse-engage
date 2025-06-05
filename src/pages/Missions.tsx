@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -340,9 +339,72 @@ const Missions = () => {
     return phases[phase as keyof typeof phases] || phases["Riacho"];
   };
 
+  const organizeMissionsByType = () => {
+    const organized = {
+      daily: missions.filter(m => m.type === 'Missões Diárias'),
+      weekly: missions.filter(m => m.type === 'Missões Semanais'),
+      monthly: missions.filter(m => m.type === 'Missões Mensais'),
+      semestral: missions.filter(m => m.type === 'Missões Semestrais'),
+      annual: missions.filter(m => m.type === 'Missões Anuais'),
+      books: missions.filter(m => m.type === 'Leitura de Livros'),
+      courses: missions.filter(m => m.type === 'Cursos'),
+      others: missions.filter(m => !['Missões Diárias', 'Missões Semanais', 'Missões Mensais', 'Missões Semestrais', 'Missões Anuais', 'Leitura de Livros', 'Cursos'].includes(m.type))
+    };
+    return organized;
+  };
+
+  const renderMissionSection = (title: string, missions: any[], emoji: string) => {
+    if (missions.length === 0) return null;
+    
+    return (
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+          <span className="text-2xl mr-2">{emoji}</span>
+          {title} ({missions.length})
+        </h3>
+        <div className="space-y-2">
+          {missions.map((mission) => {
+            const isCompleted = completedMissions.includes(mission.id);
+            return (
+              <div key={mission.id} className={`p-4 border rounded-lg ${isCompleted ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'} hover:shadow-md transition-shadow`}>
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    checked={isCompleted}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        completeMission(mission);
+                      } else {
+                        uncompleteMission(mission);
+                      }
+                    }}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-gray-800'}`}>
+                        {mission.name}
+                      </h4>
+                      <Badge variant="secondary" className="text-xs">{mission.type}</Badge>
+                      <Badge className="bg-green-100 text-green-700 text-xs">
+                        +{mission.points} pontos
+                      </Badge>
+                    </div>
+                    <p className={`text-sm ${isCompleted ? 'text-gray-400' : 'text-gray-600'}`}>
+                      {mission.description}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   if (!currentUser) return null;
 
   const phaseInfo = getPhaseInfo(currentUser.phase);
+  const organizedMissions = organizeMissionsByType();
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${phaseInfo.color}`}>
@@ -402,7 +464,7 @@ const Missions = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {missions.length === 0 ? (
           <Card>
             <CardContent className="text-center p-6">
@@ -410,44 +472,15 @@ const Missions = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {missions.map((mission) => {
-              const isCompleted = completedMissions.includes(mission.id);
-              return (
-                <Card key={mission.id} className={`bg-white shadow-md ${isCompleted ? 'bg-green-50 border-green-200' : ''}`}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3 flex-1">
-                        <Checkbox
-                          checked={isCompleted}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              completeMission(mission);
-                            } else {
-                              uncompleteMission(mission);
-                            }
-                          }}
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h3 className={`font-semibold ${isCompleted ? 'line-through text-gray-500' : 'text-gray-800'}`}>
-                              {mission.name}
-                            </h3>
-                            <Badge variant="secondary">{mission.type}</Badge>
-                            <Badge className="bg-green-100 text-green-700">
-                              +{mission.points} pontos
-                            </Badge>
-                          </div>
-                          <p className={`text-sm ${isCompleted ? 'text-gray-400' : 'text-gray-600'}`}>
-                            {mission.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="space-y-6">
+            {renderMissionSection("Missões Diárias", organizedMissions.daily, "☀️")}
+            {renderMissionSection("Missões Semanais", organizedMissions.weekly, "📅")}
+            {renderMissionSection("Missões Mensais", organizedMissions.monthly, "🗓️")}
+            {renderMissionSection("Missões Semestrais", organizedMissions.semestral, "📊")}
+            {renderMissionSection("Missões Anuais", organizedMissions.annual, "🎯")}
+            {renderMissionSection("Leitura de Livros", organizedMissions.books, "📚")}
+            {renderMissionSection("Cursos", organizedMissions.courses, "🎓")}
+            {renderMissionSection("Outras Missões", organizedMissions.others, "⚡")}
           </div>
         )}
       </div>
