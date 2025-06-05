@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Plus, Edit, Trash2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUserPhase } from "@/utils/phaseUtils";
 
 interface User {
   id: string;
@@ -90,6 +90,7 @@ const Admin = () => {
   const [pgmRoleFilter, setPgmRoleFilter] = useState('all');
   const [irmandadeFilter, setIrmandadeFilter] = useState('all');
   const [flowUpFilter, setFlowUpFilter] = useState('all');
+  const [phaseFilter, setPhaseFilter] = useState('all');
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -348,13 +349,16 @@ const Admin = () => {
     const matchesGender = genderFilter === 'all' || user.gender === genderFilter;
     const matchesPgmRole = pgmRoleFilter === 'all' || user.pgmRole === pgmRoleFilter;
     const matchesIrmandade = irmandadeFilter === 'all' || 
-      (irmandadeFilter === 'yes' && user.participatesIrmandade) ||
-      (irmandadeFilter === 'no' && !user.participatesIrmandade);
+      (irmandadeFilter === 'sim' && user.participatesIrmandade) ||
+      (irmandadeFilter === 'nao' && !user.participatesIrmandade);
     const matchesFlowUp = flowUpFilter === 'all' || 
-      (flowUpFilter === 'yes' && user.participatesFlowUp) ||
-      (flowUpFilter === 'no' && !user.participatesFlowUp);
+      (flowUpFilter === 'sim' && user.participatesFlowUp) ||
+      (flowUpFilter === 'nao' && !user.participatesFlowUp);
 
-    return matchesSearch && matchesGender && matchesPgmRole && matchesIrmandade && matchesFlowUp;
+    const userPhase = getUserPhase(user.points);
+    const matchesPhase = phaseFilter === 'all' || userPhase.name === phaseFilter;
+
+    return matchesSearch && matchesGender && matchesPgmRole && matchesIrmandade && matchesFlowUp && matchesPhase;
   });
 
   if (!currentUser) return null;
@@ -431,7 +435,7 @@ const Admin = () => {
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Público Alvo:</p>
                     <div className="flex flex-wrap gap-2">
-                      {['all', 'Líder', 'Vice-líder', 'Membro', 'flowUp', 'irmandade'].map((audience) => (
+                      {['all', 'Líder', 'Membro', 'Pastor de Rede', 'Coordenador', 'Supervisor', 'flowUp', 'irmandade'].map((audience) => (
                         <div key={audience} className="flex items-center space-x-2">
                           <Checkbox
                             checked={missionForm.targetAudience.includes(audience)}
@@ -542,7 +546,7 @@ const Admin = () => {
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Público Alvo:</p>
                     <div className="flex flex-wrap gap-2">
-                      {['all', 'Líder', 'Vice-líder', 'Membro', 'flowUp', 'irmandade'].map((audience) => (
+                      {['all', 'Líder', 'Membro', 'Pastor de Rede', 'Coordenador', 'Supervisor', 'flowUp', 'irmandade'].map((audience) => (
                         <div key={audience} className="flex items-center space-x-2">
                           <Checkbox
                             checked={bookForm.targetAudience.includes(audience)}
@@ -634,11 +638,15 @@ const Admin = () => {
                     value={courseForm.name}
                     onChange={(e) => setCourseForm({...courseForm, name: e.target.value})}
                   />
-                  <Input
-                    placeholder="Escola/Instituição"
-                    value={courseForm.school}
-                    onChange={(e) => setCourseForm({...courseForm, school: e.target.value})}
-                  />
+                  <Select value={courseForm.school} onValueChange={(value) => setCourseForm({...courseForm, school: value})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escola/Instituição" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Escola do Discípulo">Escola do Discípulo</SelectItem>
+                      <SelectItem value="Universidade da Família">Universidade da Família</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Textarea
                     placeholder="Descrição do curso"
                     value={courseForm.description}
@@ -654,7 +662,7 @@ const Admin = () => {
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Público Alvo:</p>
                     <div className="flex flex-wrap gap-2">
-                      {['all', 'Líder', 'Vice-líder', 'Membro', 'flowUp', 'irmandade'].map((audience) => (
+                      {['all', 'Líder', 'Membro', 'Pastor de Rede', 'Coordenador', 'Supervisor', 'flowUp', 'irmandade'].map((audience) => (
                         <div key={audience} className="flex items-center space-x-2">
                           <Checkbox
                             checked={courseForm.targetAudience.includes(audience)}
@@ -855,7 +863,7 @@ const Admin = () => {
                     />
                   </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <Select value={genderFilter} onValueChange={setGenderFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Gênero" />
@@ -874,8 +882,10 @@ const Admin = () => {
                       <SelectContent>
                         <SelectItem value="all">Todos os PGMs</SelectItem>
                         <SelectItem value="Líder">Líder</SelectItem>
-                        <SelectItem value="Vice-líder">Vice-líder</SelectItem>
                         <SelectItem value="Membro">Membro</SelectItem>
+                        <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
+                        <SelectItem value="Coordenador">Coordenador</SelectItem>
+                        <SelectItem value="Supervisor">Supervisor</SelectItem>
                       </SelectContent>
                     </Select>
 
@@ -885,8 +895,8 @@ const Admin = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="yes">Participa</SelectItem>
-                        <SelectItem value="no">Não participa</SelectItem>
+                        <SelectItem value="sim">Participa</SelectItem>
+                        <SelectItem value="nao">Não participa</SelectItem>
                       </SelectContent>
                     </Select>
 
@@ -896,8 +906,21 @@ const Admin = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="yes">Participa</SelectItem>
-                        <SelectItem value="no">Não participa</SelectItem>
+                        <SelectItem value="sim">Participa</SelectItem>
+                        <SelectItem value="nao">Não participa</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Fase" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as fases</SelectItem>
+                        <SelectItem value="Riacho">🌀 Riacho</SelectItem>
+                        <SelectItem value="Correnteza">🌊 Correnteza</SelectItem>
+                        <SelectItem value="Cachoeira">💥 Cachoeira</SelectItem>
+                        <SelectItem value="Oceano">🌌 Oceano</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -909,58 +932,63 @@ const Admin = () => {
                     {filteredUsers.length} usuário(s) encontrado(s)
                   </p>
                   
-                  {filteredUsers.map((user) => (
-                    <Card key={user.id} className="p-4">
-                      <div className="flex items-center space-x-4">
-                        <Avatar 
-                          className="w-12 h-12 cursor-pointer"
-                          onClick={() => navigate(`/user/${user.id}`)}
-                        >
-                          <AvatarImage src={user.profilePhoto || ''} />
-                          <AvatarFallback className="bg-purple-100 text-purple-700">
-                            {user.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <h3 className="font-semibold text-gray-800">{user.name}</h3>
-                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                              {user.points} pontos
-                            </Badge>
+                  {filteredUsers.map((user) => {
+                    const userPhase = getUserPhase(user.points);
+                    return (
+                      <Card key={user.id} className="p-4">
+                        <div className="flex items-center space-x-4">
+                          <Avatar 
+                            className="w-12 h-12 cursor-pointer"
+                            onClick={() => navigate(`/user/${user.id}`)}
+                          >
+                            <AvatarImage src={user.profilePhoto || ''} />
+                            <AvatarFallback className="bg-purple-100 text-purple-700">
+                              {user.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="font-semibold text-gray-800">{user.name}</h3>
+                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                                {user.points} pontos
+                              </Badge>
+                              <Badge className="bg-purple-100 text-purple-800">
+                                {userPhase.icon} {userPhase.name}
+                              </Badge>
+                            </div>
+                            
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <p>Email: {user.email}</p>
+                              <p>WhatsApp: {user.whatsapp}</p>
+                              <p>PGM: {user.pgmRole} {user.pgmNumber}</p>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Badge variant="outline">{user.gender}</Badge>
+                              {user.participatesIrmandade && (
+                                <Badge className="bg-blue-100 text-blue-800">Irmandade</Badge>
+                              )}
+                              {user.participatesFlowUp && (
+                                <Badge className="bg-orange-100 text-orange-800">Flow Up</Badge>
+                              )}
+                              {user.isAdmin && (
+                                <Badge className="bg-purple-100 text-purple-800">Admin</Badge>
+                              )}
+                            </div>
                           </div>
                           
-                          <div className="text-sm text-gray-600 space-y-1">
-                            <p>Email: {user.email}</p>
-                            <p>WhatsApp: {user.whatsapp}</p>
-                            <p>PGM: {user.pgmRole} {user.pgmNumber}</p>
-                          </div>
-                          
-                          <div className="flex items-center space-x-2 mt-2">
-                            <Badge variant="outline">{user.phase}</Badge>
-                            <Badge variant="outline">{user.gender}</Badge>
-                            {user.participatesIrmandade && (
-                              <Badge className="bg-blue-100 text-blue-800">Irmandade</Badge>
-                            )}
-                            {user.participatesFlowUp && (
-                              <Badge className="bg-orange-100 text-orange-800">Flow Up</Badge>
-                            )}
-                            {user.isAdmin && (
-                              <Badge className="bg-purple-100 text-purple-800">Admin</Badge>
-                            )}
-                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/user/${user.id}`)}
+                          >
+                            Ver Perfil
+                          </Button>
                         </div>
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/user/${user.id}`)}
-                        >
-                          Ver Perfil
-                        </Button>
-                      </div>
-                    </Card>
-                  ))}
+                      </Card>
+                    );
+                  })}
                   
                   {filteredUsers.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
