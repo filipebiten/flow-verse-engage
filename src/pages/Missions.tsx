@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -162,7 +161,7 @@ const Missions = () => {
         id: activityId,
         userId: currentUser.id,
         missionId: mission.id,
-        missionName: mission.name || mission.title,
+        missionName: mission.name || (mission as any).title,
         type,
         points: mission.points,
         completedAt: new Date().toISOString(),
@@ -204,6 +203,9 @@ const Missions = () => {
         setShowPhaseDialog(true);
       }
 
+      // Check for new badges
+      checkAndAwardBadges(updatedUser);
+
       toast({
         title: "🎉 Missão Concluída!",
         description: `+${mission.points} pontos adicionados!`
@@ -215,6 +217,43 @@ const Missions = () => {
         title: "Erro",
         description: "Não foi possível completar a missão. Tente novamente.",
         variant: "destructive"
+      });
+    }
+  };
+
+  const checkAndAwardBadges = (user: User) => {
+    const newBadges: string[] = [];
+    const currentBadges = user.badges || [];
+
+    // Reading badges
+    const booksRead = user.booksRead?.length || 0;
+    if (booksRead >= 1 && !currentBadges.includes('reader-1')) newBadges.push('reader-1');
+    if (booksRead >= 3 && !currentBadges.includes('reader-2')) newBadges.push('reader-2');
+    if (booksRead >= 7 && !currentBadges.includes('reader-3')) newBadges.push('reader-3');
+    if (booksRead >= 15 && !currentBadges.includes('reader-4')) newBadges.push('reader-4');
+
+    // Course badges
+    const coursesCompleted = user.coursesCompleted?.length || 0;
+    if (coursesCompleted >= 1 && !currentBadges.includes('course-1')) newBadges.push('course-1');
+    if (coursesCompleted >= 3 && !currentBadges.includes('course-2')) newBadges.push('course-2');
+    if (coursesCompleted >= 7 && !currentBadges.includes('course-3')) newBadges.push('course-3');
+    if (coursesCompleted >= 15 && !currentBadges.includes('course-4')) newBadges.push('course-4');
+
+    if (newBadges.length > 0) {
+      const updatedUser = { ...user, badges: [...currentBadges, ...newBadges] };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const updatedUsers = users.map((u: User) => 
+        u.id === user.id ? updatedUser : u
+      );
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+
+      // Show badge notification
+      toast({
+        title: "🏆 Novo Badge Conquistado!",
+        description: `Você ganhou ${newBadges.length} novo(s) badge(s)!`
       });
     }
   };
@@ -310,7 +349,7 @@ const Missions = () => {
                   
                   <div className="flex-1">
                     <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : ''}`}>
-                      {mission.name || mission.title}
+                      {mission.name || (mission as any).title}
                     </h4>
                     {mission.description && (
                       <p className="text-sm text-gray-600">{mission.description}</p>

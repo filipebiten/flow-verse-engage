@@ -97,7 +97,7 @@ const Feed = () => {
   const loadMissionActivities = () => {
     const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
     setMissionActivities(activities.sort((a: MissionActivity, b: MissionActivity) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      new Date(b.timestamp || b.completedAt).getTime() - new Date(a.timestamp || a.completedAt).getTime()
     ));
   };
 
@@ -171,7 +171,7 @@ const Feed = () => {
     ...missionActivities.map(activity => ({ ...activity, type: 'mission' })),
     ...phaseChanges.map(change => ({ ...change, type: 'phase' })),
     ...badgeActivities.map(activity => ({ ...activity, type: 'badge' }))
-  ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  ].sort((a, b) => new Date(b.timestamp || b.completedAt).getTime() - new Date(a.timestamp || a.completedAt).getTime());
 
   if (!currentUser) return null;
 
@@ -294,7 +294,7 @@ const Feed = () => {
                     >
                       <AvatarImage src={activity.userPhoto || ''} />
                       <AvatarFallback className="bg-teal-100 text-teal-700">
-                        {activity.userName.charAt(0)}
+                        {(activity.userName || 'U').charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     
@@ -305,7 +305,7 @@ const Feed = () => {
                             className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
                             onClick={() => navigate(`/user/${activity.userId}`)}
                           >
-                            {activity.userName}
+                            {activity.userName || 'Usuário'}
                           </span>
                           <span className="text-gray-500">completou</span>
                           <span className="font-medium text-teal-600">{(activity as any).missionName}</span>
@@ -316,7 +316,7 @@ const Feed = () => {
                             className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
                             onClick={() => navigate(`/user/${activity.userId}`)}
                           >
-                            {activity.userName}
+                            {activity.userName || 'Usuário'}
                           </span>
                           <span className="text-gray-500">avançou para</span>
                           <span className="font-medium text-purple-600">{(activity as any).newPhase}</span>
@@ -328,7 +328,7 @@ const Feed = () => {
                             className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
                             onClick={() => navigate(`/user/${activity.userId}`)}
                           >
-                            {activity.userName}
+                            {activity.userName || 'Usuário'}
                           </span>
                           <span className="text-gray-500">conquistou novos badges</span>
                           <Award className="w-4 h-4 text-yellow-600" />
@@ -345,7 +345,7 @@ const Feed = () => {
                           </Badge>
                         ) : (
                           <div className="flex flex-wrap gap-1">
-                            {(activity as any).badges.map((badgeId: string) => {
+                            {(activity as any).badges && (activity as any).badges.map((badgeId: string) => {
                               const badge = getBadgeInfo(badgeId);
                               return badge ? (
                                 <Badge key={badgeId} variant="secondary" className="bg-yellow-100 text-yellow-700">
@@ -356,7 +356,7 @@ const Feed = () => {
                           </div>
                         )}
                         <span className="text-xs text-gray-400">
-                          {formatTimeAgo(activity.timestamp)}
+                          {formatTimeAgo(activity.timestamp || activity.completedAt)}
                         </span>
                       </div>
                     </div>

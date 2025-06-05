@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, CheckSquare, BookOpen, GraduationCap, Award } from "lucide-react";
+import { ArrowLeft, CheckSquare, BookOpen, GraduationCap, Award, Clock } from "lucide-react";
 
 interface User {
   id: string;
@@ -38,6 +37,9 @@ interface MissionActivity {
   missionName: string;
   points: number;
   timestamp: string;
+  completedAt?: string;
+  type?: string;
+  period?: string;
 }
 
 const UserProfile = () => {
@@ -79,7 +81,7 @@ const UserProfile = () => {
     const userActivities = activities
       .filter((activity: MissionActivity) => activity.userId === userId)
       .sort((a: MissionActivity, b: MissionActivity) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        new Date(b.completedAt || b.timestamp).getTime() - new Date(a.completedAt || a.timestamp).getTime()
       );
     setUserActivities(userActivities);
   };
@@ -246,17 +248,21 @@ const UserProfile = () => {
         )}
 
         {/* Tabs for different sections */}
-        <Tabs defaultValue="missions" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="timeline" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="missions">Missões</TabsTrigger>
             <TabsTrigger value="books">Biblioteca</TabsTrigger>
             <TabsTrigger value="courses">Cursos</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="missions">
+          <TabsContent value="timeline">
             <Card>
               <CardHeader>
-                <CardTitle>📈 Timeline de Missões</CardTitle>
+                <CardTitle className="flex items-center">
+                  <Clock className="w-5 h-5 mr-2" />
+                  Timeline de Atividades
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {userActivities.length === 0 ? (
@@ -266,6 +272,47 @@ const UserProfile = () => {
                 ) : (
                   <div className="space-y-4 max-h-96 overflow-y-auto">
                     {userActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-3 p-4 rounded-lg border bg-white">
+                        <div className="w-3 h-3 bg-teal-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-gray-800">{activity.missionName}</span>
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                              +{activity.points}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                            <span>Tipo: {activity.type === 'mission' ? 'Missão' : activity.type === 'book' ? 'Livro' : 'Curso'}</span>
+                            <span>•</span>
+                            <span>{formatTimeAgo(activity.completedAt || activity.timestamp)}</span>
+                          </div>
+                          {activity.period && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              Período: {activity.period}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="missions">
+            <Card>
+              <CardHeader>
+                <CardTitle>📈 Histórico de Missões</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {userActivities.filter(a => a.type === 'mission').length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Nenhuma missão concluída ainda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {userActivities.filter(a => a.type === 'mission').map((activity) => (
                       <div key={activity.id} className="flex items-center space-x-3 p-3 rounded-lg border bg-white">
                         <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
                         <div className="flex-1">
@@ -276,7 +323,7 @@ const UserProfile = () => {
                                 +{activity.points}
                               </Badge>
                               <span className="text-xs text-gray-400">
-                                {formatTimeAgo(activity.timestamp)}
+                                {formatTimeAgo(activity.completedAt || activity.timestamp)}
                               </span>
                             </div>
                           </div>

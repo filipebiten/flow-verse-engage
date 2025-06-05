@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Plus, Edit, Trash2, Search } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArrowLeft, Users, BookOpen, GraduationCap, FileText, Plus, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getUserPhase } from "@/utils/phaseUtils";
 
@@ -35,62 +35,92 @@ interface User {
   badges: string[];
 }
 
+interface Mission {
+  id: string;
+  name: string;
+  description: string;
+  points: number;
+  type: string;
+  targetAudience: string[];
+  createdAt: string;
+}
+
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  points: number;
+  targetAudience: string[];
+  createdAt: string;
+}
+
+interface Course {
+  id: string;
+  name: string;
+  school: string;
+  description: string;
+  points: number;
+  targetAudience: string[];
+  createdAt: string;
+}
+
+interface NewsItem {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  url: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [missions, setMissions] = useState<Mission[]>([]);
+  const [books, setBooks] = useState<Book[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [news, setNews] = useState<NewsItem[]>([]);
 
-  // Mission states
-  const [missions, setMissions] = useState<any[]>([]);
-  const [missionForm, setMissionForm] = useState({
+  // Filter states
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState('Todos');
+  const [participationFilter, setParticipationFilter] = useState('Todos');
+  const [phaseFilter, setPhaseFilter] = useState('Todos');
+
+  // Form states for adding new items
+  const [newMission, setNewMission] = useState({
     name: '',
     description: '',
-    points: '',
-    type: '',
-    targetAudience: [] as string[]
+    points: 0,
+    type: 'Missões Diárias',
+    targetAudience: []
   });
-  const [editingMission, setEditingMission] = useState<any>(null);
 
-  // News states
-  const [news, setNews] = useState<any[]>([]);
-  const [newsForm, setNewsForm] = useState({
+  const [newBook, setNewBook] = useState({
+    title: '',
+    author: '',
+    points: 0,
+    targetAudience: []
+  });
+
+  const [newCourse, setNewCourse] = useState({
+    name: '',
+    school: 'Escola do Discípulo',
+    description: '',
+    points: 0,
+    targetAudience: []
+  });
+
+  const [newNews, setNewNews] = useState({
     title: '',
     description: '',
     image: '',
     url: '',
     isActive: true
   });
-  const [editingNews, setEditingNews] = useState<any>(null);
-
-  // Book states
-  const [books, setBooks] = useState<any[]>([]);
-  const [bookForm, setBookForm] = useState({
-    title: '',
-    author: '',
-    points: '',
-    targetAudience: [] as string[]
-  });
-  const [editingBook, setEditingBook] = useState<any>(null);
-
-  // Course states
-  const [courses, setCourses] = useState<any[]>([]);
-  const [courseForm, setCourseForm] = useState({
-    name: '',
-    school: '',
-    description: '',
-    points: '',
-    targetAudience: [] as string[]
-  });
-  const [editingCourse, setEditingCourse] = useState<any>(null);
-
-  // User search states
-  const [users, setUsers] = useState<User[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [genderFilter, setGenderFilter] = useState('all');
-  const [pgmRoleFilter, setPgmRoleFilter] = useState('all');
-  const [irmandadeFilter, setIrmandadeFilter] = useState('all');
-  const [flowUpFilter, setFlowUpFilter] = useState('all');
-  const [phaseFilter, setPhaseFilter] = useState('all');
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -144,8 +174,8 @@ const Admin = () => {
   };
 
   // Mission functions
-  const saveMission = () => {
-    if (!missionForm.name || !missionForm.points || !missionForm.type) {
+  const addMission = () => {
+    if (!newMission.name || !newMission.points || !newMission.type) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -155,44 +185,25 @@ const Admin = () => {
     }
 
     const mission = {
-      id: editingMission?.id || Date.now().toString(),
-      ...missionForm,
-      points: parseInt(missionForm.points),
-      createdAt: editingMission?.createdAt || new Date().toISOString()
+      id: Date.now().toString(),
+      ...newMission,
+      createdAt: new Date().toISOString()
     };
 
-    let updatedMissions;
-    if (editingMission) {
-      updatedMissions = missions.map(m => m.id === editingMission.id ? mission : m);
-    } else {
-      updatedMissions = [...missions, mission];
-    }
-
-    setMissions(updatedMissions);
-    localStorage.setItem('missions', JSON.stringify(updatedMissions));
+    setMissions([...missions, mission]);
+    localStorage.setItem('missions', JSON.stringify([...missions, mission]));
     
-    setMissionForm({ name: '', description: '', points: '', type: '', targetAudience: [] });
-    setEditingMission(null);
+    setNewMission({ name: '', description: '', points: 0, type: 'Missões Diárias', targetAudience: [] });
     
     toast({
-      title: editingMission ? "Missão atualizada" : "Missão criada",
+      title: "Missão criada",
       description: "A missão foi salva com sucesso!"
     });
   };
 
-  const deleteMission = (id: string) => {
-    const updatedMissions = missions.filter(m => m.id !== id);
-    setMissions(updatedMissions);
-    localStorage.setItem('missions', JSON.stringify(updatedMissions));
-    toast({
-      title: "Missão removida",
-      description: "A missão foi removida com sucesso!"
-    });
-  };
-
   // News functions
-  const saveNews = () => {
-    if (!newsForm.title) {
+  const addNews = () => {
+    if (!newNews.title) {
       toast({
         title: "Erro",
         description: "Por favor, preencha o título da notícia.",
@@ -202,43 +213,25 @@ const Admin = () => {
     }
 
     const newsItem = {
-      id: editingNews?.id || Date.now().toString(),
-      ...newsForm,
-      createdAt: editingNews?.createdAt || new Date().toISOString()
+      id: Date.now().toString(),
+      ...newNews,
+      createdAt: new Date().toISOString()
     };
 
-    let updatedNews;
-    if (editingNews) {
-      updatedNews = news.map(n => n.id === editingNews.id ? newsItem : n);
-    } else {
-      updatedNews = [...news, newsItem];
-    }
-
-    setNews(updatedNews);
-    localStorage.setItem('news', JSON.stringify(updatedNews));
+    setNews([...news, newsItem]);
+    localStorage.setItem('news', JSON.stringify([...news, newsItem]));
     
-    setNewsForm({ title: '', description: '', image: '', url: '', isActive: true });
-    setEditingNews(null);
+    setNewNews({ title: '', description: '', image: '', url: '', isActive: true });
     
     toast({
-      title: editingNews ? "Notícia atualizada" : "Notícia criada",
+      title: "Notícia criada",
       description: "A notícia foi salva com sucesso!"
     });
   };
 
-  const deleteNews = (id: string) => {
-    const updatedNews = news.filter(n => n.id !== id);
-    setNews(updatedNews);
-    localStorage.setItem('news', JSON.stringify(updatedNews));
-    toast({
-      title: "Notícia removida",
-      description: "A notícia foi removida com sucesso!"
-    });
-  };
-
   // Book functions
-  const saveBook = () => {
-    if (!bookForm.title || !bookForm.points) {
+  const addBook = () => {
+    if (!newBook.title || !newBook.points) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -248,44 +241,25 @@ const Admin = () => {
     }
 
     const book = {
-      id: editingBook?.id || Date.now().toString(),
-      ...bookForm,
-      points: parseInt(bookForm.points),
-      createdAt: editingBook?.createdAt || new Date().toISOString()
+      id: Date.now().toString(),
+      ...newBook,
+      createdAt: new Date().toISOString()
     };
 
-    let updatedBooks;
-    if (editingBook) {
-      updatedBooks = books.map(b => b.id === editingBook.id ? book : b);
-    } else {
-      updatedBooks = [...books, book];
-    }
-
-    setBooks(updatedBooks);
-    localStorage.setItem('books', JSON.stringify(updatedBooks));
+    setBooks([...books, book]);
+    localStorage.setItem('books', JSON.stringify([...books, book]));
     
-    setBookForm({ title: '', author: '', points: '', targetAudience: [] });
-    setEditingBook(null);
+    setNewBook({ title: '', author: '', points: 0, targetAudience: [] });
     
     toast({
-      title: editingBook ? "Livro atualizado" : "Livro adicionado",
+      title: "Livro adicionado",
       description: "O livro foi salvo com sucesso!"
     });
   };
 
-  const deleteBook = (id: string) => {
-    const updatedBooks = books.filter(b => b.id !== id);
-    setBooks(updatedBooks);
-    localStorage.setItem('books', JSON.stringify(updatedBooks));
-    toast({
-      title: "Livro removido",
-      description: "O livro foi removido com sucesso!"
-    });
-  };
-
   // Course functions
-  const saveCourse = () => {
-    if (!courseForm.name || !courseForm.points) {
+  const addCourse = () => {
+    if (!newCourse.name || !newCourse.points) {
       toast({
         title: "Erro",
         description: "Por favor, preencha todos os campos obrigatórios.",
@@ -295,38 +269,19 @@ const Admin = () => {
     }
 
     const course = {
-      id: editingCourse?.id || Date.now().toString(),
-      ...courseForm,
-      points: parseInt(courseForm.points),
-      createdAt: editingCourse?.createdAt || new Date().toISOString()
+      id: Date.now().toString(),
+      ...newCourse,
+      createdAt: new Date().toISOString()
     };
 
-    let updatedCourses;
-    if (editingCourse) {
-      updatedCourses = courses.map(c => c.id === editingCourse.id ? course : c);
-    } else {
-      updatedCourses = [...courses, course];
-    }
-
-    setCourses(updatedCourses);
-    localStorage.setItem('courses', JSON.stringify(updatedCourses));
+    setCourses([...courses, course]);
+    localStorage.setItem('courses', JSON.stringify([...courses, course]));
     
-    setCourseForm({ name: '', school: '', description: '', points: '', targetAudience: [] });
-    setEditingCourse(null);
+    setNewCourse({ name: '', school: 'Escola do Discípulo', description: '', points: 0, targetAudience: [] });
     
     toast({
-      title: editingCourse ? "Curso atualizado" : "Curso adicionado",
+      title: "Curso adicionado",
       description: "O curso foi salvo com sucesso!"
-    });
-  };
-
-  const deleteCourse = (id: string) => {
-    const updatedCourses = courses.filter(c => c.id !== id);
-    setCourses(updatedCourses);
-    localStorage.setItem('courses', JSON.stringify(updatedCourses));
-    toast({
-      title: "Curso removido",
-      description: "O curso foi removido com sucesso!"
     });
   };
 
@@ -338,36 +293,44 @@ const Admin = () => {
     setForm((prev: any) => ({ ...prev, targetAudience: newAudience }));
   };
 
-  // Filtering users based on search and filters
+  // User filtering logic
   const filteredUsers = users.filter(user => {
-    const matchesSearch = searchTerm === '' || 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.whatsapp.includes(searchTerm) ||
-      user.pgmNumber.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesGender = genderFilter === 'all' || user.gender === genderFilter;
-    const matchesPgmRole = pgmRoleFilter === 'all' || user.pgmRole === pgmRoleFilter;
-    const matchesIrmandade = irmandadeFilter === 'all' || 
-      (irmandadeFilter === 'sim' && user.participatesIrmandade) ||
-      (irmandadeFilter === 'nao' && !user.participatesIrmandade);
-    const matchesFlowUp = flowUpFilter === 'all' || 
-      (flowUpFilter === 'sim' && user.participatesFlowUp) ||
-      (flowUpFilter === 'nao' && !user.participatesFlowUp);
-
-    const userPhase = getUserPhase(user.points);
-    const matchesPhase = phaseFilter === 'all' || userPhase.name === phaseFilter;
-
-    return matchesSearch && matchesGender && matchesPgmRole && matchesIrmandade && matchesFlowUp && matchesPhase;
+    const matchesSearch = user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(userSearchTerm.toLowerCase());
+    
+    const matchesRole = userRoleFilter === 'Todos' || user.pgmRole === userRoleFilter;
+    
+    let matchesParticipation = true;
+    if (participationFilter === 'IRMANDADE') {
+      matchesParticipation = user.participatesIrmandade;
+    } else if (participationFilter === 'FLOW UP') {
+      matchesParticipation = user.participatesFlowUp;
+    }
+    
+    const matchesPhase = phaseFilter === 'Todos' || user.phase === phaseFilter;
+    
+    return matchesSearch && matchesRole && matchesParticipation && matchesPhase;
   });
 
-  if (!currentUser) return null;
+  if (!currentUser?.isAdmin) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Acesso Negado</h2>
+            <p className="text-gray-600 mb-4">Você não tem permissão para acessar esta área.</p>
+            <Button onClick={() => navigate('/feed')}>Voltar ao Feed</Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Button
               variant="ghost"
@@ -380,543 +343,88 @@ const Admin = () => {
             </Button>
             <h1 className="text-2xl font-bold text-purple-700">Painel Administrativo</h1>
           </div>
+          <Badge className="bg-purple-100 text-purple-700">
+            Administrador
+          </Badge>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 py-6">
-        <Tabs defaultValue="missions" className="w-full">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <Tabs defaultValue="users" className="w-full">
           <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="users">Usuários</TabsTrigger>
             <TabsTrigger value="missions">Missões</TabsTrigger>
             <TabsTrigger value="books">Livros</TabsTrigger>
             <TabsTrigger value="courses">Cursos</TabsTrigger>
             <TabsTrigger value="news">Notícias</TabsTrigger>
-            <TabsTrigger value="users">Usuários</TabsTrigger>
           </TabsList>
-
-          {/* Missions Tab */}
-          <TabsContent value="missions">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Add/Edit Mission Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>{editingMission ? 'Editar Missão' : 'Nova Missão'}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Input
-                    placeholder="Nome da missão"
-                    value={missionForm.name}
-                    onChange={(e) => setMissionForm({...missionForm, name: e.target.value})}
-                  />
-                  <Textarea
-                    placeholder="Descrição da missão"
-                    value={missionForm.description}
-                    onChange={(e) => setMissionForm({...missionForm, description: e.target.value})}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Pontos"
-                    value={missionForm.points}
-                    onChange={(e) => setMissionForm({...missionForm, points: e.target.value})}
-                  />
-                  <Select value={missionForm.type} onValueChange={(value) => setMissionForm({...missionForm, type: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tipo da missão" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Missões Diárias">Missões Diárias</SelectItem>
-                      <SelectItem value="Missões Semanais">Missões Semanais</SelectItem>
-                      <SelectItem value="Missões Mensais">Missões Mensais</SelectItem>
-                      <SelectItem value="Missões Semestrais">Missões Semestrais</SelectItem>
-                      <SelectItem value="Missões Anuais">Missões Anuais</SelectItem>
-                      <SelectItem value="Outras Missões">Outras Missões</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Público Alvo:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {['all', 'Líder', 'Membro', 'Pastor de Rede', 'Coordenador', 'Supervisor', 'flowUp', 'irmandade'].map((audience) => (
-                        <div key={audience} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={missionForm.targetAudience.includes(audience)}
-                            onCheckedChange={() => handleTargetAudienceChange(audience, missionForm.targetAudience, setMissionForm)}
-                          />
-                          <label className="text-sm">
-                            {audience === 'all' ? 'Todos' : 
-                             audience === 'flowUp' ? 'Flow Up' : 
-                             audience === 'irmandade' ? 'Irmandade' : audience}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button onClick={saveMission} className="flex-1">
-                      {editingMission ? 'Atualizar' : 'Criar'} Missão
-                    </Button>
-                    {editingMission && (
-                      <Button variant="outline" onClick={() => {
-                        setEditingMission(null);
-                        setMissionForm({ name: '', description: '', points: '', type: '', targetAudience: [] });
-                      }}>
-                        Cancelar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Missions List */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Missões Cadastradas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {missions.map((mission) => (
-                      <div key={mission.id} className="flex items-center justify-between p-3 border rounded">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{mission.name}</h4>
-                          <p className="text-sm text-gray-600">{mission.description}</p>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Badge variant="secondary">{mission.type}</Badge>
-                            <Badge className="bg-green-100 text-green-700">+{mission.points} pontos</Badge>
-                          </div>
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditingMission(mission);
-                              setMissionForm({
-                                name: mission.name,
-                                description: mission.description,
-                                points: mission.points.toString(),
-                                type: mission.type,
-                                targetAudience: mission.targetAudience || []
-                              });
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteMission(mission.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Books Tab */}
-          <TabsContent value="books">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Add/Edit Book Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>{editingBook ? 'Editar Livro' : 'Novo Livro'}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Input
-                    placeholder="Título do livro"
-                    value={bookForm.title}
-                    onChange={(e) => setBookForm({...bookForm, title: e.target.value})}
-                  />
-                  <Input
-                    placeholder="Autor"
-                    value={bookForm.author}
-                    onChange={(e) => setBookForm({...bookForm, author: e.target.value})}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Pontos"
-                    value={bookForm.points}
-                    onChange={(e) => setBookForm({...bookForm, points: e.target.value})}
-                  />
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Público Alvo:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {['all', 'Líder', 'Membro', 'Pastor de Rede', 'Coordenador', 'Supervisor', 'flowUp', 'irmandade'].map((audience) => (
-                        <div key={audience} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={bookForm.targetAudience.includes(audience)}
-                            onCheckedChange={() => handleTargetAudienceChange(audience, bookForm.targetAudience, setBookForm)}
-                          />
-                          <label className="text-sm">
-                            {audience === 'all' ? 'Todos' : 
-                             audience === 'flowUp' ? 'Flow Up' : 
-                             audience === 'irmandade' ? 'Irmandade' : audience}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button onClick={saveBook} className="flex-1">
-                      {editingBook ? 'Atualizar' : 'Adicionar'} Livro
-                    </Button>
-                    {editingBook && (
-                      <Button variant="outline" onClick={() => {
-                        setEditingBook(null);
-                        setBookForm({ title: '', author: '', points: '', targetAudience: [] });
-                      }}>
-                        Cancelar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Books List */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Livros Cadastrados</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {books.map((book) => (
-                      <div key={book.id} className="flex items-center justify-between p-3 border rounded">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{book.title}</h4>
-                          {book.author && <p className="text-sm text-gray-600">por {book.author}</p>}
-                          <Badge className="bg-green-100 text-green-700">+{book.points} pontos</Badge>
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditingBook(book);
-                              setBookForm({
-                                title: book.title,
-                                author: book.author || '',
-                                points: book.points.toString(),
-                                targetAudience: book.targetAudience || []
-                              });
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteBook(book.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* Courses Tab */}
-          <TabsContent value="courses">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Add/Edit Course Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>{editingCourse ? 'Editar Curso' : 'Novo Curso'}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Input
-                    placeholder="Nome do curso"
-                    value={courseForm.name}
-                    onChange={(e) => setCourseForm({...courseForm, name: e.target.value})}
-                  />
-                  <Select value={courseForm.school} onValueChange={(value) => setCourseForm({...courseForm, school: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escola/Instituição" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Escola do Discípulo">Escola do Discípulo</SelectItem>
-                      <SelectItem value="Universidade da Família">Universidade da Família</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Textarea
-                    placeholder="Descrição do curso"
-                    value={courseForm.description}
-                    onChange={(e) => setCourseForm({...courseForm, description: e.target.value})}
-                  />
-                  <Input
-                    type="number"
-                    placeholder="Pontos"
-                    value={courseForm.points}
-                    onChange={(e) => setCourseForm({...courseForm, points: e.target.value})}
-                  />
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Público Alvo:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {['all', 'Líder', 'Membro', 'Pastor de Rede', 'Coordenador', 'Supervisor', 'flowUp', 'irmandade'].map((audience) => (
-                        <div key={audience} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={courseForm.targetAudience.includes(audience)}
-                            onCheckedChange={() => handleTargetAudienceChange(audience, courseForm.targetAudience, setCourseForm)}
-                          />
-                          <label className="text-sm">
-                            {audience === 'all' ? 'Todos' : 
-                             audience === 'flowUp' ? 'Flow Up' : 
-                             audience === 'irmandade' ? 'Irmandade' : audience}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button onClick={saveCourse} className="flex-1">
-                      {editingCourse ? 'Atualizar' : 'Adicionar'} Curso
-                    </Button>
-                    {editingCourse && (
-                      <Button variant="outline" onClick={() => {
-                        setEditingCourse(null);
-                        setCourseForm({ name: '', school: '', description: '', points: '', targetAudience: [] });
-                      }}>
-                        Cancelar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Courses List */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cursos Cadastrados</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {courses.map((course) => (
-                      <div key={course.id} className="flex items-center justify-between p-3 border rounded">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{course.name}</h4>
-                          {course.school && <p className="text-sm text-gray-600">{course.school}</p>}
-                          {course.description && <p className="text-xs text-gray-500">{course.description}</p>}
-                          <Badge className="bg-green-100 text-green-700">+{course.points} pontos</Badge>
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditingCourse(course);
-                              setCourseForm({
-                                name: course.name,
-                                school: course.school || '',
-                                description: course.description || '',
-                                points: course.points.toString(),
-                                targetAudience: course.targetAudience || []
-                              });
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteCourse(course.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* News Tab */}
-          <TabsContent value="news">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Add/Edit News Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>{editingNews ? 'Editar Notícia' : 'Nova Notícia'}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Input
-                    placeholder="Título da notícia"
-                    value={newsForm.title}
-                    onChange={(e) => setNewsForm({...newsForm, title: e.target.value})}
-                  />
-                  <Textarea
-                    placeholder="Descrição"
-                    value={newsForm.description}
-                    onChange={(e) => setNewsForm({...newsForm, description: e.target.value})}
-                  />
-                  <Input
-                    placeholder="URL da imagem (opcional)"
-                    value={newsForm.image}
-                    onChange={(e) => setNewsForm({...newsForm, image: e.target.value})}
-                  />
-                  <Input
-                    placeholder="Link externo (opcional)"
-                    value={newsForm.url}
-                    onChange={(e) => setNewsForm({...newsForm, url: e.target.value})}
-                  />
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={newsForm.isActive}
-                      onCheckedChange={(checked) => setNewsForm({...newsForm, isActive: !!checked})}
-                    />
-                    <label className="text-sm">Notícia ativa</label>
-                  </div>
-                  
-                  <div className="flex space-x-2">
-                    <Button onClick={saveNews} className="flex-1">
-                      {editingNews ? 'Atualizar' : 'Criar'} Notícia
-                    </Button>
-                    {editingNews && (
-                      <Button variant="outline" onClick={() => {
-                        setEditingNews(null);
-                        setNewsForm({ title: '', description: '', image: '', url: '', isActive: true });
-                      }}>
-                        Cancelar
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* News List */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notícias Cadastradas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
-                    {news.map((item) => (
-                      <div key={item.id} className="flex items-center justify-between p-3 border rounded">
-                        <div className="flex-1">
-                          <h4 className="font-medium">{item.title}</h4>
-                          {item.description && <p className="text-sm text-gray-600">{item.description}</p>}
-                          <Badge variant={item.isActive ? "default" : "secondary"}>
-                            {item.isActive ? 'Ativa' : 'Inativa'}
-                          </Badge>
-                        </div>
-                        <div className="flex space-x-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditingNews(item);
-                              setNewsForm({
-                                title: item.title,
-                                description: item.description || '',
-                                image: item.image || '',
-                                url: item.url || '',
-                                isActive: item.isActive
-                              });
-                            }}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteNews(item.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
 
           {/* Users Tab */}
           <TabsContent value="users">
             <Card>
               <CardHeader>
-                <CardTitle>Pesquisar Usuários</CardTitle>
+                <CardTitle className="flex items-center">
+                  <Users className="w-5 h-5 mr-2" />
+                  Gerenciar Usuários ({filteredUsers.length})
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Search and Filters */}
-                <div className="space-y-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Pesquisar por nome, email, WhatsApp ou PGM..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
+              <CardContent>
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div>
+                    <Label htmlFor="userSearch">Buscar</Label>
+                    <div className="relative">
+                      <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
+                      <Input
+                        id="userSearch"
+                        placeholder="Nome ou email"
+                        value={userSearchTerm}
+                        onChange={(e) => setUserSearchTerm(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                   
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    <Select value={genderFilter} onValueChange={setGenderFilter}>
+                  <div>
+                    <Label>Função PGM</Label>
+                    <Select value={userRoleFilter} onValueChange={setUserRoleFilter}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Gênero" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todos os gêneros</SelectItem>
-                        <SelectItem value="Masculino">Masculino</SelectItem>
-                        <SelectItem value="Feminino">Feminino</SelectItem>
-                      </SelectContent>
-                    </Select>
-
-                    <Select value={pgmRoleFilter} onValueChange={setPgmRoleFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="PGM" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os PGMs</SelectItem>
-                        <SelectItem value="Líder">Líder</SelectItem>
+                        <SelectItem value="Todos">Todos</SelectItem>
                         <SelectItem value="Membro">Membro</SelectItem>
+                        <SelectItem value="Líder">Líder</SelectItem>
                         <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
                         <SelectItem value="Coordenador">Coordenador</SelectItem>
                         <SelectItem value="Supervisor">Supervisor</SelectItem>
+                        <SelectItem value="Pastor">Pastor</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
 
-                    <Select value={irmandadeFilter} onValueChange={setIrmandadeFilter}>
+                  <div>
+                    <Label>Participação</Label>
+                    <Select value={participationFilter} onValueChange={setParticipationFilter}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Irmandade" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="sim">Participa</SelectItem>
-                        <SelectItem value="nao">Não participa</SelectItem>
+                        <SelectItem value="Todos">Todos</SelectItem>
+                        <SelectItem value="IRMANDADE">IRMANDADE</SelectItem>
+                        <SelectItem value="FLOW UP">FLOW UP</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
 
-                    <Select value={flowUpFilter} onValueChange={setFlowUpFilter}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Flow Up" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="sim">Participa</SelectItem>
-                        <SelectItem value="nao">Não participa</SelectItem>
-                      </SelectContent>
-                    </Select>
-
+                  <div>
+                    <Label>Fase</Label>
                     <Select value={phaseFilter} onValueChange={setPhaseFilter}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Fase" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todas as fases</SelectItem>
+                        <SelectItem value="Todos">Todos</SelectItem>
                         <SelectItem value="Riacho">🌀 Riacho</SelectItem>
                         <SelectItem value="Correnteza">🌊 Correnteza</SelectItem>
                         <SelectItem value="Cachoeira">💥 Cachoeira</SelectItem>
@@ -927,68 +435,58 @@ const Admin = () => {
                 </div>
 
                 {/* Users List */}
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600">
-                    {filteredUsers.length} usuário(s) encontrado(s)
-                  </p>
-                  
-                  {filteredUsers.map((user) => {
-                    const userPhase = getUserPhase(user.points);
-                    return (
-                      <Card key={user.id} className="p-4">
-                        <div className="flex items-center space-x-4">
-                          <Avatar 
-                            className="w-12 h-12 cursor-pointer"
-                            onClick={() => navigate(`/user/${user.id}`)}
-                          >
-                            <AvatarImage src={user.profilePhoto || ''} />
-                            <AvatarFallback className="bg-purple-100 text-purple-700">
-                              {user.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2 mb-1">
-                              <h3 className="font-semibold text-gray-800">{user.name}</h3>
-                              <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                                {user.points} pontos
-                              </Badge>
-                              <Badge className="bg-purple-100 text-purple-800">
-                                {userPhase.icon} {userPhase.name}
-                              </Badge>
-                            </div>
-                            
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <p>Email: {user.email}</p>
-                              <p>WhatsApp: {user.whatsapp}</p>
-                              <p>PGM: {user.pgmRole} {user.pgmNumber}</p>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2 mt-2">
-                              <Badge variant="outline">{user.gender}</Badge>
-                              {user.participatesIrmandade && (
-                                <Badge className="bg-blue-100 text-blue-800">Irmandade</Badge>
-                              )}
-                              {user.participatesFlowUp && (
-                                <Badge className="bg-orange-100 text-orange-800">Flow Up</Badge>
-                              )}
-                              {user.isAdmin && (
-                                <Badge className="bg-purple-100 text-purple-800">Admin</Badge>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/user/${user.id}`)}
-                          >
-                            Ver Perfil
-                          </Button>
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {filteredUsers.map((user) => (
+                    <div key={user.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage src={user.profilePhoto || ''} />
+                        <AvatarFallback className="bg-purple-100 text-purple-700">
+                          {user.name.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-semibold">{user.name}</h4>
+                          <Badge variant="outline" className="text-xs">
+                            {user.points} pts
+                          </Badge>
                         </div>
-                      </Card>
-                    );
-                  })}
+                        <p className="text-sm text-gray-600">{user.email}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <Badge variant="secondary" className="text-xs">
+                            {user.pgmRole}
+                          </Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {user.phase}
+                          </Badge>
+                          {user.participatesIrmandade && (
+                            <Badge className="bg-blue-100 text-blue-700 text-xs">
+                              IRMANDADE
+                            </Badge>
+                          )}
+                          {user.participatesFlowUp && (
+                            <Badge className="bg-orange-100 text-orange-700 text-xs">
+                              FLOW UP
+                            </Badge>
+                          )}
+                          {user.isAdmin && (
+                            <Badge className="bg-purple-100 text-purple-700 text-xs">
+                              Admin
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/user/${user.id}`)}
+                      >
+                        Ver Perfil
+                      </Button>
+                    </div>
+                  ))}
                   
                   {filteredUsers.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
@@ -998,6 +496,452 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Missions Tab */}
+          <TabsContent value="missions">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Add Mission Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Adicionar Missão
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="missionName">Nome da Missão</Label>
+                    <Input
+                      id="missionName"
+                      value={newMission.name}
+                      onChange={(e) => setNewMission({ ...newMission, name: e.target.value })}
+                      placeholder="Ex: Ler um capítulo da Bíblia"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="missionDescription">Descrição</Label>
+                    <Textarea
+                      id="missionDescription"
+                      value={newMission.description}
+                      onChange={(e) => setNewMission({ ...newMission, description: e.target.value })}
+                      placeholder="Descreva a missão..."
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="missionPoints">Pontos</Label>
+                      <Input
+                        id="missionPoints"
+                        type="number"
+                        value={newMission.points}
+                        onChange={(e) => setNewMission({ ...newMission, points: parseInt(e.target.value) || 0 })}
+                        min="0"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label>Tipo</Label>
+                      <Select 
+                        value={newMission.type} 
+                        onValueChange={(value) => setNewMission({ ...newMission, type: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Missões Diárias">Missões Diárias</SelectItem>
+                          <SelectItem value="Missões Semanais">Missões Semanais</SelectItem>
+                          <SelectItem value="Missões Mensais">Missões Mensais</SelectItem>
+                          <SelectItem value="Missões Semestrais">Missões Semestrais</SelectItem>
+                          <SelectItem value="Missões Anuais">Missões Anuais</SelectItem>
+                          <SelectItem value="Outras Missões">Outras Missões</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label>Público-alvo</Label>
+                    <Select 
+                      value={newMission.targetAudience.join(',')} 
+                      onValueChange={(value) => setNewMission({ ...newMission, targetAudience: value ? [value] : [] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o público-alvo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Membro">Membro</SelectItem>
+                        <SelectItem value="Líder">Líder</SelectItem>
+                        <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
+                        <SelectItem value="Coordenador">Coordenador</SelectItem>
+                        <SelectItem value="Supervisor">Supervisor</SelectItem>
+                        <SelectItem value="Pastor">Pastor</SelectItem>
+                        <SelectItem value="Todos">Todos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <Button onClick={addMission} className="w-full">
+                    Adicionar Missão
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Missions List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Missões Cadastradas ({missions.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {missions.map((mission) => (
+                      <div key={mission.id} className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{mission.name}</h4>
+                            <p className="text-sm text-gray-600">{mission.description}</p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {mission.points} pts
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {mission.type}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {missions.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Nenhuma missão cadastrada ainda.</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Books Tab */}
+          <TabsContent value="books">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Add Book Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Adicionar Livro
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="bookTitle">Título do Livro</Label>
+                    <Input
+                      id="bookTitle"
+                      value={newBook.title}
+                      onChange={(e) => setNewBook({ ...newBook, title: e.target.value })}
+                      placeholder="Ex: Em Seus Passos"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="bookAuthor">Autor</Label>
+                    <Input
+                      id="bookAuthor"
+                      value={newBook.author}
+                      onChange={(e) => setNewBook({ ...newBook, author: e.target.value })}
+                      placeholder="Ex: Charles Sheldon"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="bookPoints">Pontos</Label>
+                    <Input
+                      id="bookPoints"
+                      type="number"
+                      value={newBook.points}
+                      onChange={(e) => setNewBook({ ...newBook, points: parseInt(e.target.value) || 0 })}
+                      min="0"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Público-alvo</Label>
+                    <Select 
+                      value={newBook.targetAudience.join(',')} 
+                      onValueChange={(value) => setNewBook({ ...newBook, targetAudience: value ? [value] : [] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o público-alvo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Membro">Membro</SelectItem>
+                        <SelectItem value="Líder">Líder</SelectItem>
+                        <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
+                        <SelectItem value="Coordenador">Coordenador</SelectItem>
+                        <SelectItem value="Supervisor">Supervisor</SelectItem>
+                        <SelectItem value="Pastor">Pastor</SelectItem>
+                        <SelectItem value="Todos">Todos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <Button onClick={addBook} className="w-full">
+                    Adicionar Livro
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Books List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Livros Cadastrados ({books.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {books.map((book) => (
+                      <div key={book.id} className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{book.title}</h4>
+                            <p className="text-sm text-gray-600">por {book.author}</p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {book.points} pts
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {books.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Nenhum livro cadastrado ainda.</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Courses Tab */}
+          <TabsContent value="courses">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Add Course Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Adicionar Curso
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="courseName">Nome do Curso</Label>
+                    <Input
+                      id="courseName"
+                      value={newCourse.name}
+                      onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
+                      placeholder="Ex: Fundamentos da Fé"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Escola/Instituição</Label>
+                    <Select 
+                      value={newCourse.school} 
+                      onValueChange={(value) => setNewCourse({ ...newCourse, school: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Escola do Discípulo">Escola do Discípulo</SelectItem>
+                        <SelectItem value="Universidade da Família">Universidade da Família</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="courseDescription">Descrição</Label>
+                    <Textarea
+                      id="courseDescription"
+                      value={newCourse.description}
+                      onChange={(e) => setNewCourse({ ...newCourse, description: e.target.value })}
+                      placeholder="Descreva o curso..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="coursePoints">Pontos</Label>
+                    <Input
+                      id="coursePoints"
+                      type="number"
+                      value={newCourse.points}
+                      onChange={(e) => setNewCourse({ ...newCourse, points: parseInt(e.target.value) || 0 })}
+                      min="0"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label>Público-alvo</Label>
+                    <Select 
+                      value={newCourse.targetAudience.join(',')} 
+                      onValueChange={(value) => setNewCourse({ ...newCourse, targetAudience: value ? [value] : [] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o público-alvo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Membro">Membro</SelectItem>
+                        <SelectItem value="Líder">Líder</SelectItem>
+                        <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
+                        <SelectItem value="Coordenador">Coordenador</SelectItem>
+                        <SelectItem value="Supervisor">Supervisor</SelectItem>
+                        <SelectItem value="Pastor">Pastor</SelectItem>
+                        <SelectItem value="Todos">Todos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <Button onClick={addCourse} className="w-full">
+                    Adicionar Curso
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Courses List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Cursos Cadastrados ({courses.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {courses.map((course) => (
+                      <div key={course.id} className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{course.name}</h4>
+                            <p className="text-sm text-gray-600">{course.school}</p>
+                            <p className="text-sm text-gray-600">{course.description}</p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {course.points} pts
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {courses.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Nenhum curso cadastrado ainda.</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* News Tab */}
+          <TabsContent value="news">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Add News Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Adicionar Notícia
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="newsTitle">Título</Label>
+                    <Input
+                      id="newsTitle"
+                      value={newNews.title}
+                      onChange={(e) => setNewNews({ ...newNews, title: e.target.value })}
+                      placeholder="Ex: Novo evento da FLOW"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="newsDescription">Descrição</Label>
+                    <Textarea
+                      id="newsDescription"
+                      value={newNews.description}
+                      onChange={(e) => setNewNews({ ...newNews, description: e.target.value })}
+                      placeholder="Descreva a notícia..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="newsImage">URL da Imagem (opcional)</Label>
+                    <Input
+                      id="newsImage"
+                      value={newNews.image}
+                      onChange={(e) => setNewNews({ ...newNews, image: e.target.value })}
+                      placeholder="https://..."
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="newsUrl">Link da Notícia (opcional)</Label>
+                    <Input
+                      id="newsUrl"
+                      value={newNews.url}
+                      onChange={(e) => setNewNews({ ...newNews, url: e.target.value })}
+                      placeholder="https://..."
+                    />
+                  </div>
+                  
+                  <Button onClick={addNews} className="w-full">
+                    Adicionar Notícia
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* News List */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notícias Cadastradas ({news.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {news.map((item) => (
+                      <div key={item.id} className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h4 className="font-medium">{item.title}</h4>
+                            <p className="text-sm text-gray-600">{item.description}</p>
+                            <div className="flex items-center space-x-2 mt-2">
+                              <Badge variant={item.isActive ? "default" : "secondary"} className="text-xs">
+                                {item.isActive ? "Ativa" : "Inativa"}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {news.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Nenhuma notícia cadastrada ainda.</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
