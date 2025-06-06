@@ -164,7 +164,7 @@ const Missions = () => {
         missionName: (mission as Mission).name || (mission as Book).title || (mission as Course).name,
         type,
         points: mission.points,
-        timestamp: new Date().toISOString(),
+        completedAt: new Date().toISOString(),
         period: getCurrentPeriod((mission as Mission).type || 'Outras Missões')
       };
 
