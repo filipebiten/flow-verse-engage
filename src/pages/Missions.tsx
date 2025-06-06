@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +51,7 @@ interface Book {
   points: number;
   targetAudience: string[];
   createdAt: string;
+  imageUrl?: string;
 }
 
 interface Course {
@@ -110,9 +112,7 @@ const Missions = () => {
   const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
   const [showPhaseDialog, setShowPhaseDialog] = useState(false);
   const [previousPoints, setPreviousPoints] = useState(0);
-  const [currentView, setCurrentView] = useState<'overview' | 'myMissions'>('overview');
 
-  // Apply phase colors based on user points
   usePhaseColors(currentUser?.points || 0);
 
   useEffect(() => {
@@ -157,11 +157,13 @@ const Missions = () => {
 
     try {
       const activityId = `${mission.id}-${Date.now()}`;
+      const missionName = (mission as Mission).name || (mission as Book).title || (mission as Course).name;
+      
       const activity: MissionActivity = {
         id: activityId,
         userId: currentUser.id,
         missionId: mission.id,
-        missionName: (mission as Mission).name || (mission as Book).title || (mission as Course).name,
+        missionName: missionName,
         type,
         points: mission.points,
         completedAt: new Date().toISOString(),
@@ -169,17 +171,8 @@ const Missions = () => {
       };
 
       const updatedActivities = [...missionActivities, activity];
-      
-      // Save to localStorage with size check
-      const dataSize = JSON.stringify(updatedActivities).length;
-      if (dataSize > 4900000) { // ~5MB limit with buffer
-        const recentActivities = updatedActivities.slice(-1000);
-        localStorage.setItem('missionActivities', JSON.stringify(recentActivities));
-        setMissionActivities(recentActivities);
-      } else {
-        localStorage.setItem('missionActivities', JSON.stringify(updatedActivities));
-        setMissionActivities(updatedActivities);
-      }
+      setMissionActivities(updatedActivities);
+      localStorage.setItem('missionActivities', JSON.stringify(updatedActivities));
 
       // Store global mission activities for feed
       const globalActivities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
@@ -194,14 +187,29 @@ const Missions = () => {
       setPreviousPoints(currentUser.points);
       const newPoints = currentUser.points + mission.points;
       
+      let updatedUser = { ...currentUser, points: newPoints };
+
+      // Add book/course to completed lists
+      if (type === 'book' && !updatedUser.booksRead.includes(missionName)) {
+        updatedUser.booksRead = [...updatedUser.booksRead, missionName];
+      } else if (type === 'course' && !updatedUser.coursesCompleted.includes(missionName)) {
+        updatedUser.coursesCompleted = [...updatedUser.coursesCompleted, missionName];
+        // Remove from in progress if it was there
+        updatedUser.coursesInProgress = updatedUser.coursesInProgress.filter(c => c !== missionName);
+      }
+
       // Check for new badges
-      const newBadges = checkForNewBadges(currentUser, type);
+      const newBadges = checkForNewBadges(updatedUser, type);
       
-      const updatedUser = { 
-        ...currentUser, 
-        points: newPoints,
-        badges: [...currentUser.badges, ...newBadges]
-      };
+      if (newBadges.length > 0) {
+        updatedUser.badges = [...updatedUser.badges, ...newBadges];
+        
+        // Show badge notification
+        toast({
+          title: "🏆 Novo Badge Conquistado!",
+          description: `Você ganhou ${newBadges.length} novo(s) badge(s)!`
+        });
+      }
       
       setCurrentUser(updatedUser);
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
@@ -212,27 +220,6 @@ const Missions = () => {
         user.id === currentUser.id ? updatedUser : user
       );
       localStorage.setItem('users', JSON.stringify(updatedUsers));
-
-      // Save badge activity if new badges were earned
-      if (newBadges.length > 0) {
-        const badgeActivities = JSON.parse(localStorage.getItem('badgeActivities') || '[]');
-        const badgeActivity = {
-          id: `badge-${Date.now()}`,
-          userId: currentUser.id,
-          userName: currentUser.name,
-          userPhoto: currentUser.profilePhoto,
-          badges: newBadges,
-          timestamp: new Date().toISOString()
-        };
-        badgeActivities.push(badgeActivity);
-        localStorage.setItem('badgeActivities', JSON.stringify(badgeActivities));
-
-        // Show badge notification
-        toast({
-          title: "🏆 Novo Badge Conquistado!",
-          description: `Você ganhou ${newBadges.length} novo(s) badge(s)!`
-        });
-      }
 
       // Check for phase change
       const oldPhase = getUserPhase(currentUser.points);
@@ -275,33 +262,50 @@ const Missions = () => {
     const newBadges: string[] = [];
     
     if (type === 'book') {
-      const booksRead = user.booksRead?.length || 0;
-      const newBookCount = booksRead + 1;
+      const booksRead = user.booksRead.length;
       
-      if (newBookCount === 1 && !user.badges.includes('reader-1')) {
+      if (booksRead === 1 && !user.badges.includes('reader-1')) {
         newBadges.push('reader-1');
-      } else if (newBookCount === 5 && !user.badges.includes('reader-2')) {
+      } else if (booksRead === 5 && !user.badges.includes('reader-2')) {
         newBadges.push('reader-2');
-      } else if (newBookCount === 10 && !user.badges.includes('reader-3')) {
+      } else if (booksRead === 10 && !user.badges.includes('reader-3')) {
         newBadges.push('reader-3');
-      } else if (newBookCount === 20 && !user.badges.includes('reader-4')) {
+      } else if (booksRead === 20 && !user.badges.includes('reader-4')) {
         newBadges.push('reader-4');
       }
     }
     
     if (type === 'course') {
-      const coursesCompleted = user.coursesCompleted?.length || 0;
-      const newCourseCount = coursesCompleted + 1;
+      const coursesCompleted = user.coursesCompleted.length;
       
-      if (newCourseCount === 1 && !user.badges.includes('course-1')) {
+      if (coursesCompleted === 1 && !user.badges.includes('course-1')) {
         newBadges.push('course-1');
-      } else if (newCourseCount === 3 && !user.badges.includes('course-2')) {
+      } else if (coursesCompleted === 3 && !user.badges.includes('course-2')) {
         newBadges.push('course-2');
-      } else if (newCourseCount === 5 && !user.badges.includes('course-3')) {
+      } else if (coursesCompleted === 5 && !user.badges.includes('course-3')) {
         newBadges.push('course-3');
-      } else if (newCourseCount === 8 && !user.badges.includes('course-4')) {
+      } else if (coursesCompleted === 8 && !user.badges.includes('course-4')) {
         newBadges.push('course-4');
       }
+    }
+    
+    // Check for combined badges
+    const booksCount = user.booksRead.length;
+    const coursesCount = user.coursesCompleted.length;
+    
+    // Discípulo Completo: 5 livros + 3 cursos + 30 dias missão
+    if (booksCount >= 5 && coursesCount >= 3 && !user.badges.includes('complete-1')) {
+      newBadges.push('complete-1');
+    }
+    
+    // Guerreiro da Rotina: 10 livros + 5 cursos + 90 dias missão
+    if (booksCount >= 10 && coursesCount >= 5 && !user.badges.includes('complete-2')) {
+      newBadges.push('complete-2');
+    }
+    
+    // Líder Exemplar: 15 livros + 8 cursos + 180 dias missão
+    if (booksCount >= 15 && coursesCount >= 8 && !user.badges.includes('complete-3')) {
+      newBadges.push('complete-3');
     }
     
     return newBadges;
@@ -324,7 +328,16 @@ const Missions = () => {
       localStorage.setItem('missionActivities', JSON.stringify(updatedActivities));
 
       const newPoints = Math.max(0, currentUser.points - mission.points);
-      const updatedUser = { ...currentUser, points: newPoints };
+      const missionName = (mission as Mission).name || (mission as Book).title || (mission as Course).name;
+      
+      let updatedUser = { ...currentUser, points: newPoints };
+
+      // Remove book/course from completed lists
+      if (type === 'book') {
+        updatedUser.booksRead = updatedUser.booksRead.filter(book => book !== missionName);
+      } else if (type === 'course') {
+        updatedUser.coursesCompleted = updatedUser.coursesCompleted.filter(course => course !== missionName);
+      }
       
       setCurrentUser(updatedUser);
       localStorage.setItem('currentUser', JSON.stringify(updatedUser));
@@ -445,15 +458,13 @@ const Missions = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => currentView === 'myMissions' ? setCurrentView('overview') : navigate('/feed')}
+              onClick={() => navigate('/feed')}
               className="text-purple-600"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
-              {currentView === 'myMissions' ? 'Voltar' : 'Feed'}
+              Feed
             </Button>
-            <h1 className="text-2xl font-bold text-purple-700">
-              {currentView === 'myMissions' ? 'Minhas Missões' : 'Missões'}
-            </h1>
+            <h1 className="text-2xl font-bold text-purple-700">Missões</h1>
           </div>
           <div className="flex items-center space-x-2">
             <Badge className="bg-yellow-100 text-yellow-800">
@@ -466,106 +477,48 @@ const Missions = () => {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {currentView === 'overview' ? (
-          <>
-            {/* Phase Progress */}
-            <Card className="mb-6 bg-gradient-to-r from-purple-100 to-pink-100">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h2 className="text-xl font-bold text-purple-700 mb-1">
-                      {currentPhase.icon} {currentPhase.name}
-                    </h2>
-                    <p className="text-purple-600 italic">"{currentPhase.phrase}"</p>
-                    <p className="text-sm text-gray-600 mt-1">{currentPhase.description}</p>
-                  </div>
-                  <Trophy className="w-12 h-12 text-yellow-500" />
-                </div>
-                
-                {nextPhase && (
-                  <>
-                    <div className="flex justify-between text-sm text-gray-600 mb-2">
-                      <span>{currentUser.points} pontos</span>
-                      <span>{nextPhase.minPoints} pontos para {nextPhase.name}</span>
-                    </div>
-                    <Progress 
-                      value={(currentUser.points / nextPhase.minPoints) * 100} 
-                      className="h-2"
-                    />
-                    <p className="text-sm text-gray-600 mt-2">
-                      Faltam {nextPhase.minPoints - currentUser.points} pontos para a próxima fase: {nextPhase.icon} {nextPhase.name}
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Action Buttons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              <Button 
-                onClick={() => setCurrentView('myMissions')}
-                className="h-16 text-left justify-start bg-purple-600 hover:bg-purple-700"
-              >
-                <div>
-                  <h3 className="font-semibold">Minhas Missões</h3>
-                  <p className="text-sm opacity-90">Veja suas missões ativas</p>
-                </div>
-              </Button>
-              
-              <Button 
-                onClick={() => navigate('/profile')}
-                variant="outline"
-                className="h-16 text-left justify-start border-purple-200 hover:bg-purple-50"
-              >
-                <div>
-                  <h3 className="font-semibold text-purple-700">Ver Perfil</h3>
-                  <p className="text-sm text-purple-600">Badges e estatísticas</p>
-                </div>
-              </Button>
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Phase Progress */}
+        <Card className="bg-gradient-to-r from-purple-100 to-pink-100">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-purple-700 mb-1">
+                  {currentPhase.icon} {currentPhase.name}
+                </h2>
+                <p className="text-purple-600 italic">"{currentPhase.phrase}"</p>
+                <p className="text-sm text-gray-600 mt-1">{currentPhase.description}</p>
+              </div>
+              <Trophy className="w-12 h-12 text-yellow-500" />
             </div>
+            
+            {nextPhase && (
+              <>
+                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <span>{currentUser.points} pontos</span>
+                  <span>{nextPhase.minPoints} pontos para {nextPhase.name}</span>
+                </div>
+                <Progress 
+                  value={(currentUser.points / nextPhase.minPoints) * 100} 
+                  className="h-2"
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                  Faltam {nextPhase.minPoints - currentUser.points} pontos ({Math.round(((nextPhase.minPoints - currentUser.points) / nextPhase.minPoints) * 100)}%) para a próxima fase: {nextPhase.icon} {nextPhase.name}
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <Trophy className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-                  <p className="font-semibold">{currentUser.points}</p>
-                  <p className="text-sm text-gray-600">Pontos</p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <BookOpen className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                  <p className="font-semibold">{currentUser.booksRead?.length || 0}</p>
-                  <p className="text-sm text-gray-600">Livros</p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4 text-center">
-                  <GraduationCap className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                  <p className="font-semibold">{currentUser.coursesCompleted?.length || 0}</p>
-                  <p className="text-sm text-gray-600">Cursos</p>
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        ) : (
-          // My Missions View - List Layout
-          <div className="space-y-6">
-            {/* Mission Categories */}
-            {renderMissionCategory("Missões Diárias", getMissionsByType("Missões Diárias"), "🌅")}
-            {renderMissionCategory("Missões Semanais", getMissionsByType("Missões Semanais"), "📅")}
-            {renderMissionCategory("Missões Mensais", getMissionsByType("Missões Mensais"), "📊")}
-            {renderMissionCategory("Missões Semestrais", getMissionsByType("Missões Semestrais"), "🎯")}
-            {renderMissionCategory("Missões Anuais", getMissionsByType("Missões Anuais"), "🏆")}
-            {renderMissionCategory("Livros para Ler", books, "📚")}
-            {renderMissionCategory("Cursos para Fazer", courses, "🎓")}
-            {renderMissionCategory("Outras Missões", getMissionsByType("Outras Missões"), "⭐")}
-          </div>
-        )}
+        {/* Mission Categories */}
+        {renderMissionCategory("Missões Diárias", getMissionsByType("Missões Diárias"), "🌅")}
+        {renderMissionCategory("Missões Semanais", getMissionsByType("Missões Semanais"), "📅")}
+        {renderMissionCategory("Missões Mensais", getMissionsByType("Missões Mensais"), "📊")}
+        {renderMissionCategory("Missões Semestrais", getMissionsByType("Missões Semestrais"), "🎯")}
+        {renderMissionCategory("Missões Anuais", getMissionsByType("Missões Anuais"), "🏆")}
+        {renderMissionCategory("Livros para Ler", books, "📚")}
+        {renderMissionCategory("Cursos para Fazer", courses, "🎓")}
+        {renderMissionCategory("Outras Missões", getMissionsByType("Outras Missões"), "⭐")}
       </div>
 
       <PhaseChangeDialog

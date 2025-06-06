@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Settings, BookOpen, GraduationCap, Sparkles, Award, TrendingUp, Calendar } from "lucide-react";
-import BookLibrary from "@/components/BookLibrary";
+import { ArrowLeft, Settings, BookOpen, GraduationCap, Award, TrendingUp, Calendar, Clock } from "lucide-react";
 
 interface User {
   id: string;
@@ -31,9 +31,22 @@ interface User {
   badges: string[];
 }
 
+interface MissionActivity {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto: string | null;
+  missionName: string;
+  points: number;
+  timestamp: string;
+  type?: string;
+  period?: string;
+}
+
 const Profile = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userActivities, setUserActivities] = useState<MissionActivity[]>([]);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -52,7 +65,18 @@ const Profile = () => {
     }
     
     setCurrentUser(userData);
+    loadUserActivities(userData.id);
   }, [navigate]);
+
+  const loadUserActivities = (userId: string) => {
+    const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+    const userActivities = activities
+      .filter((activity: MissionActivity) => activity.userId === userId)
+      .sort((a: MissionActivity, b: MissionActivity) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+    setUserActivities(userActivities);
+  };
 
   const getPhaseInfo = (phase: string) => {
     const phases = {
@@ -108,11 +132,6 @@ const Profile = () => {
     return Math.min((progressInPhase / totalPointsForPhase) * 100, 100);
   };
 
-  const getDiscountPercentage = () => {
-    if (!currentUser) return 0;
-    return Math.min(Math.floor(currentUser.points / 10), 100);
-  };
-
   const formatJoinDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -121,50 +140,58 @@ const Profile = () => {
     });
   };
 
+  const formatTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return "Agora";
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+    if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d`;
+    return new Date(timestamp).toLocaleDateString('pt-BR');
+  };
+
   const getBadgeInfo = (badgeId: string) => {
     const badges = {
+      // Reading badges
       'reader-1': { name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.' },
       'reader-2': { name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.' },
       'reader-3': { name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.' },
-      'reader-4': { name: 'Mente Brilhante', icon: '🧠✨', description: 'Um verdadeiro devorador de sabedoria.' },
-      'course-1': { name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.' },
-      'course-2': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.' },
-      'course-3': { name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para grandes responsabilidades.' },
-      'course-4': { name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Um veterano na trilha do aprendizado.' },
+      'reader-4': { name: 'Mente Brilhante', icon: '🧠✨', description: 'Devorador de sabedoria.' },
+      
+      // Course badges
+      'course-1': { name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando jornada de formação.' },
+      'course-2': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Sede de crescimento.' },
+      'course-3': { name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para liderar.' },
+      'course-4': { name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Veterano do aprendizado.' },
+      
+      // Daily mission badges
+      'daily-1': { name: 'Fiel no Pouco', icon: '🕊️', description: 'Fidelidade nos detalhes.' },
+      'daily-2': { name: 'Constante no Caminho', icon: '⛰️', description: 'Perseverança constante.' },
+      'daily-3': { name: 'Incansável na Missão', icon: '🏃‍♂️🔥', description: 'Vive o propósito.' },
+      'daily-4': { name: 'Exemplo de Disciplina', icon: '🛡️✨', description: 'Inspiração de disciplina espiritual.' },
+      
+      // Combined badges
+      'complete-1': { name: 'Discípulo Completo', icon: '🧎‍♂️🔥', description: 'Vida com Deus em ação.' },
+      'complete-2': { name: 'Guerreiro da Rotina', icon: '🗡️📚🎓', description: 'Treinado e engajado.' },
+      'complete-3': { name: 'Líder Exemplar', icon: '👑🧠✨', description: 'Liderança vivida com profundidade.' }
     };
     return badges[badgeId as keyof typeof badges];
   };
 
-  const getNextBadges = () => {
-    if (!currentUser) return [];
+  const getStatistics = () => {
+    if (!currentUser) return {};
     
-    const nextBadges = [];
-    
-    // Reading badges
-    const booksRead = currentUser.booksRead.length;
-    if (booksRead < 1 && !currentUser.badges.includes('reader-1')) {
-      nextBadges.push({ id: 'reader-1', name: 'Leitor Iniciante', icon: '📖', requirement: `Leia 1 livro (${1 - booksRead} restante)`, type: 'reading' });
-    } else if (booksRead < 5 && !currentUser.badges.includes('reader-2')) {
-      nextBadges.push({ id: 'reader-2', name: 'Leitor Fluente', icon: '📚', requirement: `Leia 5 livros (${5 - booksRead} restantes)`, type: 'reading' });
-    } else if (booksRead < 10 && !currentUser.badges.includes('reader-3')) {
-      nextBadges.push({ id: 'reader-3', name: 'Leitor Voraz', icon: '🔥📚', requirement: `Leia 10 livros (${10 - booksRead} restantes)`, type: 'reading' });
-    } else if (booksRead < 20 && !currentUser.badges.includes('reader-4')) {
-      nextBadges.push({ id: 'reader-4', name: 'Mente Brilhante', icon: '🧠✨', requirement: `Leia 20 livros (${20 - booksRead} restantes)`, type: 'reading' });
-    }
-    
-    // Course badges
-    const coursesCompleted = currentUser.coursesCompleted.length;
-    if (coursesCompleted < 1 && !currentUser.badges.includes('course-1')) {
-      nextBadges.push({ id: 'course-1', name: 'Discípulo em Formação', icon: '🎓', requirement: `Complete 1 curso (${1 - coursesCompleted} restante)`, type: 'course' });
-    } else if (coursesCompleted < 3 && !currentUser.badges.includes('course-2')) {
-      nextBadges.push({ id: 'course-2', name: 'Aprendiz Dedicado', icon: '📘🎓', requirement: `Complete 3 cursos (${3 - coursesCompleted} restantes)`, type: 'course' });
-    } else if (coursesCompleted < 5 && !currentUser.badges.includes('course-3')) {
-      nextBadges.push({ id: 'course-3', name: 'Líder em Construção', icon: '🛠️🎓', requirement: `Complete 5 cursos (${5 - coursesCompleted} restantes)`, type: 'course' });
-    } else if (coursesCompleted < 8 && !currentUser.badges.includes('course-4')) {
-      nextBadges.push({ id: 'course-4', name: 'Mestre da Jornada', icon: '🧙‍♂️📘', requirement: `Complete 8 cursos (${8 - coursesCompleted} restantes)`, type: 'course' });
-    }
-    
-    return nextBadges.slice(0, 4); // Show max 4 next badges
+    return {
+      totalPoints: currentUser.points,
+      booksRead: currentUser.booksRead.length,
+      coursesCompleted: currentUser.coursesCompleted.length,
+      missionsCompleted: userActivities.filter(a => a.type === 'mission').length,
+      daysInJourney: getDaysInJourney(),
+      badgesEarned: currentUser.badges.length,
+      currentPhase: currentUser.phase
+    };
   };
 
   const getDaysInJourney = () => {
@@ -175,23 +202,9 @@ const Profile = () => {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
-  const getStatistics = () => {
-    if (!currentUser) return {};
-    
-    return {
-      totalPoints: currentUser.points,
-      booksRead: currentUser.booksRead.length,
-      coursesCompleted: currentUser.coursesCompleted.length,
-      daysInJourney: getDaysInJourney(),
-      badgesEarned: currentUser.badges.length,
-      currentPhase: currentUser.phase
-    };
-  };
-
   if (!currentUser) return null;
 
   const phaseInfo = getPhaseInfo(currentUser.phase);
-  const nextBadges = getNextBadges();
   const stats = getStatistics();
 
   return (
@@ -276,6 +289,25 @@ const Profile = () => {
                     </Badge>
                   )}
                 </div>
+
+                {/* Small Badges Display */}
+                {currentUser.badges.length > 0 && (
+                  <div className="flex items-center space-x-1 flex-wrap">
+                    <span className="text-sm font-medium text-gray-600 mr-2">Badges:</span>
+                    {currentUser.badges.slice(0, 8).map((badgeId) => {
+                      const badge = getBadgeInfo(badgeId);
+                      if (!badge) return null;
+                      return (
+                        <span key={badgeId} className="text-lg" title={badge.name}>
+                          {badge.icon}
+                        </span>
+                      );
+                    })}
+                    {currentUser.badges.length > 8 && (
+                      <span className="text-sm text-gray-500">+{currentUser.badges.length - 8}</span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -290,7 +322,7 @@ const Profile = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <div className="text-3xl font-bold text-yellow-600">{stats.totalPoints}</div>
                 <p className="text-gray-600 text-sm">Pontos Totais</p>
@@ -304,12 +336,16 @@ const Profile = () => {
                 <p className="text-gray-600 text-sm">Cursos Concluídos</p>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-purple-600">{stats.daysInJourney}</div>
-                <p className="text-gray-600 text-sm">Dias de Jornada</p>
+                <div className="text-3xl font-bold text-purple-600">{stats.missionsCompleted}</div>
+                <p className="text-gray-600 text-sm">Missões Concluídas</p>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-pink-600">{stats.badgesEarned}</div>
                 <p className="text-gray-600 text-sm">Badges Conquistados</p>
+              </div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-teal-600">{stats.daysInJourney}</div>
+                <p className="text-gray-600 text-sm">Dias de Jornada</p>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-teal-600">{phaseInfo.emoji}</div>
@@ -318,64 +354,6 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Next Badges */}
-        {nextBadges.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="w-5 h-5 mr-2" />
-                Próximos Badges
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {nextBadges.map((badge) => (
-                  <div key={badge.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
-                    <div className="text-2xl">{badge.icon}</div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-700">{badge.name}</h4>
-                      <p className="text-sm text-gray-600">{badge.requirement}</p>
-                      <Badge variant="outline" className="mt-1 text-xs">
-                        {badge.type === 'reading' ? 'Leitura' : 'Curso'}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Badges Section */}
-        {currentUser.badges.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="w-5 h-5 mr-2" />
-                Badges Conquistados ({currentUser.badges.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {currentUser.badges.map((badgeId) => {
-                  const badge = getBadgeInfo(badgeId);
-                  if (!badge) return null;
-                  
-                  return (
-                    <div key={badgeId} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                      <div className="text-2xl">{badge.icon}</div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-purple-700">{badge.name}</h4>
-                        <p className="text-sm text-gray-600">{badge.description}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Phase Progress */}
         <Card>
@@ -412,40 +390,91 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* OVERFLOW Discount */}
-        <Card className="bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200">
-          <CardHeader>
-            <CardTitle className="flex items-center text-orange-700">
-              <Sparkles className="w-5 h-5 mr-2" />
-              Desconto OVERFLOW
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center space-y-2">
-              <div className="text-3xl font-bold text-orange-600">{getDiscountPercentage()}%</div>
-              <p className="text-gray-600">Desconto acumulado para o OVERFLOW</p>
-              {getDiscountPercentage() < 100 ? (
-                <div className="bg-white p-3 rounded-lg">
-                  <Progress value={Math.min((currentUser.points % 10) * 10, 100)} className="h-2" />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Próximo 1%: {10 - (currentUser.points % 10)} pontos restantes
-                  </p>
-                </div>
-              ) : (
-                <div className="bg-white p-3 rounded-lg">
-                  <p className="text-green-600 font-semibold">Desconto máximo alcançado!</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Books and Courses Tabs */}
-        <Tabs defaultValue="books" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        {/* Tabs for different sections */}
+        <Tabs defaultValue="badges" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="badges">Badges</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
             <TabsTrigger value="books">Biblioteca</TabsTrigger>
             <TabsTrigger value="courses">Cursos</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="badges">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Award className="w-5 h-5 mr-2" />
+                  Badges Conquistados ({currentUser.badges.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {currentUser.badges.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">Nenhum badge conquistado ainda</p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {currentUser.badges.map((badgeId) => {
+                      const badge = getBadgeInfo(badgeId);
+                      if (!badge) return null;
+                      
+                      return (
+                        <div key={badgeId} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                          <div className="text-2xl">{badge.icon}</div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-purple-700">{badge.name}</h4>
+                            <p className="text-sm text-gray-600">{badge.description}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="timeline">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Clock className="w-5 h-5 mr-2" />
+                  Histórico de Missões
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {userActivities.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>Nenhuma missão concluída ainda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {userActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-start space-x-3 p-4 rounded-lg border bg-white">
+                        <div className="w-3 h-3 bg-teal-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-gray-800">{activity.missionName}</span>
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                              +{activity.points}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-gray-500">
+                            <span>Tipo: {activity.type === 'mission' ? 'Missão' : activity.type === 'book' ? 'Livro' : 'Curso'}</span>
+                            <span>•</span>
+                            <span>{formatTimeAgo(activity.timestamp)}</span>
+                          </div>
+                          {activity.period && (
+                            <div className="text-xs text-gray-400 mt-1">
+                              Período: {activity.period}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
           
           <TabsContent value="books">
             <Card>

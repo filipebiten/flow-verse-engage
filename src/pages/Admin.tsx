@@ -1,15 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Plus, Edit, Trash2, Users, BookOpen, GraduationCap, Target, Image, ExternalLink } from "lucide-react";
+import { ArrowLeft, Users, BookOpen, GraduationCap, CheckSquare, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -51,6 +51,7 @@ interface Book {
   points: number;
   targetAudience: string[];
   createdAt: string;
+  imageUrl?: string;
 }
 
 interface Course {
@@ -63,37 +64,44 @@ interface Course {
   createdAt: string;
 }
 
-interface NewsItem {
-  id: string;
-  title: string;
-  description?: string;
-  image?: string;
-  url?: string;
-  isActive: boolean;
-  createdAt: string;
-}
-
 const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  
-  // States for different entities
   const [users, setUsers] = useState<User[]>([]);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [news, setNews] = useState<NewsItem[]>([]);
   
+  // Filters and search
+  const [participationFilter, setParticipationFilter] = useState('Todos');
+  const [phaseFilter, setPhaseFilter] = useState('Todas');
+  const [searchTerm, setSearchTerm] = useState('');
+
   // Form states
-  const [newMission, setNewMission] = useState({ name: '', description: '', points: 0, type: '', targetAudience: [] });
-  const [newBook, setNewBook] = useState({ title: '', author: '', points: 0, targetAudience: [] });
-  const [newCourse, setNewCourse] = useState({ name: '', school: '', description: '', points: 0, targetAudience: [] });
-  const [newNews, setNewNews] = useState({ title: '', description: '', image: '', url: '', isActive: true });
-  
-  // Filter states
-  const [userFilter, setUserFilter] = useState('todos');
-  const [phaseFilter, setPhaseFilter] = useState('todos');
+  const [newMission, setNewMission] = useState({
+    name: '',
+    description: '',
+    points: 0,
+    type: 'Missões Diárias',
+    targetAudience: [] as string[]
+  });
+
+  const [newBook, setNewBook] = useState({
+    title: '',
+    author: '',
+    points: 0,
+    targetAudience: [] as string[],
+    imageUrl: ''
+  });
+
+  const [newCourse, setNewCourse] = useState({
+    name: '',
+    school: 'Escola do Discípulo',
+    description: '',
+    points: 0,
+    targetAudience: [] as string[]
+  });
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -113,7 +121,6 @@ const Admin = () => {
     loadMissions();
     loadBooks();
     loadCourses();
-    loadNews();
   }, [navigate]);
 
   const loadUsers = () => {
@@ -136,135 +143,176 @@ const Admin = () => {
     setCourses(storedCourses);
   };
 
-  const loadNews = () => {
-    const storedNews = JSON.parse(localStorage.getItem('news') || '[]');
-    setNews(storedNews);
-  };
+  // Filter users based on search and filters
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = searchTerm === '' || 
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.whatsapp.includes(searchTerm) ||
+      user.pgmNumber.toLowerCase().includes(searchTerm.toLowerCase());
 
-  // CRUD operations for missions
+    const matchesParticipation = participationFilter === 'Todos' ||
+      (participationFilter === 'Irmandade' && user.participatesIrmandade) ||
+      (participationFilter === 'Flow Up' && user.participatesFlowUp);
+
+    const matchesPhase = phaseFilter === 'Todas' || user.phase === phaseFilter;
+
+    return matchesSearch && matchesParticipation && matchesPhase;
+  });
+
   const createMission = () => {
-    if (!newMission.name || !newMission.description || newMission.points <= 0) return;
+    if (!newMission.name || !newMission.description) {
+      toast({
+        title: "Erro",
+        description: "Nome e descrição são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    const mission = {
-      ...newMission,
+    const mission: Mission = {
       id: Date.now().toString(),
+      ...newMission,
       createdAt: new Date().toISOString()
     };
 
     const updatedMissions = [...missions, mission];
     setMissions(updatedMissions);
     localStorage.setItem('missions', JSON.stringify(updatedMissions));
-    
-    setNewMission({ name: '', description: '', points: 0, type: '', targetAudience: [] });
-    toast({ title: "Missão criada com sucesso!" });
+
+    setNewMission({
+      name: '',
+      description: '',
+      points: 0,
+      type: 'Missões Diárias',
+      targetAudience: []
+    });
+
+    toast({
+      title: "Missão criada!",
+      description: "A nova missão foi adicionada com sucesso."
+    });
   };
 
-  const deleteMission = (id: string) => {
-    const updatedMissions = missions.filter(mission => mission.id !== id);
-    setMissions(updatedMissions);
-    localStorage.setItem('missions', JSON.stringify(updatedMissions));
-    toast({ title: "Missão removida com sucesso!" });
-  };
-
-  // CRUD operations for books
   const createBook = () => {
-    if (!newBook.title || !newBook.author || newBook.points <= 0) return;
+    if (!newBook.title || !newBook.author) {
+      toast({
+        title: "Erro",
+        description: "Título e autor são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    const book = {
-      ...newBook,
+    const book: Book = {
       id: Date.now().toString(),
+      ...newBook,
       createdAt: new Date().toISOString()
     };
 
     const updatedBooks = [...books, book];
     setBooks(updatedBooks);
     localStorage.setItem('books', JSON.stringify(updatedBooks));
-    
-    setNewBook({ title: '', author: '', points: 0, targetAudience: [] });
-    toast({ title: "Livro adicionado com sucesso!" });
+
+    setNewBook({
+      title: '',
+      author: '',
+      points: 0,
+      targetAudience: [],
+      imageUrl: ''
+    });
+
+    toast({
+      title: "Livro adicionado!",
+      description: "O novo livro foi adicionado com sucesso."
+    });
   };
 
-  const deleteBook = (id: string) => {
-    const updatedBooks = books.filter(book => book.id !== id);
-    setBooks(updatedBooks);
-    localStorage.setItem('books', JSON.stringify(updatedBooks));
-    toast({ title: "Livro removido com sucesso!" });
-  };
-
-  // CRUD operations for courses
   const createCourse = () => {
-    if (!newCourse.name || !newCourse.school || newCourse.points <= 0) return;
+    if (!newCourse.name || !newCourse.description) {
+      toast({
+        title: "Erro",
+        description: "Nome e descrição são obrigatórios",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    const course = {
-      ...newCourse,
+    const course: Course = {
       id: Date.now().toString(),
+      ...newCourse,
       createdAt: new Date().toISOString()
     };
 
     const updatedCourses = [...courses, course];
     setCourses(updatedCourses);
     localStorage.setItem('courses', JSON.stringify(updatedCourses));
+
+    setNewCourse({
+      name: '',
+      school: 'Escola do Discípulo',
+      description: '',
+      points: 0,
+      targetAudience: []
+    });
+
+    toast({
+      title: "Curso criado!",
+      description: "O novo curso foi adicionado com sucesso."
+    });
+  };
+
+  const deleteMission = (id: string) => {
+    const updatedMissions = missions.filter(m => m.id !== id);
+    setMissions(updatedMissions);
+    localStorage.setItem('missions', JSON.stringify(updatedMissions));
     
-    setNewCourse({ name: '', school: '', description: '', points: 0, targetAudience: [] });
-    toast({ title: "Curso adicionado com sucesso!" });
+    toast({
+      title: "Missão removida",
+      description: "A missão foi removida com sucesso."
+    });
+  };
+
+  const deleteBook = (id: string) => {
+    const updatedBooks = books.filter(b => b.id !== id);
+    setBooks(updatedBooks);
+    localStorage.setItem('books', JSON.stringify(updatedBooks));
+    
+    toast({
+      title: "Livro removido",
+      description: "O livro foi removido com sucesso."
+    });
   };
 
   const deleteCourse = (id: string) => {
-    const updatedCourses = courses.filter(course => course.id !== id);
+    const updatedCourses = courses.filter(c => c.id !== id);
     setCourses(updatedCourses);
     localStorage.setItem('courses', JSON.stringify(updatedCourses));
-    toast({ title: "Curso removido com sucesso!" });
-  };
-
-  // CRUD operations for news
-  const createNews = () => {
-    if (!newNews.title) return;
-
-    const newsItem = {
-      ...newNews,
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-
-    const updatedNews = [...news, newsItem];
-    setNews(updatedNews);
-    localStorage.setItem('news', JSON.stringify(updatedNews));
     
-    setNewNews({ title: '', description: '', image: '', url: '', isActive: true });
-    toast({ title: "Notícia criada com sucesso!" });
+    toast({
+      title: "Curso removido",
+      description: "O curso foi removido com sucesso."
+    });
   };
 
-  const deleteNews = (id: string) => {
-    const updatedNews = news.filter(item => item.id !== id);
-    setNews(updatedNews);
-    localStorage.setItem('news', JSON.stringify(updatedNews));
-    toast({ title: "Notícia removida com sucesso!" });
+  const handleTargetAudienceChange = (value: string, setter: any, currentValues: string[]) => {
+    if (currentValues.includes(value)) {
+      setter((prev: any) => ({
+        ...prev,
+        targetAudience: currentValues.filter(v => v !== value)
+      }));
+    } else {
+      setter((prev: any) => ({
+        ...prev,
+        targetAudience: [...currentValues, value]
+      }));
+    }
   };
 
-  const toggleNewsStatus = (id: string) => {
-    const updatedNews = news.map(item => 
-      item.id === id ? { ...item, isActive: !item.isActive } : item
-    );
-    setNews(updatedNews);
-    localStorage.setItem('news', JSON.stringify(updatedNews));
-    toast({ title: "Status da notícia atualizado!" });
-  };
-
-  const filteredUsers = users.filter(user => {
-    const participationMatch = 
-      userFilter === 'todos' || 
-      (userFilter === 'irmandade' && user.participatesIrmandade) ||
-      (userFilter === 'flowup' && user.participatesFlowUp);
-    
-    const phaseMatch = phaseFilter === 'todos' || user.phase === phaseFilter;
-    
-    return participationMatch && phaseMatch;
-  });
-
-  if (!currentUser) return null;
+  if (!currentUser?.isAdmin) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -280,58 +328,63 @@ const Admin = () => {
             </Button>
             <h1 className="text-2xl font-bold text-purple-700">Administração</h1>
           </div>
-          <Badge className="bg-purple-100 text-purple-700">Admin</Badge>
         </div>
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-6">
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="users">
-              <Users className="w-4 h-4 mr-1" />
-              Usuários
-            </TabsTrigger>
-            <TabsTrigger value="missions">
-              <Target className="w-4 h-4 mr-1" />
-              Missões
-            </TabsTrigger>
-            <TabsTrigger value="books">
-              <BookOpen className="w-4 h-4 mr-1" />
-              Livros
-            </TabsTrigger>
-            <TabsTrigger value="courses">
-              <GraduationCap className="w-4 h-4 mr-1" />
-              Cursos
-            </TabsTrigger>
-            <TabsTrigger value="news">
-              <ExternalLink className="w-4 h-4 mr-1" />
-              Notícias
-            </TabsTrigger>
+        <Tabs defaultValue="users" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="users">Usuários</TabsTrigger>
+            <TabsTrigger value="missions">Missões</TabsTrigger>
+            <TabsTrigger value="books">Livros</TabsTrigger>
+            <TabsTrigger value="courses">Cursos</TabsTrigger>
           </TabsList>
 
-          {/* Users Tab */}
           <TabsContent value="users">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Gerenciar Usuários ({filteredUsers.length})</CardTitle>
-                  <div className="flex space-x-2">
-                    <Select value={userFilter} onValueChange={setUserFilter}>
+                <CardTitle className="flex items-center">
+                  <Users className="w-5 h-5 mr-2" />
+                  Gerenciar Usuários ({filteredUsers.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Search and Filters */}
+                <div className="flex space-x-4 items-end">
+                  <div className="flex-1">
+                    <Label htmlFor="search">Pesquisar</Label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="search"
+                        placeholder="Nome, email, telefone ou PGM..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="participation">Participação</Label>
+                    <Select value={participationFilter} onValueChange={setParticipationFilter}>
                       <SelectTrigger className="w-40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="todos">Todos</SelectItem>
-                        <SelectItem value="irmandade">Irmandade</SelectItem>
-                        <SelectItem value="flowup">Flow Up</SelectItem>
+                        <SelectItem value="Todos">Todos</SelectItem>
+                        <SelectItem value="Irmandade">Irmandade</SelectItem>
+                        <SelectItem value="Flow Up">Flow Up</SelectItem>
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="phase">Fase</Label>
                     <Select value={phaseFilter} onValueChange={setPhaseFilter}>
                       <SelectTrigger className="w-40">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="todos">Todas as Fases</SelectItem>
+                        <SelectItem value="Todas">Todas</SelectItem>
                         <SelectItem value="Riacho">Riacho</SelectItem>
                         <SelectItem value="Correnteza">Correnteza</SelectItem>
                         <SelectItem value="Cachoeira">Cachoeira</SelectItem>
@@ -340,35 +393,30 @@ const Admin = () => {
                     </Select>
                   </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+
+                {/* Users List */}
+                <div className="space-y-2 max-h-96 overflow-y-auto">
                   {filteredUsers.map((user) => (
-                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <h4 className="font-medium">{user.name}</h4>
-                          <Badge variant="outline">{user.points} pontos</Badge>
-                          <Badge variant="secondary">{user.phase}</Badge>
-                          {user.isAdmin && <Badge className="bg-purple-100 text-purple-700">Admin</Badge>}
-                        </div>
+                        <h4 className="font-medium">{user.name}</h4>
                         <p className="text-sm text-gray-600">{user.email}</p>
-                        <div className="flex space-x-2 mt-1">
-                          {user.participatesIrmandade && (
-                            <Badge variant="outline" className="text-xs">Irmandade</Badge>
-                          )}
-                          {user.participatesFlowUp && (
-                            <Badge variant="outline" className="text-xs">Flow Up</Badge>
-                          )}
-                        </div>
+                        <p className="text-sm text-gray-600">{user.pgmRole} {user.pgmNumber}</p>
+                        <p className="text-sm text-gray-600">WhatsApp: {user.whatsapp}</p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/user/${user.id}`)}
-                      >
-                        Ver Perfil
-                      </Button>
+                      <div className="flex items-center space-x-2">
+                        <Badge variant="secondary">{user.points} pts</Badge>
+                        <Badge variant="outline">{user.phase}</Badge>
+                        {user.participatesIrmandade && (
+                          <Badge className="bg-blue-100 text-blue-800">Irmandade</Badge>
+                        )}
+                        {user.participatesFlowUp && (
+                          <Badge className="bg-orange-100 text-orange-800">Flow Up</Badge>
+                        )}
+                        {user.isAdmin && (
+                          <Badge className="bg-purple-100 text-purple-800">Admin</Badge>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -376,7 +424,6 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
-          {/* Missions Tab */}
           <TabsContent value="missions">
             <div className="space-y-6">
               {/* Create Mission Form */}
@@ -384,30 +431,46 @@ const Admin = () => {
                 <CardHeader>
                   <CardTitle>Criar Nova Missão</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Input
-                      placeholder="Nome da missão"
-                      value={newMission.name}
-                      onChange={(e) => setNewMission({...newMission, name: e.target.value})}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Pontos"
-                      value={newMission.points || ''}
-                      onChange={(e) => setNewMission({...newMission, points: parseInt(e.target.value) || 0})}
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="mission-name">Nome da Missão</Label>
+                      <Input
+                        id="mission-name"
+                        value={newMission.name}
+                        onChange={(e) => setNewMission(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Ex: Oração matinal"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="mission-points">Pontos</Label>
+                      <Input
+                        id="mission-points"
+                        type="number"
+                        value={newMission.points}
+                        onChange={(e) => setNewMission(prev => ({ ...prev, points: Number(e.target.value) }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="mission-description">Descrição</Label>
+                    <Textarea
+                      id="mission-description"
+                      value={newMission.description}
+                      onChange={(e) => setNewMission(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Descreva a missão..."
                     />
                   </div>
-                  <Textarea
-                    placeholder="Descrição da missão"
-                    className="mt-4"
-                    value={newMission.description}
-                    onChange={(e) => setNewMission({...newMission, description: e.target.value})}
-                  />
-                  <div className="flex justify-between items-center mt-4">
-                    <Select value={newMission.type} onValueChange={(value) => setNewMission({...newMission, type: value})}>
-                      <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Tipo de missão" />
+
+                  <div>
+                    <Label htmlFor="mission-type">Tipo de Missão</Label>
+                    <Select 
+                      value={newMission.type} 
+                      onValueChange={(value) => setNewMission(prev => ({ ...prev, type: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Missões Diárias">Missões Diárias</SelectItem>
@@ -418,38 +481,60 @@ const Admin = () => {
                         <SelectItem value="Outras Missões">Outras Missões</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button onClick={createMission}>
-                      <Plus className="w-4 h-4 mr-1" />
-                      Criar Missão
-                    </Button>
                   </div>
+
+                  <div>
+                    <Label>Público-alvo</Label>
+                    <div className="flex space-x-2 mt-2">
+                      {['Todos', 'Membros', 'Líderes', 'Supervisores', 'Coordenadores', 'Pastores'].map((audience) => (
+                        <Button
+                          key={audience}
+                          variant={newMission.targetAudience.includes(audience) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleTargetAudienceChange(audience, setNewMission, newMission.targetAudience)}
+                        >
+                          {audience}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button onClick={createMission} className="w-full">
+                    <CheckSquare className="w-4 h-4 mr-2" />
+                    Criar Missão
+                  </Button>
                 </CardContent>
               </Card>
 
               {/* Missions List */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Missões Criadas ({missions.length})</CardTitle>
+                  <CardTitle>Missões Existentes ({missions.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
                     {missions.map((mission) => (
-                      <div key={mission.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div key={mission.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <h4 className="font-medium">{mission.name}</h4>
+                          <h4 className="font-medium">{mission.name}</h4>
+                          <p className="text-sm text-gray-600">{mission.description}</p>
+                          <div className="flex items-center space-x-2 mt-1">
                             <Badge variant="secondary">{mission.points} pontos</Badge>
                             <Badge variant="outline">{mission.type}</Badge>
+                            {mission.targetAudience.map((audience) => (
+                              <Badge key={audience} variant="outline" className="text-xs">
+                                {audience}
+                              </Badge>
+                            ))}
                           </div>
-                          <p className="text-sm text-gray-600">{mission.description}</p>
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => deleteMission(mission.id)}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          Remover
                         </Button>
                       </div>
                     ))}
@@ -459,7 +544,6 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          {/* Books Tab */}
           <TabsContent value="books">
             <div className="space-y-6">
               {/* Create Book Form */}
@@ -467,57 +551,105 @@ const Admin = () => {
                 <CardHeader>
                   <CardTitle>Adicionar Novo Livro</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Input
-                      placeholder="Título do livro"
-                      value={newBook.title}
-                      onChange={(e) => setNewBook({...newBook, title: e.target.value})}
-                    />
-                    <Input
-                      placeholder="Autor"
-                      value={newBook.author}
-                      onChange={(e) => setNewBook({...newBook, author: e.target.value})}
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Pontos"
-                      value={newBook.points || ''}
-                      onChange={(e) => setNewBook({...newBook, points: parseInt(e.target.value) || 0})}
-                    />
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="book-title">Título do Livro</Label>
+                      <Input
+                        id="book-title"
+                        value={newBook.title}
+                        onChange={(e) => setNewBook(prev => ({ ...prev, title: e.target.value }))}
+                        placeholder="Ex: O Peregrino"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="book-author">Autor</Label>
+                      <Input
+                        id="book-author"
+                        value={newBook.author}
+                        onChange={(e) => setNewBook(prev => ({ ...prev, author: e.target.value }))}
+                        placeholder="Ex: John Bunyan"
+                      />
+                    </div>
                   </div>
-                  <div className="flex justify-end mt-4">
-                    <Button onClick={createBook}>
-                      <Plus className="w-4 h-4 mr-1" />
-                      Adicionar Livro
-                    </Button>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="book-points">Pontos</Label>
+                      <Input
+                        id="book-points"
+                        type="number"
+                        value={newBook.points}
+                        onChange={(e) => setNewBook(prev => ({ ...prev, points: Number(e.target.value) }))}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="book-image">URL da Imagem</Label>
+                      <Input
+                        id="book-image"
+                        value={newBook.imageUrl}
+                        onChange={(e) => setNewBook(prev => ({ ...prev, imageUrl: e.target.value }))}
+                        placeholder="https://..."
+                      />
+                    </div>
                   </div>
+
+                  <div>
+                    <Label>Público-alvo</Label>
+                    <div className="flex space-x-2 mt-2">
+                      {['Todos', 'Membros', 'Líderes', 'Supervisores', 'Coordenadores', 'Pastores'].map((audience) => (
+                        <Button
+                          key={audience}
+                          variant={newBook.targetAudience.includes(audience) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleTargetAudienceChange(audience, setNewBook, newBook.targetAudience)}
+                        >
+                          {audience}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Button onClick={createBook} className="w-full">
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Adicionar Livro
+                  </Button>
                 </CardContent>
               </Card>
 
               {/* Books List */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Livros Cadastrados ({books.length})</CardTitle>
+                  <CardTitle>Livros Existentes ({books.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
                     {books.map((book) => (
-                      <div key={book.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
+                      <div key={book.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
+                        <div className="flex items-center space-x-3 flex-1">
+                          {book.imageUrl && (
+                            <img src={book.imageUrl} alt={book.title} className="w-12 h-16 object-cover rounded" />
+                          )}
+                          <div className="flex-1">
                             <h4 className="font-medium">{book.title}</h4>
-                            <Badge variant="secondary">{book.points} pontos</Badge>
+                            <p className="text-sm text-gray-600">por {book.author}</p>
+                            <div className="flex items-center space-x-2 mt-1">
+                              <Badge variant="secondary">{book.points} pontos</Badge>
+                              {book.targetAudience.map((audience) => (
+                                <Badge key={audience} variant="outline" className="text-xs">
+                                  {audience}
+                                </Badge>
+                              ))}
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600">por {book.author}</p>
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => deleteBook(book.id)}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          Remover
                         </Button>
                       </div>
                     ))}
@@ -527,182 +659,114 @@ const Admin = () => {
             </div>
           </TabsContent>
 
-          {/* Courses Tab */}
           <TabsContent value="courses">
             <div className="space-y-6">
               {/* Create Course Form */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Adicionar Novo Curso</CardTitle>
+                  <CardTitle>Criar Novo Curso</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Input
-                      placeholder="Nome do curso"
-                      value={newCourse.name}
-                      onChange={(e) => setNewCourse({...newCourse, name: e.target.value})}
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="course-name">Nome do Curso</Label>
+                      <Input
+                        id="course-name"
+                        value={newCourse.name}
+                        onChange={(e) => setNewCourse(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Ex: Fundamentos da Fé"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="course-school">Escola/Plataforma</Label>
+                      <Select 
+                        value={newCourse.school} 
+                        onValueChange={(value) => setNewCourse(prev => ({ ...prev, school: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Escola do Discípulo">Escola do Discípulo</SelectItem>
+                          <SelectItem value="Universidade da Família">Universidade da Família</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="course-description">Descrição</Label>
+                    <Textarea
+                      id="course-description"
+                      value={newCourse.description}
+                      onChange={(e) => setNewCourse(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Descreva o curso..."
                     />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="course-points">Pontos</Label>
                     <Input
-                      placeholder="Escola/Plataforma"
-                      value={newCourse.school}
-                      onChange={(e) => setNewCourse({...newCourse, school: e.target.value})}
-                    />
-                    <Input
+                      id="course-points"
                       type="number"
-                      placeholder="Pontos"
-                      value={newCourse.points || ''}
-                      onChange={(e) => setNewCourse({...newCourse, points: parseInt(e.target.value) || 0})}
+                      value={newCourse.points}
+                      onChange={(e) => setNewCourse(prev => ({ ...prev, points: Number(e.target.value) }))}
                     />
                   </div>
-                  <Textarea
-                    placeholder="Descrição do curso"
-                    className="mt-4"
-                    value={newCourse.description}
-                    onChange={(e) => setNewCourse({...newCourse, description: e.target.value})}
-                  />
-                  <div className="flex justify-end mt-4">
-                    <Button onClick={createCourse}>
-                      <Plus className="w-4 h-4 mr-1" />
-                      Adicionar Curso
-                    </Button>
+
+                  <div>
+                    <Label>Público-alvo</Label>
+                    <div className="flex space-x-2 mt-2">
+                      {['Todos', 'Membros', 'Líderes', 'Supervisores', 'Coordenadores', 'Pastores'].map((audience) => (
+                        <Button
+                          key={audience}
+                          variant={newCourse.targetAudience.includes(audience) ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleTargetAudienceChange(audience, setNewCourse, newCourse.targetAudience)}
+                        >
+                          {audience}
+                        </Button>
+                      ))}
+                    </div>
                   </div>
+
+                  <Button onClick={createCourse} className="w-full">
+                    <GraduationCap className="w-4 h-4 mr-2" />
+                    Criar Curso
+                  </Button>
                 </CardContent>
               </Card>
 
               {/* Courses List */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Cursos Cadastrados ({courses.length})</CardTitle>
+                  <CardTitle>Cursos Existentes ({courses.length})</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
                     {courses.map((course) => (
-                      <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div key={course.id} className="flex items-center justify-between p-3 border rounded-lg bg-white">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <h4 className="font-medium">{course.name}</h4>
-                            <Badge variant="secondary">{course.points} pontos</Badge>
-                          </div>
+                          <h4 className="font-medium">{course.name}</h4>
                           <p className="text-sm text-gray-600">{course.school}</p>
-                          {course.description && (
-                            <p className="text-sm text-gray-500 mt-1">{course.description}</p>
-                          )}
+                          <p className="text-sm text-gray-600">{course.description}</p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Badge variant="secondary">{course.points} pontos</Badge>
+                            {course.targetAudience.map((audience) => (
+                              <Badge key={audience} variant="outline" className="text-xs">
+                                {audience}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => deleteCourse(course.id)}
-                          className="text-red-600 hover:text-red-700"
+                          className="text-red-600 border-red-200 hover:bg-red-50"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          Remover
                         </Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          {/* News Tab */}
-          <TabsContent value="news">
-            <div className="space-y-6">
-              {/* Create News Form */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Criar Nova Notícia</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <Input
-                      placeholder="Título da notícia"
-                      value={newNews.title}
-                      onChange={(e) => setNewNews({...newNews, title: e.target.value})}
-                    />
-                    <Textarea
-                      placeholder="Descrição (opcional)"
-                      value={newNews.description}
-                      onChange={(e) => setNewNews({...newNews, description: e.target.value})}
-                    />
-                    <Input
-                      placeholder="URL da imagem (opcional)"
-                      value={newNews.image}
-                      onChange={(e) => setNewNews({...newNews, image: e.target.value})}
-                    />
-                    <Input
-                      placeholder="Link externo (opcional)"
-                      value={newNews.url}
-                      onChange={(e) => setNewNews({...newNews, url: e.target.value})}
-                    />
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={newNews.isActive}
-                        onCheckedChange={(checked) => setNewNews({...newNews, isActive: !!checked})}
-                      />
-                      <label className="text-sm">Ativar notícia</label>
-                    </div>
-                  </div>
-                  <div className="flex justify-end mt-4">
-                    <Button onClick={createNews}>
-                      <Plus className="w-4 h-4 mr-1" />
-                      Criar Notícia
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* News List */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Notícias Criadas ({news.length})</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {news.map((item) => (
-                      <div key={item.id} className="flex items-start justify-between p-3 border rounded-lg">
-                        <div className="flex space-x-3 flex-1">
-                          {item.image && (
-                            <img src={item.image} alt={item.title} className="w-16 h-16 object-cover rounded" />
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <h4 className="font-medium">{item.title}</h4>
-                              <Badge variant={item.isActive ? "default" : "secondary"}>
-                                {item.isActive ? "Ativa" : "Inativa"}
-                              </Badge>
-                            </div>
-                            {item.description && (
-                              <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                            )}
-                            {item.url && (
-                              <a 
-                                href={item.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-sm text-blue-600 hover:underline mt-1 block"
-                              >
-                                {item.url}
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleNewsStatus(item.id)}
-                          >
-                            {item.isActive ? "Desativar" : "Ativar"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => deleteNews(item.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
                       </div>
                     ))}
                   </div>
