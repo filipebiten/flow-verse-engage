@@ -4,13 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Trophy, BookOpen, GraduationCap } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ArrowLeft, CheckSquare, Calendar, BookOpen, GraduationCap, Target, Trophy, Award } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import PhaseChangeDialog from "@/components/PhaseChangeDialog";
-import { getUserPhase, getNextPhase } from "@/utils/phaseUtils";
-import { usePhaseColors } from "@/hooks/usePhaseColors";
 
 interface User {
   id: string;
@@ -36,71 +34,50 @@ interface User {
 
 interface Mission {
   id: string;
-  name: string;
+  title: string;
   description: string;
   points: number;
-  type: string;
-  targetAudience: string[];
+  type: 'mission' | 'book' | 'course';
+  isActive: boolean;
   createdAt: string;
+  bookId?: string;
+  courseId?: string;
+  period?: string;
+}
+
+interface MissionActivity {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto: string | null;
+  missionName: string;
+  points: number;
+  timestamp: string;
+  type?: string;
+  period?: string;
+  bookId?: string;
+  courseId?: string;
+  completedAt: string;
 }
 
 interface Book {
   id: string;
   title: string;
   author: string;
+  phase: string;
   points: number;
-  targetAudience: string[];
-  createdAt: string;
-  imageUrl?: string;
+  isActive: boolean;
+  image?: string;
 }
 
 interface Course {
   id: string;
-  name: string;
+  title: string;
   school: string;
-  description: string;
+  phase: string;
   points: number;
-  targetAudience: string[];
-  createdAt: string;
+  isActive: boolean;
 }
-
-interface MissionActivity {
-  id: string;
-  userId: string;
-  missionId: string;
-  missionName: string;
-  type: 'mission' | 'book' | 'course';
-  points: number;
-  completedAt: string;
-  period: string;
-}
-
-const getCurrentPeriod = (type: string): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const day = now.getDate();
-
-  switch (type) {
-    case 'Missões Diárias':
-      return `${year}-${month + 1}-${day}`;
-    case 'Missões Semanais': {
-      const startOfWeek = new Date(year, month, day - now.getDay());
-      const endOfWeek = new Date(year, month, day + (6 - now.getDay()));
-      return `${startOfWeek.toISOString().split('T')[0]} - ${endOfWeek.toISOString().split('T')[0]}`;
-    }
-    case 'Missões Mensais':
-      return `${year}-${month + 1}`;
-    case 'Missões Semestrais': {
-      const semester = month < 6 ? 1 : 2;
-      return `${year}-${semester}`;
-    }
-    case 'Missões Anuais':
-      return `${year}`;
-    default:
-      return 'Sempre';
-  }
-};
 
 const Missions = () => {
   const navigate = useNavigate();
@@ -109,11 +86,9 @@ const Missions = () => {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
-  const [showPhaseDialog, setShowPhaseDialog] = useState(false);
-  const [previousPoints, setPreviousPoints] = useState(0);
-
-  usePhaseColors(currentUser?.points || 0);
+  const [userActivities, setUserActivities] = useState<MissionActivity[]>([]);
+  const [showBadgeDialog, setShowBadgeDialog] = useState(false);
+  const [newBadges, setNewBadges] = useState<string[]>([]);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -121,336 +96,278 @@ const Missions = () => {
       navigate('/');
       return;
     }
-
-    const userData = JSON.parse(user);
-    setCurrentUser(userData);
-    setPreviousPoints(userData.points);
+    
+    setCurrentUser(JSON.parse(user));
     loadMissions();
     loadBooks();
     loadCourses();
-    loadMissionActivities(userData.id);
+    loadUserActivities(JSON.parse(user).id);
   }, [navigate]);
 
   const loadMissions = () => {
     const storedMissions = JSON.parse(localStorage.getItem('missions') || '[]');
-    setMissions(storedMissions);
+    setMissions(storedMissions.filter((m: Mission) => m.isActive));
   };
 
   const loadBooks = () => {
     const storedBooks = JSON.parse(localStorage.getItem('books') || '[]');
-    setBooks(storedBooks);
+    setBooks(storedBooks.filter((b: Book) => b.isActive));
   };
 
   const loadCourses = () => {
     const storedCourses = JSON.parse(localStorage.getItem('courses') || '[]');
-    setCourses(storedCourses);
+    setCourses(storedCourses.filter((c: Course) => c.isActive));
   };
 
-  const loadMissionActivities = (userId: string) => {
-    const storedActivities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
-    const userActivities = storedActivities.filter((activity: MissionActivity) => activity.userId === userId);
-    setMissionActivities(userActivities);
+  const loadUserActivities = (userId: string) => {
+    const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+    const userActivities = activities.filter((activity: MissionActivity) => activity.userId === userId);
+    setUserActivities(userActivities);
   };
 
-  const completeMission = (mission: Mission | Book | Course, type: 'mission' | 'book' | 'course') => {
-    if (!currentUser) return;
-
-    try {
-      const activityId = `${mission.id}-${Date.now()}`;
-      const missionName = (mission as Mission).name || (mission as Book).title || (mission as Course).name;
-      
-      const activity: MissionActivity = {
-        id: activityId,
-        userId: currentUser.id,
-        missionId: mission.id,
-        missionName: missionName,
-        type,
-        points: mission.points,
-        completedAt: new Date().toISOString(),
-        period: getCurrentPeriod((mission as Mission).type || 'Outras Missões')
-      };
-
-      const updatedActivities = [...missionActivities, activity];
-      setMissionActivities(updatedActivities);
-      localStorage.setItem('missionActivities', JSON.stringify(updatedActivities));
-
-      // Store global mission activities for feed
-      const globalActivities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
-      const globalActivity = {
-        ...activity,
-        userName: currentUser.name,
-        userPhoto: currentUser.profilePhoto
-      };
-      globalActivities.push(globalActivity);
-      localStorage.setItem('missionActivities', JSON.stringify(globalActivities));
-
-      setPreviousPoints(currentUser.points);
-      const newPoints = currentUser.points + mission.points;
-      
-      let updatedUser = { ...currentUser, points: newPoints };
-
-      // Add book/course to completed lists
-      if (type === 'book' && !updatedUser.booksRead.includes(missionName)) {
-        updatedUser.booksRead = [...updatedUser.booksRead, missionName];
-      } else if (type === 'course' && !updatedUser.coursesCompleted.includes(missionName)) {
-        updatedUser.coursesCompleted = [...updatedUser.coursesCompleted, missionName];
-        // Remove from in progress if it was there
-        updatedUser.coursesInProgress = updatedUser.coursesInProgress.filter(c => c !== missionName);
+  const getPhaseInfo = (phase: string) => {
+    const phases = {
+      "Riacho": { 
+        emoji: "🌀", 
+        phrase: "Começando a fluir", 
+        description: "Início da caminhada com Deus e com a FLOW.",
+        color: "bg-green-100 text-green-800",
+        nextPhase: "Correnteza",
+        nextPoints: 251
+      },
+      "Correnteza": { 
+        emoji: "🌊", 
+        phrase: "Sendo levado por algo maior", 
+        description: "Engajado no PGM, abrindo-se ao mover de Deus.",
+        color: "bg-blue-100 text-blue-800",
+        nextPhase: "Cachoeira",
+        nextPoints: 501
+      },
+      "Cachoeira": { 
+        emoji: "💥", 
+        phrase: "Entregue ao movimento de Deus", 
+        description: "Servindo com intensidade e sendo transformador.",
+        color: "bg-purple-100 text-purple-800",
+        nextPhase: "Oceano",
+        nextPoints: 1001
+      },
+      "Oceano": { 
+        emoji: "🌌", 
+        phrase: "Profundamente imerso em Deus", 
+        description: "Maturidade espiritual, liderança e profundidade.",
+        color: "bg-gray-900 text-white",
+        nextPhase: null,
+        nextPoints: null
       }
-
-      // Check for new badges
-      const newBadges = checkForNewBadges(updatedUser, type);
-      
-      if (newBadges.length > 0) {
-        updatedUser.badges = [...updatedUser.badges, ...newBadges];
-        
-        // Show badge notification
-        toast({
-          title: "🏆 Novo Badge Conquistado!",
-          description: `Você ganhou ${newBadges.length} novo(s) badge(s)!`
-        });
-      }
-      
-      setCurrentUser(updatedUser);
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-      // Update users array
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const updatedUsers = users.map((user: User) => 
-        user.id === currentUser.id ? updatedUser : user
-      );
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-
-      // Check for phase change
-      const oldPhase = getUserPhase(currentUser.points);
-      const newPhase = getUserPhase(newPoints);
-      
-      if (oldPhase.name !== newPhase.name) {
-        // Save phase change activity
-        const phaseChanges = JSON.parse(localStorage.getItem('phaseChanges') || '[]');
-        const phaseChange = {
-          id: `phase-${Date.now()}`,
-          userId: currentUser.id,
-          userName: currentUser.name,
-          userPhoto: currentUser.profilePhoto,
-          oldPhase: oldPhase.name,
-          newPhase: newPhase.name,
-          timestamp: new Date().toISOString()
-        };
-        phaseChanges.push(phaseChange);
-        localStorage.setItem('phaseChanges', JSON.stringify(phaseChanges));
-        
-        setShowPhaseDialog(true);
-      }
-
-      toast({
-        title: "🎉 Missão Concluída!",
-        description: `+${mission.points} pontos adicionados!`
-      });
-
-    } catch (error) {
-      console.error('Error completing mission:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível completar a missão. Tente novamente.",
-        variant: "destructive"
-      });
-    }
+    };
+    return phases[phase as keyof typeof phases] || phases["Riacho"];
   };
 
-  const checkForNewBadges = (user: User, type: 'mission' | 'book' | 'course'): string[] => {
+  const getPhaseProgress = () => {
+    if (!currentUser) return 0;
+    const phaseInfo = getPhaseInfo(currentUser.phase);
+    
+    if (!phaseInfo.nextPoints) return 100;
+    
+    const currentPhaseStart = phaseInfo.nextPoints === 251 ? 0 : 
+                             phaseInfo.nextPoints === 501 ? 251 :
+                             phaseInfo.nextPoints === 1001 ? 501 : 0;
+    
+    const progressInPhase = currentUser.points - currentPhaseStart;
+    const totalPointsForPhase = phaseInfo.nextPoints - currentPhaseStart;
+    
+    return Math.min((progressInPhase / totalPointsForPhase) * 100, 100);
+  };
+
+  const checkAndAwardBadges = (user: User) => {
+    const currentBadges = user.badges || [];
     const newBadges: string[] = [];
-    
-    if (type === 'book') {
-      const booksRead = user.booksRead.length;
-      
-      if (booksRead === 1 && !user.badges.includes('reader-1')) {
-        newBadges.push('reader-1');
-      } else if (booksRead === 5 && !user.badges.includes('reader-2')) {
-        newBadges.push('reader-2');
-      } else if (booksRead === 10 && !user.badges.includes('reader-3')) {
-        newBadges.push('reader-3');
-      } else if (booksRead === 20 && !user.badges.includes('reader-4')) {
-        newBadges.push('reader-4');
-      }
-    }
-    
-    if (type === 'course') {
-      const coursesCompleted = user.coursesCompleted.length;
-      
-      if (coursesCompleted === 1 && !user.badges.includes('course-1')) {
-        newBadges.push('course-1');
-      } else if (coursesCompleted === 3 && !user.badges.includes('course-2')) {
-        newBadges.push('course-2');
-      } else if (coursesCompleted === 5 && !user.badges.includes('course-3')) {
-        newBadges.push('course-3');
-      } else if (coursesCompleted === 8 && !user.badges.includes('course-4')) {
-        newBadges.push('course-4');
-      }
-    }
-    
-    // Check for combined badges
-    const booksCount = user.booksRead.length;
-    const coursesCount = user.coursesCompleted.length;
-    
-    // Discípulo Completo: 5 livros + 3 cursos + 30 dias missão
-    if (booksCount >= 5 && coursesCount >= 3 && !user.badges.includes('complete-1')) {
+
+    // Reading badges
+    const booksCount = user.booksRead?.length || 0;
+    if (booksCount >= 1 && !currentBadges.includes('reader-1')) newBadges.push('reader-1');
+    if (booksCount >= 5 && !currentBadges.includes('reader-2')) newBadges.push('reader-2');
+    if (booksCount >= 10 && !currentBadges.includes('reader-3')) newBadges.push('reader-3');
+    if (booksCount >= 20 && !currentBadges.includes('reader-4')) newBadges.push('reader-4');
+
+    // Course badges
+    const coursesCount = user.coursesCompleted?.length || 0;
+    if (coursesCount >= 1 && !currentBadges.includes('course-1')) newBadges.push('course-1');
+    if (coursesCount >= 3 && !currentBadges.includes('course-2')) newBadges.push('course-2');
+    if (coursesCount >= 5 && !currentBadges.includes('course-3')) newBadges.push('course-3');
+    if (coursesCount >= 8 && !currentBadges.includes('course-4')) newBadges.push('course-4');
+
+    // Combined badges
+    if (booksCount >= 5 && coursesCount >= 3 && !currentBadges.includes('complete-1')) {
       newBadges.push('complete-1');
     }
-    
-    // Guerreiro da Rotina: 10 livros + 5 cursos + 90 dias missão
-    if (booksCount >= 10 && coursesCount >= 5 && !user.badges.includes('complete-2')) {
+    if (booksCount >= 10 && coursesCount >= 5 && !currentBadges.includes('complete-2')) {
       newBadges.push('complete-2');
     }
-    
-    // Líder Exemplar: 15 livros + 8 cursos + 180 dias missão
-    if (booksCount >= 15 && coursesCount >= 8 && !user.badges.includes('complete-3')) {
+    if (booksCount >= 15 && coursesCount >= 8 && !currentBadges.includes('complete-3')) {
       newBadges.push('complete-3');
     }
-    
-    return newBadges;
-  };
 
-  const uncompleteMission = (mission: Mission | Book | Course, type: 'mission' | 'book' | 'course') => {
-    if (!currentUser) return;
-
-    const period = getCurrentPeriod((mission as Mission).type || 'Outras Missões');
-    const activityToRemove = missionActivities.find(activity => 
-      activity.userId === currentUser.id && 
-      activity.missionId === mission.id && 
-      activity.type === type &&
-      activity.period === period
-    );
-
-    if (activityToRemove) {
-      const updatedActivities = missionActivities.filter(activity => activity.id !== activityToRemove.id);
-      setMissionActivities(updatedActivities);
-      localStorage.setItem('missionActivities', JSON.stringify(updatedActivities));
-
-      const newPoints = Math.max(0, currentUser.points - mission.points);
-      const missionName = (mission as Mission).name || (mission as Book).title || (mission as Course).name;
+    if (newBadges.length > 0) {
+      const updatedUser = { ...user, badges: [...currentBadges, ...newBadges] };
       
-      let updatedUser = { ...currentUser, points: newPoints };
-
-      // Remove book/course from completed lists
-      if (type === 'book') {
-        updatedUser.booksRead = updatedUser.booksRead.filter(book => book !== missionName);
-      } else if (type === 'course') {
-        updatedUser.coursesCompleted = updatedUser.coursesCompleted.filter(course => course !== missionName);
-      }
-      
-      setCurrentUser(updatedUser);
-      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
+      // Update localStorage
       const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const updatedUsers = users.map((user: User) => 
-        user.id === currentUser.id ? updatedUser : user
-      );
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      const userIndex = users.findIndex((u: User) => u.id === user.id);
+      if (userIndex !== -1) {
+        users[userIndex] = updatedUser;
+        localStorage.setItem('users', JSON.stringify(users));
+        localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+      }
 
-      toast({
-        title: "Missão desmarcada",
-        description: `${mission.points} pontos removidos.`
-      });
+      // Show badge dialog
+      setNewBadges(newBadges);
+      setShowBadgeDialog(true);
+
+      // Add badge activity
+      const badgeActivity = {
+        id: Date.now().toString(),
+        userId: user.id,
+        userName: user.name,
+        userPhoto: user.profilePhoto,
+        badges: newBadges,
+        timestamp: new Date().toISOString()
+      };
+      
+      const badgeActivities = JSON.parse(localStorage.getItem('badgeActivities') || '[]');
+      badgeActivities.push(badgeActivity);
+      localStorage.setItem('badgeActivities', JSON.stringify(badgeActivities));
+
+      setCurrentUser(updatedUser);
     }
   };
 
-  const isMissionCompleted = (mission: Mission | Book | Course, type: 'mission' | 'book' | 'course'): boolean => {
-    if (!currentUser) return false;
-  
-    const period = getCurrentPeriod((mission as Mission).type || 'Outras Missões');
-    return missionActivities.some(activity =>
-      activity.userId === currentUser.id &&
-      activity.missionId === mission.id &&
-      activity.type === type &&
-      activity.period === period
+  const completeMission = (mission: Mission) => {
+    if (!currentUser) return;
+
+    const completedAt = new Date().toISOString();
+    
+    const activity: MissionActivity = {
+      id: Date.now().toString(),
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userPhoto: currentUser.profilePhoto,
+      missionName: mission.title,
+      points: mission.points,
+      timestamp: completedAt,
+      type: mission.type,
+      period: mission.period,
+      bookId: mission.bookId,
+      courseId: mission.courseId,
+      completedAt
+    };
+
+    const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+    activities.push(activity);
+    localStorage.setItem('missionActivities', JSON.stringify(activities));
+
+    const updatedUser = { 
+      ...currentUser, 
+      points: currentUser.points + mission.points 
+    };
+
+    if (mission.type === 'book' && mission.bookId) {
+      const book = books.find(b => b.id === mission.bookId);
+      if (book) {
+        updatedUser.booksRead = [...(currentUser.booksRead || []), book.title];
+      }
+    }
+
+    if (mission.type === 'course' && mission.courseId) {
+      const course = courses.find(c => c.id === mission.courseId);
+      if (course) {
+        updatedUser.coursesCompleted = [...(currentUser.coursesCompleted || []), course.title];
+      }
+    }
+
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userIndex = users.findIndex((u: User) => u.id === currentUser.id);
+    if (userIndex !== -1) {
+      users[userIndex] = updatedUser;
+      localStorage.setItem('users', JSON.stringify(users));
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    }
+
+    setCurrentUser(updatedUser);
+    loadUserActivities(currentUser.id);
+
+    toast({
+      title: "Missão Concluída! 🎉",
+      description: `Você ganhou ${mission.points} pontos!`,
+    });
+
+    // Check for new badges
+    setTimeout(() => checkAndAwardBadges(updatedUser), 500);
+  };
+
+  const isMissionCompleted = (mission: Mission) => {
+    return userActivities.some(activity => 
+      activity.missionName === mission.title && 
+      activity.type === mission.type
     );
   };
 
-  const getMissionsByType = (type: string): Mission[] => {
-    return missions.filter(mission => mission.type === type);
+  const getMissionCompletionDate = (mission: Mission) => {
+    const activity = userActivities.find(activity => 
+      activity.missionName === mission.title && 
+      activity.type === mission.type
+    );
+    return activity?.completedAt;
   };
 
-  function renderMissionCategory(title: string, items: (Mission | Book | Course)[], icon: string) {
-    if (!items.length) return null;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
 
-    return (
-      <Card key={title}>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <span className="mr-2">{icon}</span>
-            {title} ({items.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {items.map((item) => {
-              const isCompleted = isMissionCompleted(item, 
-                title.includes('Livros') ? 'book' : 
-                title.includes('Cursos') ? 'course' : 'mission'
-              );
-              
-              return (
-                <div key={item.id} className="flex items-start space-x-3 p-3 border rounded-lg">
-                  <Checkbox
-                    checked={isCompleted}
-                    onCheckedChange={(checked) => {
-                      const type = title.includes('Livros') ? 'book' : 
-                                  title.includes('Cursos') ? 'course' : 'mission';
-                      if (checked) {
-                        completeMission(item, type);
-                      } else {
-                        uncompleteMission(item, type);
-                      }
-                    }}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : ''}`}>
-                      {(item as Mission).name || (item as Book).title || (item as Course).name}
-                    </h4>
-                    {(item as Mission).description && (
-                      <p className={`text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-600'}`}>
-                        {(item as Mission).description}
-                      </p>
-                    )}
-                    {(item as Book).author && (
-                      <p className={`text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-600'}`}>
-                        por {(item as Book).author}
-                      </p>
-                    )}
-                    {(item as Course).school && (
-                      <p className={`text-sm ${isCompleted ? 'line-through text-gray-400' : 'text-gray-600'}`}>
-                        {(item as Course).school}
-                      </p>
-                    )}
-                    <div className="flex items-center space-x-2 mt-1">
-                      <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                        {item.points} pontos
-                      </Badge>
-                      {item.targetAudience.map((audience) => (
-                        <Badge key={audience} variant="outline" className="text-xs">
-                          {audience}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    );
+  const getBadgeInfo = (badgeId: string) => {
+    const badges = {
+      'reader-1': { name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.' },
+      'reader-2': { name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.' },
+      'reader-3': { name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.' },
+      'reader-4': { name: 'Mente Brilhante', icon: '🧠✨', description: 'Um verdadeiro devorador de sabedoria.' },
+      'course-1': { name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.' },
+      'course-2': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.' },
+      'course-3': { name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para grandes responsabilidades.' },
+      'course-4': { name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Um veterano na trilha do aprendizado.' },
+      'complete-1': { name: 'Discípulo Completo', icon: '🧎‍♂️🔥', description: 'Vida com Deus em ação.' },
+      'complete-2': { name: 'Guerreiro da Rotina', icon: '🗡️📚🎓', description: 'Treinado e engajado.' },
+      'complete-3': { name: 'Líder Exemplar', icon: '👑🧠✨', description: 'Liderança vivida com profundidade.' }
+    };
+    return badges[badgeId as keyof typeof badges];
+  };
+
+  const getAllBadges = () => {
+    return [
+      'reader-1', 'reader-2', 'reader-3', 'reader-4',
+      'course-1', 'course-2', 'course-3', 'course-4',
+      'complete-1', 'complete-2', 'complete-3'
+    ];
+  };
+
+  const isBadgeUnlocked = (badgeId: string) => {
+    return currentUser?.badges?.includes(badgeId) || false;
   };
 
   if (!currentUser) return null;
 
-  const currentPhase = getUserPhase(currentUser.points);
-  const nextPhase = getNextPhase(currentUser.points);
+  const phaseInfo = getPhaseInfo(currentUser.phase);
+  const currentPhaseMissions = missions.filter(m => 
+    books.find(b => b.id === m.bookId)?.phase === currentUser.phase ||
+    courses.find(c => c.id === m.courseId)?.phase === currentUser.phase ||
+    (!m.bookId && !m.courseId)
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -459,74 +376,184 @@ const Missions = () => {
               variant="ghost"
               size="sm"
               onClick={() => navigate('/feed')}
-              className="text-purple-600"
+              className="text-teal-600"
             >
               <ArrowLeft className="w-4 h-4 mr-1" />
               Feed
             </Button>
-            <h1 className="text-2xl font-bold text-purple-700">Missões</h1>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Badge className="bg-yellow-100 text-yellow-800">
-              {currentUser.points} pontos
-            </Badge>
-            <Badge className="bg-purple-100 text-purple-700">
-              {currentPhase.icon} {currentPhase.name}
-            </Badge>
+            <h1 className="text-2xl font-bold text-teal-700">Minhas Missões</h1>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Phase Progress */}
-        <Card className="bg-gradient-to-r from-purple-100 to-pink-100">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-xl font-bold text-purple-700 mb-1">
-                  {currentPhase.icon} {currentPhase.name}
-                </h2>
-                <p className="text-purple-600 italic">"{currentPhase.phrase}"</p>
-                <p className="text-sm text-gray-600 mt-1">{currentPhase.description}</p>
-              </div>
-              <Trophy className="w-12 h-12 text-yellow-500" />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              {phaseInfo.emoji} Fase: {currentUser.phase}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <p className="text-lg font-medium text-gray-700">"{phaseInfo.phrase}"</p>
+              <p className="text-gray-600">{phaseInfo.description}</p>
             </div>
             
-            {nextPhase && (
-              <>
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span>{currentUser.points} pontos</span>
-                  <span>{nextPhase.minPoints} pontos para {nextPhase.name}</span>
+            {phaseInfo.nextPhase && (
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Progresso para {phaseInfo.nextPhase}</span>
+                  <span>{currentUser.points} / {phaseInfo.nextPoints} pontos</span>
                 </div>
-                <Progress 
-                  value={(currentUser.points / nextPhase.minPoints) * 100} 
-                  className="h-2"
-                />
-                <p className="text-sm text-gray-600 mt-2">
-                  Faltam {nextPhase.minPoints - currentUser.points} pontos ({Math.round(((nextPhase.minPoints - currentUser.points) / nextPhase.minPoints) * 100)}%) para a próxima fase: {nextPhase.icon} {nextPhase.name}
+                <Progress value={getPhaseProgress()} className="h-3" />
+                <p className="text-xs text-gray-500">
+                  Faltam {(phaseInfo.nextPoints || 0) - currentUser.points} pontos para a próxima fase
                 </p>
-              </>
+              </div>
+            )}
+            
+            {currentUser.phase === "Oceano" && (
+              <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                <p className="text-lg font-medium text-gray-700">🎉 Você alcançou o nível máximo!</p>
+                <p className="text-gray-600">Parabéns por sua jornada espiritual!</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Mission Categories */}
-        {renderMissionCategory("Missões Diárias", getMissionsByType("Missões Diárias"), "🌅")}
-        {renderMissionCategory("Missões Semanais", getMissionsByType("Missões Semanais"), "📅")}
-        {renderMissionCategory("Missões Mensais", getMissionsByType("Missões Mensais"), "📊")}
-        {renderMissionCategory("Missões Semestrais", getMissionsByType("Missões Semestrais"), "🎯")}
-        {renderMissionCategory("Missões Anuais", getMissionsByType("Missões Anuais"), "🏆")}
-        {renderMissionCategory("Livros para Ler", books, "📚")}
-        {renderMissionCategory("Cursos para Fazer", courses, "🎓")}
-        {renderMissionCategory("Outras Missões", getMissionsByType("Outras Missões"), "⭐")}
+        {/* Badges Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Award className="w-5 h-5 mr-2" />
+              Badges ({currentUser.badges?.length || 0}/{getAllBadges().length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {getAllBadges().map((badgeId) => {
+                const badge = getBadgeInfo(badgeId);
+                const isUnlocked = isBadgeUnlocked(badgeId);
+                
+                return (
+                  <div 
+                    key={badgeId} 
+                    className={`p-3 rounded-lg border transition-all ${
+                      isUnlocked 
+                        ? 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200' 
+                        : 'bg-gray-50 border-gray-200 opacity-50'
+                    }`}
+                  >
+                    <div className="text-center">
+                      <div className={`text-2xl mb-1 ${!isUnlocked ? 'grayscale' : ''}`}>
+                        {isUnlocked ? badge?.icon : '🔒'}
+                      </div>
+                      <h4 className={`text-xs font-medium ${isUnlocked ? 'text-purple-700' : 'text-gray-500'}`}>
+                        {badge?.name}
+                      </h4>
+                      <p className="text-xs text-gray-500 mt-1">{badge?.description}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Missions for Current Phase */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Target className="w-5 h-5 mr-2" />
+              Missões da Fase {currentUser.phase}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {currentPhaseMissions.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">Nenhuma missão disponível para sua fase atual</p>
+            ) : (
+              currentPhaseMissions.map((mission) => {
+                const isCompleted = isMissionCompleted(mission);
+                const completionDate = getMissionCompletionDate(mission);
+
+                return (
+                  <div key={mission.id} className={`p-4 rounded-lg border ${isCompleted ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200'}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-800 mb-1">{mission.title}</h3>
+                        <p className="text-gray-600 text-sm mb-2">{mission.description}</p>
+                        <div className="flex items-center space-x-3">
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            {mission.points} pontos
+                          </Badge>
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            {mission.type === 'mission' ? 'Missão' : mission.type === 'book' ? 'Livro' : 'Curso'}
+                          </Badge>
+                          {mission.period && (
+                            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                              {mission.period}
+                            </Badge>
+                          )}
+                        </div>
+                        {isCompleted && completionDate && (
+                          <div className="flex items-center space-x-1 mt-2 text-sm text-green-600">
+                            <Calendar className="w-4 h-4" />
+                            <span>Concluída em {formatDate(completionDate)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="ml-4">
+                        {isCompleted ? (
+                          <Badge className="bg-green-100 text-green-800">
+                            <CheckSquare className="w-3 h-3 mr-1" />
+                            Concluída
+                          </Badge>
+                        ) : (
+                          <Button 
+                            onClick={() => completeMission(mission)}
+                            className="bg-teal-600 hover:bg-teal-700"
+                          >
+                            Concluir
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <PhaseChangeDialog
-        isOpen={showPhaseDialog}
-        onClose={() => setShowPhaseDialog(false)}
-        newPoints={currentUser.points}
-        previousPoints={previousPoints}
-      />
+      {/* Badge Dialog */}
+      <Dialog open={showBadgeDialog} onOpenChange={setShowBadgeDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-center">🎉 Parabéns! Novo Badge Conquistado!</DialogTitle>
+          </DialogHeader>
+          <div className="py-6">
+            {newBadges.map((badgeId) => {
+              const badge = getBadgeInfo(badgeId);
+              return (
+                <div key={badgeId} className="text-center space-y-4 mb-4">
+                  <div className="text-6xl">{badge?.icon}</div>
+                  <div>
+                    <h3 className="text-xl font-bold text-purple-700">{badge?.name}</h3>
+                    <p className="text-gray-600">{badge?.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="text-center mt-6">
+              <Button onClick={() => setShowBadgeDialog(false)} className="bg-purple-600 hover:bg-purple-700">
+                Continuar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

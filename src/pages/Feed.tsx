@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { User, CheckSquare, Settings, ExternalLink, Trophy, TrendingUp, Award } from "lucide-react";
+import { User, CheckSquare, Settings, ExternalLink, Trophy, TrendingUp, Award, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -73,6 +73,7 @@ const Feed = () => {
   const [missionActivities, setMissionActivities] = useState<MissionActivity[]>([]);
   const [phaseChanges, setPhaseChanges] = useState<PhaseChangeActivity[]>([]);
   const [badgeActivities, setBadgeActivities] = useState<BadgeActivity[]>([]);
+  const [books, setBooks] = useState<any[]>([]);
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
@@ -86,6 +87,7 @@ const Feed = () => {
     loadMissionActivities();
     loadPhaseChanges();
     loadBadgeActivities();
+    loadBooks();
   }, [navigate]);
 
   const loadNews = () => {
@@ -95,7 +97,15 @@ const Feed = () => {
 
   const loadMissionActivities = () => {
     const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
-    setMissionActivities(activities.sort((a: MissionActivity, b: MissionActivity) => 
+    // Remove duplicates based on userId, missionName, and timestamp
+    const uniqueActivities = activities.filter((activity: MissionActivity, index: number, self: MissionActivity[]) => 
+      index === self.findIndex((a) => 
+        a.userId === activity.userId && 
+        a.missionName === activity.missionName && 
+        a.timestamp === activity.timestamp
+      )
+    );
+    setMissionActivities(uniqueActivities.sort((a: MissionActivity, b: MissionActivity) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     ));
   };
@@ -112,6 +122,11 @@ const Feed = () => {
     setBadgeActivities(activities.sort((a: BadgeActivity, b: BadgeActivity) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     ));
+  };
+
+  const loadBooks = () => {
+    const storedBooks = JSON.parse(localStorage.getItem('books') || '[]');
+    setBooks(storedBooks);
   };
 
   const getPhaseInfo = (phase: string) => {
@@ -134,8 +149,16 @@ const Feed = () => {
       'course-2': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.' },
       'course-3': { name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para grandes responsabilidades.' },
       'course-4': { name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Um veterano na trilha do aprendizado.' },
+      'complete-1': { name: 'Discípulo Completo', icon: '🧎‍♂️🔥', description: 'Vida com Deus em ação.' },
+      'complete-2': { name: 'Guerreiro da Rotina', icon: '🗡️📚🎓', description: 'Treinado e engajado.' },
+      'complete-3': { name: 'Líder Exemplar', icon: '👑🧠✨', description: 'Liderança vivida com profundidade.' }
     };
     return badges[badgeId as keyof typeof badges];
+  };
+
+  const getBookImage = (bookId: string) => {
+    const book = books.find(b => b.id === bookId);
+    return book?.image;
   };
 
   const handleLogout = () => {
@@ -156,6 +179,14 @@ const Feed = () => {
     if (diffInMinutes < 60) return `${diffInMinutes}m`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
     return `${Math.floor(diffInMinutes / 1440)}d`;
+  };
+
+  const formatDate = (timestamp: string) => {
+    return new Date(timestamp).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   // Combine and sort all activities
@@ -279,7 +310,7 @@ const Feed = () => {
             allActivities.map((activity) => (
               <Card key={activity.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
+                  <div className="flex items-start space-x-3">
                     <Avatar 
                       className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-teal-200"
                       onClick={() => navigate(`/user/${activity.userId}`)}
@@ -292,15 +323,45 @@ const Feed = () => {
                     
                     <div className="flex-1">
                       {activity.type === 'mission' ? (
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
-                            onClick={() => navigate(`/user/${activity.userId}`)}
-                          >
-                            {activity.userName || 'Usuário'}
-                          </span>
-                          <span className="text-gray-500">completou</span>
-                          <span className="font-medium text-teal-600">{(activity as any).missionName}</span>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
+                              onClick={() => navigate(`/user/${activity.userId}`)}
+                            >
+                              {activity.userName}
+                            </span>
+                            <span className="text-gray-500">completou</span>
+                            <span className="font-medium text-teal-600">{(activity as any).missionName}</span>
+                          </div>
+                          
+                          {/* Show book image if it's a book mission */}
+                          {(activity as any).type === 'book' && (activity as any).bookId && (
+                            <div className="mt-2">
+                              {getBookImage((activity as any).bookId) && (
+                                <img
+                                  src={getBookImage((activity as any).bookId)}
+                                  alt="Livro lido"
+                                  className="w-20 h-28 object-cover rounded-lg border"
+                                />
+                              )}
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center space-x-2">
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                              +{(activity as any).points} pontos
+                            </Badge>
+                            {(activity as any).completedAt && (
+                              <div className="flex items-center space-x-1 text-sm text-gray-500">
+                                <Calendar className="w-3 h-3" />
+                                <span>{formatDate((activity as any).completedAt)}</span>
+                              </div>
+                            )}
+                            <span className="text-xs text-gray-400">
+                              {formatTimeAgo(activity.timestamp)}
+                            </span>
+                          </div>
                         </div>
                       ) : activity.type === 'phase' ? (
                         <div className="flex items-center space-x-2">
@@ -308,34 +369,27 @@ const Feed = () => {
                             className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
                             onClick={() => navigate(`/user/${activity.userId}`)}
                           >
-                            {activity.userName || 'Usuário'}
+                            {activity.userName}
                           </span>
                           <span className="text-gray-500">avançou para</span>
                           <span className="font-medium text-purple-600">{(activity as any).newPhase}</span>
                           <TrendingUp className="w-4 h-4 text-purple-600" />
+                          <span className="text-xs text-gray-400">
+                            {formatTimeAgo(activity.timestamp)}
+                          </span>
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
-                            onClick={() => navigate(`/user/${activity.userId}`)}
-                          >
-                            {activity.userName || 'Usuário'}
-                          </span>
-                          <span className="text-gray-500">conquistou novos badges</span>
-                          <Award className="w-4 h-4 text-yellow-600" />
-                        </div>
-                      )}
-                      <div className="flex items-center space-x-2 mt-1">
-                        {activity.type === 'mission' ? (
-                          <Badge variant="secondary" className="bg-green-100 text-green-700">
-                            +{(activity as any).points} pontos
-                          </Badge>
-                        ) : activity.type === 'phase' ? (
-                          <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                            Nova fase alcançada!
-                          </Badge>
-                        ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <span
+                              className="font-medium text-gray-800 cursor-pointer hover:text-teal-600"
+                              onClick={() => navigate(`/user/${activity.userId}`)}
+                            >
+                              {activity.userName}
+                            </span>
+                            <span className="text-gray-500">conquistou novos badges</span>
+                            <Award className="w-4 h-4 text-yellow-600" />
+                          </div>
                           <div className="flex flex-wrap gap-1">
                             {(activity as any).badges && (activity as any).badges.map((badgeId: string) => {
                               const badge = getBadgeInfo(badgeId);
@@ -346,11 +400,11 @@ const Feed = () => {
                               ) : null;
                             })}
                           </div>
-                        )}
-                        <span className="text-xs text-gray-400">
-                          {formatTimeAgo(activity.timestamp)}
-                        </span>
-                      </div>
+                          <span className="text-xs text-gray-400">
+                            {formatTimeAgo(activity.timestamp)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
