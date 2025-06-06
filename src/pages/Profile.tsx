@@ -40,6 +40,7 @@ interface MissionActivity {
   timestamp: string;
   type?: string;
   period?: string;
+  completedAt?: string;
 }
 
 const Profile = () => {
