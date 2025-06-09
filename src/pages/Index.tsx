@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Upload, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-const Index = () => {
+interface IndexProps {
+  onLogin: () => void;
+}
+
+const Index = ({ onLogin }: IndexProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -58,11 +63,11 @@ const Index = () => {
     if (loginForm.identifier === "filipebiten@gmail.com" && loginForm.password === "filipe") {
       const adminUser = {
         id: "admin",
-        name: "Admin FLOW",
+        name: "Filipe Biten",
         email: "filipebiten@gmail.com",
         whatsapp: "",
-        birthDate: "",
-        gender: "",
+        birthDate: "1990-01-01",
+        gender: "Masculino",
         pgmRole: "Pastor de Rede",
         pgmNumber: "",
         isAdmin: true,
@@ -82,6 +87,7 @@ const Index = () => {
 
       localStorage.setItem('currentUser', JSON.stringify(adminUser));
       localStorage.setItem('users', JSON.stringify([adminUser]));
+      onLogin();
       navigate('/feed');
       return;
     }
@@ -95,6 +101,7 @@ const Index = () => {
 
     if (user) {
       localStorage.setItem('currentUser', JSON.stringify(user));
+      onLogin();
       navigate('/feed');
       toast({
         title: "Login realizado!",
@@ -189,6 +196,7 @@ const Index = () => {
     localStorage.setItem('users', JSON.stringify(users));
     localStorage.setItem('currentUser', JSON.stringify(newUser));
 
+    onLogin();
     navigate('/feed');
     toast({
       title: "Cadastro realizado!",

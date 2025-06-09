@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -18,9 +18,14 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   useEffect(() => {
-    // Apply user phase colors on app load
+    // Check if user is logged in
     const currentUser = localStorage.getItem('currentUser');
+    setIsLoggedIn(!!currentUser);
+
+    // Apply user phase colors on app load
     if (currentUser) {
       try {
         const userData = JSON.parse(currentUser);
@@ -30,18 +35,17 @@ const App = () => {
         console.error('Error applying phase colors:', error);
       }
     }
+  }, []);
 
-    // Initialize default user if none exists
-    if (!currentUser) {
-      const defaultUser = {
-        id: '1',
-        name: 'João Silva',
-        pgm: 'PGM001',
-        points: 150,
-        role: 'user'
-      };
-      localStorage.setItem('currentUser', JSON.stringify(defaultUser));
-    }
+  // Listen for storage changes to update login status
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const currentUser = localStorage.getItem('currentUser');
+      setIsLoggedIn(!!currentUser);
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   return (
@@ -50,18 +54,21 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Layout>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/feed" element={<Feed />} />
-              <Route path="/missions" element={<Missions />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/user/:userId" element={<UserProfile />} />
-              <Route path="/admin" element={<Admin />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Layout>
+          {!isLoggedIn ? (
+            <Index onLogin={() => setIsLoggedIn(true)} />
+          ) : (
+            <Layout>
+              <Routes>
+                <Route path="/" element={<Feed />} />
+                <Route path="/feed" element={<Feed />} />
+                <Route path="/missions" element={<Missions />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/user/:userId" element={<UserProfile />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Layout>
+          )}
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

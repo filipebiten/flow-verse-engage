@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -14,15 +14,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { 
-  Home, 
   Users, 
   Target, 
   User, 
   Settings, 
-  BookOpen,
-  Trophy,
-  BarChart3,
-  Shield
+  Shield,
+  LogOut
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -30,11 +27,6 @@ import { Button } from '@/components/ui/button';
 import { getUserPhase } from '@/utils/phaseUtils';
 
 const menuItems = [
-  {
-    title: "Início",
-    url: "/",
-    icon: Home,
-  },
   {
     title: "Feed",
     url: "/feed",
@@ -62,6 +54,7 @@ const adminItems = [
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const isAdmin = currentUser?.role === 'admin';
   const userPhase = getUserPhase(currentUser?.points || 0);
@@ -69,6 +62,11 @@ export function AppSidebar() {
   const getUserInitials = (name: string) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    window.location.reload(); // This will trigger the app to show login page
   };
 
   return (
@@ -100,6 +98,12 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={handleLogout}>
+                  <LogOut className="w-4 h-4" />
+                  <span>Sair</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -136,7 +140,9 @@ export function AppSidebar() {
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{currentUser?.name || 'Usuário'}</p>
-            <p className="text-xs text-muted-foreground truncate">{currentUser?.pgmNumber || currentUser?.pgmRole || 'PGM001'}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {currentUser?.pgmNumber ? `PGM ${currentUser.pgmNumber}` : currentUser?.pgmRole || 'Usuário'}
+            </p>
           </div>
         </div>
 
