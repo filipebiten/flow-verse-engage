@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Eye, EyeOff, AlertCircle } from "lucide-react";
+import { Upload, Eye, EyeOff, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
@@ -31,7 +32,6 @@ const Index = () => {
     password: "",
     confirmPassword: "",
     profilePhoto: null as File | null,
-    isAdmin: false,
     participatesFlowUp: false,
     participatesIrmandade: false
   });
@@ -49,7 +49,7 @@ const Index = () => {
     if (!loginForm.identifier.trim() || !loginForm.password) {
       toast({
         title: "Erro",
-        description: "Preencha WhatsApp/Email e senha.",
+        description: "Preencha email/WhatsApp e senha.",
         variant: "destructive",
       });
       return;
@@ -64,7 +64,7 @@ const Index = () => {
         whatsapp: "",
         birthDate: "",
         gender: "",
-        pgmRole: "pastor de rede",
+        pgmRole: "Pastor de Rede",
         pgmNumber: "",
         isAdmin: true,
         phase: "Oceano",
@@ -76,7 +76,9 @@ const Index = () => {
         coursesInProgress: [],
         participatesFlowUp: false,
         participatesIrmandade: false,
-        badges: []
+        badges: [],
+        consecutiveDays: 200,
+        role: 'admin'
       };
 
       localStorage.setItem('currentUser', JSON.stringify(adminUser));
@@ -169,7 +171,7 @@ const Index = () => {
       pgmRole: registerForm.pgmRole,
       pgmNumber: registerForm.pgmNumber,
       password: registerForm.password,
-      isAdmin: registerForm.isAdmin,
+      isAdmin: false,
       phase: "Riacho",
       points: 0,
       profilePhoto: previewUrl,
@@ -179,7 +181,9 @@ const Index = () => {
       coursesInProgress: [],
       participatesFlowUp: age >= 25 ? registerForm.participatesFlowUp : false,
       participatesIrmandade: registerForm.gender === "Masculino" ? registerForm.participatesIrmandade : false,
-      badges: []
+      badges: [],
+      consecutiveDays: 0,
+      role: 'user'
     };
 
     users.push(newUser);
@@ -189,7 +193,7 @@ const Index = () => {
     navigate('/feed');
     toast({
       title: "Cadastro realizado!",
-      description: `Bem-vindo à FLOW, ${newUser.name}!`,
+      description: `Bem-vindo à REDE FLOW, ${newUser.name}!`,
     });
   };
 
@@ -230,13 +234,17 @@ const Index = () => {
       <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md backdrop-blur-sm bg-white/95 shadow-2xl border-0">
           <CardHeader className="space-y-1 pb-6">
-            <div className="text-center space-y-2">
+            <div className="text-center space-y-3">
               <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
                 REDE FLOW
               </h1>
               <p className="text-sm text-gray-600 font-medium">
                 POSTURA | IDENTIDADE | OBEDIÊNCIA
               </p>
+              <div className="flex items-center justify-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                <p className="text-xs text-amber-700">Este app está em fase de testes.</p>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -248,12 +256,12 @@ const Index = () => {
 
               <TabsContent value="login" className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="identifier">WhatsApp ou E-mail</Label>
+                  <Label htmlFor="identifier">Email ou WhatsApp</Label>
                   <Input
                     id="identifier"
                     value={loginForm.identifier}
                     onChange={(e) => setLoginForm(prev => ({ ...prev, identifier: e.target.value }))}
-                    placeholder="Digite seu WhatsApp ou e-mail"
+                    placeholder="Digite seu email ou WhatsApp"
                   />
                 </div>
 
@@ -288,7 +296,7 @@ const Index = () => {
                 </Button>
               </TabsContent>
 
-              <TabsContent value="register" className="space-y-4">
+              <TabsContent value="register" className="space-y-4 max-h-96 overflow-y-auto">
                 <div className="space-y-2">
                   <Label htmlFor="name">Nome Completo *</Label>
                   <Input
@@ -300,13 +308,13 @@ const Index = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email">E-mail *</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
                     type="email"
                     value={registerForm.email}
                     onChange={(e) => setRegisterForm(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="Digite seu e-mail"
+                    placeholder="Digite seu email"
                   />
                 </div>
 
@@ -330,6 +338,17 @@ const Index = () => {
                   />
                 </div>
 
+                {registerForm.birthDate && calculateAge(registerForm.birthDate) >= 25 && (
+                  <div className="flex items-center space-x-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                    <Checkbox
+                      id="flowUp"
+                      checked={registerForm.participatesFlowUp}
+                      onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, participatesFlowUp: !!checked }))}
+                    />
+                    <Label htmlFor="flowUp" className="text-sm font-medium text-blue-700">Participa do FLOW UP</Label>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gênero *</Label>
                   <Select
@@ -345,6 +364,17 @@ const Index = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {registerForm.gender === "Masculino" && (
+                  <div className="flex items-center space-x-2 p-2 bg-purple-50 border border-purple-200 rounded">
+                    <Checkbox
+                      id="irmandade"
+                      checked={registerForm.participatesIrmandade}
+                      onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, participatesIrmandade: !!checked }))}
+                    />
+                    <Label htmlFor="irmandade" className="text-sm font-medium text-purple-700">Participa da IRMANDADE</Label>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="pgmRole">Situação no PGM *</Label>
@@ -374,28 +404,6 @@ const Index = () => {
                       onChange={(e) => setRegisterForm(prev => ({ ...prev, pgmNumber: e.target.value }))}
                       placeholder="Digite o número do seu PGM"
                     />
-                  </div>
-                )}
-
-                {registerForm.birthDate && calculateAge(registerForm.birthDate) >= 25 && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="flowUp"
-                      checked={registerForm.participatesFlowUp}
-                      onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, participatesFlowUp: !!checked }))}
-                    />
-                    <Label htmlFor="flowUp" className="text-sm">Participa do FLOW UP</Label>
-                  </div>
-                )}
-
-                {registerForm.gender === "Masculino" && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="irmandade"
-                      checked={registerForm.participatesIrmandade}
-                      onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, participatesIrmandade: !!checked }))}
-                    />
-                    <Label htmlFor="irmandade" className="text-sm">Participa da IRMANDADE</Label>
                   </div>
                 )}
 
@@ -460,15 +468,6 @@ const Index = () => {
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
                   </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="admin"
-                    checked={registerForm.isAdmin}
-                    onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, isAdmin: !!checked }))}
-                  />
-                  <Label htmlFor="admin" className="text-sm">Sou administrador</Label>
                 </div>
 
                 <Button onClick={handleRegister} className="w-full bg-teal-600 hover:bg-teal-700">

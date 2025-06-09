@@ -91,3 +91,80 @@ export const applyPhaseColors = (phase: Phase) => {
   root.style.setProperty('--accent', phase.colors.accent);
   root.style.setProperty('--background', phase.colors.background);
 };
+
+// Sistema de badges/bottons
+export interface Badge {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  requirement: number;
+  type: 'books' | 'courses' | 'consecutive' | 'allstars';
+}
+
+export const badges: Badge[] = [
+  // Badges de Leitura
+  { id: 'leitor-iniciante', name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.', requirement: 1, type: 'books' },
+  { id: 'leitor-fluente', name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.', requirement: 5, type: 'books' },
+  { id: 'leitor-voraz', name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.', requirement: 10, type: 'books' },
+  { id: 'mente-brilhante', name: 'Mente Brilhante', icon: '🧠✨', description: 'Um verdadeiro devorador de sabedoria.', requirement: 20, type: 'books' },
+  
+  // Badges de Cursos
+  { id: 'discipulo-formacao', name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.', requirement: 1, type: 'courses' },
+  { id: 'aprendiz-dedicado', name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.', requirement: 3, type: 'courses' },
+  { id: 'lider-construcao', name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para grandes responsabilidades.', requirement: 5, type: 'courses' },
+  { id: 'mestre-jornada', name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Um veterano na trilha do aprendizado.', requirement: 8, type: 'courses' },
+  
+  // Badges de Consecutividade
+  { id: 'fiel-pouco', name: 'Fiel no Pouco', icon: '🕊️', description: 'A fidelidade começa nos detalhes.', requirement: 7, type: 'consecutive' },
+  { id: 'constante-caminho', name: 'Constante no Caminho', icon: '⛰️', description: 'Perseverando todos os dias.', requirement: 30, type: 'consecutive' },
+  { id: 'incansavel-missao', name: 'Incansável na Missão', icon: '🏃‍♂️🔥', description: 'Vive e respira propósito.', requirement: 90, type: 'consecutive' },
+  { id: 'exemplo-disciplina', name: 'Exemplo de Disciplina', icon: '🛡️✨', description: 'Disciplina espiritual inspiradora.', requirement: 180, type: 'consecutive' },
+  
+  // All-Stars
+  { id: 'discipulo-completo', name: 'Discípulo Completo', icon: '🧎‍♂️🔥', description: 'Vida com Deus em ação.', requirement: 0, type: 'allstars' },
+  { id: 'guerreiro-rotina', name: 'Guerreiro da Rotina', icon: '🗡️📚🎓', description: 'Treinado, equipado e engajado.', requirement: 0, type: 'allstars' },
+  { id: 'lider-exemplar', name: 'Líder Exemplar', icon: '👑🧠✨', description: 'Vive o que prega e prega com vida.', requirement: 0, type: 'allstars' }
+];
+
+export const checkBadgeEligibility = (user: any): Badge[] => {
+  const eligibleBadges: Badge[] = [];
+  
+  badges.forEach(badge => {
+    let isEligible = false;
+    
+    switch (badge.type) {
+      case 'books':
+        isEligible = (user.booksRead?.length || 0) >= badge.requirement;
+        break;
+      case 'courses':
+        isEligible = (user.coursesCompleted?.length || 0) >= badge.requirement;
+        break;
+      case 'consecutive':
+        isEligible = (user.consecutiveDays || 0) >= badge.requirement;
+        break;
+      case 'allstars':
+        // All-Stars badges have specific requirements
+        if (badge.id === 'discipulo-completo') {
+          isEligible = (user.booksRead?.length || 0) >= 5 && 
+                      (user.coursesCompleted?.length || 0) >= 3 && 
+                      (user.consecutiveDays || 0) >= 30;
+        } else if (badge.id === 'guerreiro-rotina') {
+          isEligible = (user.booksRead?.length || 0) >= 10 && 
+                      (user.coursesCompleted?.length || 0) >= 5 && 
+                      (user.consecutiveDays || 0) >= 90;
+        } else if (badge.id === 'lider-exemplar') {
+          isEligible = (user.booksRead?.length || 0) >= 15 && 
+                      (user.coursesCompleted?.length || 0) >= 8 && 
+                      (user.consecutiveDays || 0) >= 180;
+        }
+        break;
+    }
+    
+    if (isEligible && !user.badges?.includes(badge.id)) {
+      eligibleBadges.push(badge);
+    }
+  });
+  
+  return eligibleBadges;
+};

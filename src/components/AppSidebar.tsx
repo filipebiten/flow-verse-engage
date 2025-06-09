@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { getUserPhase } from '@/utils/phaseUtils';
 
 const menuItems = [
   {
@@ -62,6 +64,7 @@ export function AppSidebar() {
   const location = useLocation();
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const isAdmin = currentUser?.role === 'admin';
+  const userPhase = getUserPhase(currentUser?.points || 0);
 
   const getUserInitials = (name: string) => {
     if (!name) return 'U';
@@ -72,12 +75,12 @@ export function AppSidebar() {
     <Sidebar className="border-r">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">F</span>
           </div>
           <div>
-            <h2 className="font-bold text-lg">FLOW</h2>
-            <p className="text-xs text-muted-foreground">Plataforma Cristã</p>
+            <h2 className="font-bold text-lg bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">REDE FLOW</h2>
+            <p className="text-xs text-muted-foreground">POSTURA | IDENTIDADE | OBEDIÊNCIA</p>
           </div>
         </div>
       </SidebarHeader>
@@ -123,18 +126,41 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4">
+      <SidebarFooter className="p-4 space-y-3">
+        {/* User Info */}
         <div className="flex items-center gap-3">
           <Avatar className="w-8 h-8">
-            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+            <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs">
               {getUserInitials(currentUser?.name || 'Usuário')}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium truncate">{currentUser?.name || 'Usuário'}</p>
-            <p className="text-xs text-muted-foreground truncate">{currentUser?.pgm || 'PGM001'}</p>
+            <p className="text-xs text-muted-foreground truncate">{currentUser?.pgmNumber || currentUser?.pgmRole || 'PGM001'}</p>
           </div>
         </div>
+
+        {/* Phase Info */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Fase Atual</span>
+            <Badge variant="outline" className="text-xs">
+              {userPhase.icon} {userPhase.name}
+            </Badge>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium">{currentUser?.points || 0}</span> pontos
+          </div>
+          <p className="text-xs italic text-center">"{userPhase.phrase}"</p>
+        </div>
+
+        {/* Admin Mode Toggle */}
+        {isAdmin && (
+          <Button variant="outline" size="sm" className="w-full text-xs">
+            <Settings className="w-3 h-3 mr-1" />
+            Modo Admin
+          </Button>
+        )}
       </SidebarFooter>
     </Sidebar>
   );
