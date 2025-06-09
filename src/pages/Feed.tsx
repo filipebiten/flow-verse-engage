@@ -111,7 +111,7 @@ const Feed = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-2 sm:p-4 lg:p-6">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         
-        {/* Header - Mobile Optimized */}
+        {/* Header */}
         <Card>
           <CardHeader className="pb-3 sm:pb-4">
             <div className="flex items-center gap-3">
@@ -124,7 +124,7 @@ const Feed = () => {
           </CardHeader>
         </Card>
 
-        {/* Activities Feed - Mobile Optimized */}
+        {/* Activities Feed */}
         <div className="space-y-3 sm:space-y-4">
           {activities.map((activity) => (
             <Card key={activity.id} className="hover:shadow-md transition-shadow">
@@ -183,7 +183,7 @@ const Feed = () => {
                     </div>
                   )}
 
-                  {/* Action Buttons - Mobile Optimized */}
+                  {/* Action Buttons */}
                   <div className="flex items-center justify-between pt-2 border-t">
                     <div className="flex items-center gap-4 sm:gap-6">
                       <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
@@ -207,7 +207,7 @@ const Feed = () => {
           ))}
         </div>
 
-        {/* Load More - Mobile Optimized */}
+        {/* Load More */}
         <div className="flex justify-center pt-4">
           <Button variant="outline" className="w-full sm:w-auto">
             Carregar Mais Atividades
