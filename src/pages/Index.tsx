@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -220,6 +219,8 @@ const Index = () => {
     return age;
   };
 
+  const showFlowUpOption = registerForm.birthDate && calculateAge(registerForm.birthDate) >= 25;
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Background */}
@@ -338,7 +339,7 @@ const Index = () => {
                   />
                 </div>
 
-                {registerForm.birthDate && calculateAge(registerForm.birthDate) >= 25 && (
+                {showFlowUpOption && (
                   <div className="flex items-center space-x-2 p-2 bg-blue-50 border border-blue-200 rounded">
                     <Checkbox
                       id="flowUp"

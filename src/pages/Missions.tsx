@@ -17,232 +17,220 @@ import {
   GraduationCap,
   Heart,
   Users,
-  Zap
+  Zap,
+  CalendarDays,
+  CalendarCheck,
+  CalendarX,
+  Book,
+  School
 } from 'lucide-react';
+import { getUserPhase } from '@/utils/phaseUtils';
 
 interface Mission {
   id: string;
   title: string;
   description: string;
-  type: 'daily' | 'weekly' | 'monthly' | 'book' | 'course';
-  phase: number;
+  type: 'daily' | 'weekly' | 'monthly' | 'semestral' | 'annual' | 'book' | 'course' | 'special';
+  points: number;
   completed: boolean;
   completedAt?: string;
   dueDate?: string;
-  points: number;
   category: 'spiritual' | 'study' | 'service' | 'community';
+  targetAudience?: string[];
 }
 
-interface UserProgress {
-  currentPhase: number;
-  totalMissions: number;
-  completedMissions: number;
-  nextPhaseRequirement: number;
-  booksRead: number;
-  coursesCompleted: number;
-  consecutiveDays: number;
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  points: number;
+  image?: string;
+  completed: boolean;
+  completedAt?: string;
+}
+
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  school: 'Escola do Discípulo' | 'Universidade da Família';
+  points: number;
+  completed: boolean;
+  completedAt?: string;
 }
 
 const Missions = () => {
-  const [userProgress] = useState<UserProgress>({
-    currentPhase: 2,
-    totalMissions: 60,
-    completedMissions: 45,
-    nextPhaseRequirement: 60,
-    booksRead: 3,
-    coursesCompleted: 2,
-    consecutiveDays: 15
-  });
+  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+  const userPhase = getUserPhase(currentUser?.points || 0);
 
+  // Missões por categoria
   const [missions] = useState<Mission[]>([
+    // Missões Diárias
     {
-      id: "1",
+      id: "daily_1",
       title: "Oração Matinal",
       description: "Dedique 10 minutos para oração pessoal",
       type: "daily",
-      phase: 2,
+      points: 10,
       completed: true,
       completedAt: "2024-01-15T08:30:00Z",
-      points: 10,
       category: "spiritual"
     },
     {
-      id: "2",
+      id: "daily_2",
       title: "Leitura Bíblica",
       description: "Leia um capítulo da Bíblia",
       type: "daily",
-      phase: 2,
+      points: 15,
       completed: false,
       dueDate: "2024-01-16T23:59:59Z",
-      points: 15,
       category: "spiritual"
     },
     {
-      id: "3",
-      title: "Estudo: Fundamentos da Fé",
-      description: "Complete o curso na Escola do Discípulo",
-      type: "course",
-      phase: 2,
+      id: "daily_3",
+      title: "Momento de Gratidão",
+      description: "Liste 3 coisas pelas quais é grato hoje",
+      type: "daily",
+      points: 5,
       completed: false,
-      points: 100,
-      category: "study"
+      category: "spiritual"
+    },
+    
+    // Missões Semanais
+    {
+      id: "weekly_1",
+      title: "Participar do PGM",
+      description: "Esteja presente na reunião do seu PGM",
+      type: "weekly",
+      points: 50,
+      completed: true,
+      completedAt: "2024-01-12T19:30:00Z",
+      category: "community"
     },
     {
-      id: "4",
-      title: "Livro: Propósito Eterno",
-      description: "Leia o livro completo",
-      type: "book",
-      phase: 2,
-      completed: true,
-      completedAt: "2024-01-10T20:00:00Z",
+      id: "weekly_2",
+      title: "Servir na Igreja",
+      description: "Participe de algum ministério da igreja",
+      type: "weekly",
+      points: 30,
+      completed: false,
+      category: "service"
+    },
+    
+    // Missões Mensais
+    {
+      id: "monthly_1",
+      title: "Convidar Alguém",
+      description: "Convide uma pessoa para conhecer a igreja",
+      type: "monthly",
+      points: 100,
+      completed: false,
+      category: "community"
+    },
+    {
+      id: "monthly_2",
+      title: "Jejum e Oração",
+      description: "Dedique um dia do mês para jejum e oração",
+      type: "monthly",
       points: 80,
-      category: "study"
+      completed: true,
+      completedAt: "2024-01-05T18:00:00Z",
+      category: "spiritual"
+    },
+    
+    // Missões Especiais
+    {
+      id: "special_1",
+      title: "Participar do OVERFLOW",
+      description: "Inscreva-se e participe do retiro OVERFLOW",
+      type: "special",
+      points: 200,
+      completed: false,
+      category: "community"
     }
   ]);
 
-  const [showBadgePopup, setShowBadgePopup] = useState(false);
+  const [books] = useState<Book[]>([
+    {
+      id: "book_1",
+      title: "Propósito Eterno",
+      author: "Watchman Nee",
+      points: 80,
+      completed: true,
+      completedAt: "2024-01-10T20:00:00Z"
+    },
+    {
+      id: "book_2",
+      title: "A Vida Normal da Igreja Cristã",
+      author: "Watchman Nee",
+      points: 90,
+      completed: false
+    },
+    {
+      id: "book_3",
+      title: "O Homem Espiritual",
+      author: "Watchman Nee",
+      points: 120,
+      completed: false
+    },
+    {
+      id: "book_4",
+      title: "Autoridade Espiritual",
+      author: "Watchman Nee",
+      points: 85,
+      completed: false
+    }
+  ]);
 
-  const getBadges = () => {
-    const badges = [
-      // Badges de Leitura
-      { 
-        id: 'leitor-iniciante', 
-        name: 'Leitor Iniciante', 
-        icon: '📖', 
-        requirement: 1, 
-        current: userProgress.booksRead,
-        type: 'books',
-        unlocked: userProgress.booksRead >= 1,
-        description: 'Começando a jornada da leitura'
-      },
-      { 
-        id: 'leitor-fluente', 
-        name: 'Leitor Fluente', 
-        icon: '📚', 
-        requirement: 5, 
-        current: userProgress.booksRead,
-        type: 'books',
-        unlocked: userProgress.booksRead >= 5,
-        description: 'Já tem o hábito da leitura'
-      },
-      { 
-        id: 'leitor-voraz', 
-        name: 'Leitor Voraz', 
-        icon: '🔥📚', 
-        requirement: 10, 
-        current: userProgress.booksRead,
-        type: 'books',
-        unlocked: userProgress.booksRead >= 10,
-        description: 'Não larga um bom livro por nada'
-      },
-      { 
-        id: 'mente-brilhante', 
-        name: 'Mente Brilhante', 
-        icon: '🧠✨', 
-        requirement: 20, 
-        current: userProgress.booksRead,
-        type: 'books',
-        unlocked: userProgress.booksRead >= 20,
-        description: 'Devorador de sabedoria'
-      },
-      
-      // Badges de Cursos
-      { 
-        id: 'discipulo-formacao', 
-        name: 'Discípulo em Formação', 
-        icon: '🎓', 
-        requirement: 1, 
-        current: userProgress.coursesCompleted,
-        type: 'courses',
-        unlocked: userProgress.coursesCompleted >= 1,
-        description: 'Iniciando jornada de formação'
-      },
-      { 
-        id: 'aprendiz-dedicado', 
-        name: 'Aprendiz Dedicado', 
-        icon: '📘🎓', 
-        requirement: 3, 
-        current: userProgress.coursesCompleted,
-        type: 'courses',
-        unlocked: userProgress.coursesCompleted >= 3,
-        description: 'Sede de crescimento'
-      },
-      { 
-        id: 'lider-construcao', 
-        name: 'Líder em Construção', 
-        icon: '🛠️🎓', 
-        requirement: 5, 
-        current: userProgress.coursesCompleted,
-        type: 'courses',
-        unlocked: userProgress.coursesCompleted >= 5,
-        description: 'Preparando-se para liderar'
-      },
-      { 
-        id: 'mestre-jornada', 
-        name: 'Mestre da Jornada', 
-        icon: '🧙‍♂️📘', 
-        requirement: 8, 
-        current: userProgress.coursesCompleted,
-        type: 'courses',
-        unlocked: userProgress.coursesCompleted >= 8,
-        description: 'Veterano do aprendizado'
-      },
-      
-      // Badges de Consecutividade
-      { 
-        id: 'fiel-pouco', 
-        name: 'Fiel no Pouco', 
-        icon: '🕊️', 
-        requirement: 7, 
-        current: userProgress.consecutiveDays,
-        type: 'consecutive',
-        unlocked: userProgress.consecutiveDays >= 7,
-        description: 'Fidelidade nos detalhes'
-      },
-      { 
-        id: 'constante-caminho', 
-        name: 'Constante no Caminho', 
-        icon: '⛰️', 
-        requirement: 30, 
-        current: userProgress.consecutiveDays,
-        type: 'consecutive',
-        unlocked: userProgress.consecutiveDays >= 30,
-        description: 'Perseverança constante'
-      },
-      { 
-        id: 'incansavel-missao', 
-        name: 'Incansável na Missão', 
-        icon: '🏃‍♂️🔥', 
-        requirement: 90, 
-        current: userProgress.consecutiveDays,
-        type: 'consecutive',
-        unlocked: userProgress.consecutiveDays >= 90,
-        description: 'Vive o propósito'
-      },
-      { 
-        id: 'exemplo-disciplina', 
-        name: 'Exemplo de Disciplina', 
-        icon: '🛡️✨', 
-        requirement: 180, 
-        current: userProgress.consecutiveDays,
-        type: 'consecutive',
-        unlocked: userProgress.consecutiveDays >= 180,
-        description: 'Inspiração de disciplina espiritual'
-      }
-    ];
+  const [courses] = useState<Course[]>([
+    {
+      id: "course_1",
+      title: "Fundamentos da Fé",
+      description: "Bases bíblicas da vida cristã",
+      school: "Escola do Discípulo",
+      points: 100,
+      completed: true,
+      completedAt: "2024-01-05T14:00:00Z"
+    },
+    {
+      id: "course_2",
+      title: "Vida de Igreja",
+      description: "Entendendo a vida prática da igreja",
+      school: "Escola do Discípulo",
+      points: 120,
+      completed: false
+    },
+    {
+      id: "course_3",
+      title: "Casamento Cristão",
+      description: "Princípios bíblicos para o casamento",
+      school: "Universidade da Família",
+      points: 150,
+      completed: false
+    },
+    {
+      id: "course_4",
+      title: "Educação de Filhos",
+      description: "Criando filhos segundo a Palavra",
+      school: "Universidade da Família",
+      points: 130,
+      completed: false
+    }
+  ]);
 
-    return badges;
+  const completeMission = (missionId: string, type: 'mission' | 'book' | 'course') => {
+    console.log(`Completing ${type}: ${missionId}`);
+    // Aqui seria implementada a lógica para completar missão
+    // Incluindo atualização de pontos, badges, etc.
   };
 
-  const getPhaseInfo = (phase: number) => {
-    const phases = {
-      1: { name: "Fundação", color: "bg-blue-500", description: "Construindo bases sólidas" },
-      2: { name: "Crescimento", color: "bg-green-500", description: "Expandindo conhecimento" },
-      3: { name: "Maturidade", color: "bg-purple-500", description: "Desenvolvendo sabedoria" },
-      4: { name: "Liderança", color: "bg-orange-500", description: "Influenciando outros" },
-      5: { name: "Multiplicação", color: "bg-red-500", description: "Formando discípulos" }
-    };
-    return phases[phase as keyof typeof phases] || phases[1];
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const getCategoryIcon = (category: Mission['category']) => {
@@ -255,295 +243,491 @@ const Missions = () => {
     }
   };
 
-  const completeMission = (missionId: string) => {
-    console.log(`Completing mission: ${missionId}`);
-    // Lógica para completar missão
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'daily': return <CalendarDays className="w-4 h-4" />;
+      case 'weekly': return <CalendarCheck className="w-4 h-4" />;
+      case 'monthly': return <Calendar className="w-4 h-4" />;
+      case 'book': return <Book className="w-4 h-4" />;
+      case 'course': return <School className="w-4 h-4" />;
+      default: return <Target className="w-4 h-4" />;
+    }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const getTypeBadgeText = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'daily': 'Diária',
+      'weekly': 'Semanal',
+      'monthly': 'Mensal',
+      'semestral': 'Semestral',
+      'annual': 'Anual',
+      'book': 'Livro',
+      'course': 'Curso',
+      'special': 'Especial'
+    };
+    return typeMap[type] || type;
   };
 
-  const progressToNextPhase = (userProgress.completedMissions / userProgress.nextPhaseRequirement) * 100;
-  const currentPhase = getPhaseInfo(userProgress.currentPhase);
-  const nextPhase = getPhaseInfo(userProgress.currentPhase + 1);
+  const filteredMissions = {
+    daily: missions.filter(m => m.type === 'daily'),
+    weekly: missions.filter(m => m.type === 'weekly'),
+    monthly: missions.filter(m => m.type === 'monthly'),
+    semestral: missions.filter(m => m.type === 'semestral'),
+    annual: missions.filter(m => m.type === 'annual'),
+    special: missions.filter(m => m.type === 'special')
+  };
+
+  const totalCompleted = missions.filter(m => m.completed).length + 
+                         books.filter(b => b.completed).length + 
+                         courses.filter(c => c.completed).length;
+
+  const totalMissions = missions.length + books.length + courses.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-2 sm:p-4 lg:p-6">
       <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
         
-        {/* Header - Mobile Optimized */}
+        {/* Header */}
         <Card className="overflow-hidden">
           <CardContent className="p-3 sm:p-6">
-            {/* Current Phase */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4">
-              <div className={`w-12 h-12 sm:w-16 sm:h-16 ${currentPhase.color} rounded-full flex items-center justify-center text-white text-lg sm:text-xl font-bold flex-shrink-0`}>
-                {userProgress.currentPhase}
+              <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-white text-lg sm:text-xl font-bold flex-shrink-0`}
+                   style={{ backgroundColor: userPhase.colors.primary }}>
+                {userPhase.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Fase {userProgress.currentPhase}: {currentPhase.name}</h1>
-                <p className="text-sm text-gray-600">{currentPhase.description}</p>
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900">Missões - {userPhase.name}</h1>
+                <p className="text-sm text-gray-600">"{userPhase.phrase}"</p>
+                <p className="text-xs text-gray-500">{totalCompleted}/{totalMissions} missões concluídas</p>
               </div>
             </div>
 
-            {/* Progress to Next Phase */}
             <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Progresso para Fase {userProgress.currentPhase + 1}: {nextPhase.name}</span>
-                <span className="font-medium">{userProgress.completedMissions}/{userProgress.nextPhaseRequirement}</span>
-              </div>
-              <Progress value={progressToNextPhase} className="h-3" />
+              <Progress value={(totalCompleted / totalMissions) * 100} className="h-3" />
               <p className="text-xs text-gray-600">
-                {userProgress.nextPhaseRequirement - userProgress.completedMissions} missões restantes ({Math.round(100 - progressToNextPhase)}%)
+                {Math.round((totalCompleted / totalMissions) * 100)}% de progresso geral
               </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Stats Grid - Mobile Responsive */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-blue-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600">Missões</p>
-                  <p className="text-lg sm:text-xl font-bold">{userProgress.completedMissions}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <BookOpen className="w-6 h-6 sm:w-8 sm:h-8 text-green-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600">Livros</p>
-                  <p className="text-lg sm:text-xl font-bold">{userProgress.booksRead}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600">Cursos</p>
-                  <p className="text-lg sm:text-xl font-bold">{userProgress.coursesCompleted}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Flame className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-sm text-gray-600">Sequência</p>
-                  <p className="text-lg sm:text-xl font-bold">{userProgress.consecutiveDays}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Missions List - Directly visible */}
+        {/* Missões organizadas em Tabs */}
         <Card>
           <CardHeader className="pb-3 sm:pb-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <CardTitle className="text-lg sm:text-xl">Missões Ativas</CardTitle>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => setShowBadgePopup(true)}
-                className="text-xs sm:text-sm"
-              >
-                <Trophy className="w-4 h-4 mr-1" />
-                Ver Badges
-              </Button>
-            </div>
+            <CardTitle className="text-lg sm:text-xl">Suas Missões</CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-6 pt-0">
-            <div className="space-y-3">
-              {missions.map((mission) => (
-                <Card key={mission.id} className={`transition-all ${mission.completed ? 'bg-green-50 border-green-200' : 'hover:shadow-md'}`}>
-                  <CardContent className="p-3 sm:p-4">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        mission.completed ? 'bg-green-500' : 'bg-gray-200'
-                      }`}>
-                        {mission.completed ? (
-                          <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                        ) : (
-                          getCategoryIcon(mission.category)
-                        )}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
-                          <h3 className="font-semibold text-sm sm:text-base truncate">{mission.title}</h3>
-                          <div className="flex items-center gap-2">
-                            <Badge variant={mission.type === 'daily' ? 'default' : 'secondary'} className="text-xs">
-                              {mission.type === 'daily' ? 'Diária' : 
-                               mission.type === 'weekly' ? 'Semanal' : 
-                               mission.type === 'monthly' ? 'Mensal' :
-                               mission.type === 'book' ? 'Livro' : 'Curso'}
-                            </Badge>
-                            <span className="text-xs text-orange-600 font-medium">+{mission.points}pts</span>
+            <Tabs defaultValue="daily" className="w-full">
+              <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 h-auto gap-1 bg-gray-100 p-1">
+                <TabsTrigger value="daily" className="text-xs py-2">📅 Diárias</TabsTrigger>
+                <TabsTrigger value="weekly" className="text-xs py-2">📆 Semanais</TabsTrigger>
+                <TabsTrigger value="monthly" className="text-xs py-2">🗓️ Mensais</TabsTrigger>
+                <TabsTrigger value="books" className="text-xs py-2">📚 Livros</TabsTrigger>
+                <TabsTrigger value="courses" className="text-xs py-2">🎓 Cursos</TabsTrigger>
+                <TabsTrigger value="semestral" className="text-xs py-2">📊 Semestrais</TabsTrigger>
+                <TabsTrigger value="annual" className="text-xs py-2">🏆 Anuais</TabsTrigger>
+                <TabsTrigger value="special" className="text-xs py-2">⭐ Especiais</TabsTrigger>
+              </TabsList>
+
+              {/* Missões Diárias */}
+              <TabsContent value="daily" className="space-y-3 mt-4">
+                {filteredMissions.daily.length > 0 ? (
+                  filteredMissions.daily.map((mission) => (
+                    <Card key={mission.id} className={`transition-all ${mission.completed ? 'bg-green-50 border-green-200' : 'hover:shadow-md'}`}>
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            mission.completed ? 'bg-green-500' : 'bg-gray-200'
+                          }`}>
+                            {mission.completed ? (
+                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            ) : (
+                              getCategoryIcon(mission.category)
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                              <h3 className="font-semibold text-sm sm:text-base truncate">{mission.title}</h3>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="default" className="text-xs">
+                                  {getTypeBadgeText(mission.type)}
+                                </Badge>
+                                <span className="text-xs text-orange-600 font-medium">+{mission.points}pts</span>
+                              </div>
+                            </div>
+                            
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">{mission.description}</p>
+                            
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                              {mission.completed && mission.completedAt ? (
+                                <div className="flex items-center gap-1 text-xs text-green-600">
+                                  <CheckCircle className="w-3 h-3" />
+                                  <span>Concluído em {formatDate(mission.completedAt)}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Hoje</span>
+                                </div>
+                              )}
+                              
+                              {!mission.completed && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => completeMission(mission.id, 'mission')}
+                                  className="text-xs"
+                                >
+                                  Marcar Concluído
+                                </Button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        
-                        <p className="text-xs sm:text-sm text-gray-600 mb-2">{mission.description}</p>
-                        
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                          {mission.completed && mission.completedAt ? (
-                            <div className="flex items-center gap-1 text-xs text-green-600">
-                              <CheckCircle className="w-3 h-3" />
-                              <span>Concluído em {formatDate(mission.completedAt)}</span>
-                            </div>
-                          ) : mission.dueDate ? (
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <Clock className="w-3 h-3" />
-                              <span>Prazo: {formatDate(mission.dueDate)}</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <Target className="w-3 h-3" />
-                              <span>Sem prazo definido</span>
-                            </div>
-                          )}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <CalendarDays className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma missão diária disponível</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Missões Semanais */}
+              <TabsContent value="weekly" className="space-y-3 mt-4">
+                {filteredMissions.weekly.length > 0 ? (
+                  filteredMissions.weekly.map((mission) => (
+                    <Card key={mission.id} className={`transition-all ${mission.completed ? 'bg-green-50 border-green-200' : 'hover:shadow-md'}`}>
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            mission.completed ? 'bg-green-500' : 'bg-gray-200'
+                          }`}>
+                            {mission.completed ? (
+                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            ) : (
+                              getCategoryIcon(mission.category)
+                            )}
+                          </div>
                           
-                          {!mission.completed && (
-                            <Button 
-                              size="sm" 
-                              onClick={() => completeMission(mission.id)}
-                              className="text-xs"
-                            >
-                              Marcar Concluído
-                            </Button>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                              <h3 className="font-semibold text-sm sm:text-base truncate">{mission.title}</h3>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  {getTypeBadgeText(mission.type)}
+                                </Badge>
+                                <span className="text-xs text-orange-600 font-medium">+{mission.points}pts</span>
+                              </div>
+                            </div>
+                            
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">{mission.description}</p>
+                            
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                              {mission.completed && mission.completedAt ? (
+                                <div className="flex items-center gap-1 text-xs text-green-600">
+                                  <CheckCircle className="w-3 h-3" />
+                                  <span>Concluído em {formatDate(mission.completedAt)}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Esta semana</span>
+                                </div>
+                              )}
+                              
+                              {!mission.completed && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => completeMission(mission.id, 'mission')}
+                                  className="text-xs"
+                                >
+                                  Marcar Concluído
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <CalendarCheck className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma missão semanal disponível</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Missões Mensais */}
+              <TabsContent value="monthly" className="space-y-3 mt-4">
+                {filteredMissions.monthly.length > 0 ? (
+                  filteredMissions.monthly.map((mission) => (
+                    <Card key={mission.id} className={`transition-all ${mission.completed ? 'bg-green-50 border-green-200' : 'hover:shadow-md'}`}>
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            mission.completed ? 'bg-green-500' : 'bg-gray-200'
+                          }`}>
+                            {mission.completed ? (
+                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            ) : (
+                              getCategoryIcon(mission.category)
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                              <h3 className="font-semibold text-sm sm:text-base truncate">{mission.title}</h3>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {getTypeBadgeText(mission.type)}
+                                </Badge>
+                                <span className="text-xs text-orange-600 font-medium">+{mission.points}pts</span>
+                              </div>
+                            </div>
+                            
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">{mission.description}</p>
+                            
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                              {mission.completed && mission.completedAt ? (
+                                <div className="flex items-center gap-1 text-xs text-green-600">
+                                  <CheckCircle className="w-3 h-3" />
+                                  <span>Concluído em {formatDate(mission.completedAt)}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Este mês</span>
+                                </div>
+                              )}
+                              
+                              {!mission.completed && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => completeMission(mission.id, 'mission')}
+                                  className="text-xs"
+                                >
+                                  Marcar Concluído
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma missão mensal disponível</p>
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Livros */}
+              <TabsContent value="books" className="space-y-3 mt-4">
+                {books.map((book) => (
+                  <Card key={book.id} className={`transition-all ${book.completed ? 'bg-green-50 border-green-200' : 'hover:shadow-md'}`}>
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          book.completed ? 'bg-green-500' : 'bg-blue-100'
+                        }`}>
+                          {book.completed ? (
+                            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                          ) : (
+                            <Book className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                           )}
                         </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                            <h3 className="font-semibold text-sm sm:text-base truncate">{book.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="text-xs bg-blue-100 text-blue-700">
+                                Livro
+                              </Badge>
+                              <span className="text-xs text-orange-600 font-medium">+{book.points}pts</span>
+                            </div>
+                          </div>
+                          
+                          <p className="text-xs sm:text-sm text-gray-600 mb-2">Autor: {book.author}</p>
+                          
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            {book.completed && book.completedAt ? (
+                              <div className="flex items-center gap-1 text-xs text-green-600">
+                                <CheckCircle className="w-3 h-3" />
+                                <span>Concluído em {formatDate(book.completedAt)}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <BookOpen className="w-3 h-3" />
+                                <span>Leitura disponível</span>
+                              </div>
+                            )}
+                            
+                            {!book.completed && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => completeMission(book.id, 'book')}
+                                className="text-xs"
+                              >
+                                Marcar como Lido
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
+
+              {/* Cursos */}
+              <TabsContent value="courses" className="space-y-3 mt-4">
+                {courses.map((course) => (
+                  <Card key={course.id} className={`transition-all ${course.completed ? 'bg-green-50 border-green-200' : 'hover:shadow-md'}`}>
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                          course.completed ? 'bg-green-500' : 'bg-purple-100'
+                        }`}>
+                          {course.completed ? (
+                            <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                          ) : (
+                            <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                            <h3 className="font-semibold text-sm sm:text-base truncate">{course.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="text-xs bg-purple-100 text-purple-700">
+                                Curso
+                              </Badge>
+                              <span className="text-xs text-orange-600 font-medium">+{course.points}pts</span>
+                            </div>
+                          </div>
+                          
+                          <p className="text-xs sm:text-sm text-gray-600 mb-1">{course.description}</p>
+                          <p className="text-xs text-gray-500 mb-2">Escola: {course.school}</p>
+                          
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                            {course.completed && course.completedAt ? (
+                              <div className="flex items-center gap-1 text-xs text-green-600">
+                                <CheckCircle className="w-3 h-3" />
+                                <span>Concluído em {formatDate(course.completedAt)}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <GraduationCap className="w-3 h-3" />
+                                <span>Curso disponível</span>
+                              </div>
+                            )}
+                            
+                            {!course.completed && (
+                              <Button 
+                                size="sm" 
+                                onClick={() => completeMission(course.id, 'course')}
+                                className="text-xs"
+                              >
+                                Marcar Concluído
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </TabsContent>
+
+              {/* Outras categorias (semestrais, anuais, especiais) */}
+              <TabsContent value="semestral" className="space-y-3 mt-4">
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Missões semestrais serão disponibilizadas em breve</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="annual" className="space-y-3 mt-4">
+                <div className="text-center py-8 text-gray-500">
+                  <Trophy className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Missões anuais serão disponibilizadas em breve</p>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="special" className="space-y-3 mt-4">
+                {filteredMissions.special.length > 0 ? (
+                  filteredMissions.special.map((mission) => (
+                    <Card key={mission.id} className={`transition-all ${mission.completed ? 'bg-green-50 border-green-200' : 'hover:shadow-md'}`}>
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start gap-3">
+                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                            mission.completed ? 'bg-green-500' : 'bg-orange-100'
+                          }`}>
+                            {mission.completed ? (
+                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            ) : (
+                              <Star className="w-4 h-4 sm:w-5 sm:h-5 text-orange-600" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                              <h3 className="font-semibold text-sm sm:text-base truncate">{mission.title}</h3>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs border-orange-200 text-orange-700">
+                                  {getTypeBadgeText(mission.type)}
+                                </Badge>
+                                <span className="text-xs text-orange-600 font-medium">+{mission.points}pts</span>
+                              </div>
+                            </div>
+                            
+                            <p className="text-xs sm:text-sm text-gray-600 mb-2">{mission.description}</p>
+                            
+                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                              {mission.completed && mission.completedAt ? (
+                                <div className="flex items-center gap-1 text-xs text-green-600">
+                                  <CheckCircle className="w-3 h-3" />
+                                  <span>Concluído em {formatDate(mission.completedAt)}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-xs text-gray-500">
+                                  <Star className="w-3 h-3" />
+                                  <span>Missão especial</span>
+                                </div>
+                              )}
+                              
+                              {!mission.completed && (
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => completeMission(mission.id, 'mission')}
+                                  className="text-xs"
+                                >
+                                  Marcar Concluído
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Star className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>Nenhuma missão especial disponível no momento</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
-
-        {/* Badge Popup - Mobile Optimized */}
-        {showBadgePopup && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-            <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-center">
-                  <CardTitle className="text-lg sm:text-xl">Sistema de Badges</CardTitle>
-                  <Button variant="ghost" size="sm" onClick={() => setShowBadgePopup(false)}>
-                    ✕
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0 overflow-y-auto">
-                <Tabs defaultValue="reading" className="w-full">
-                  <TabsList className="grid w-full grid-cols-4 h-auto">
-                    <TabsTrigger value="reading" className="text-xs py-2">📚 Leitura</TabsTrigger>
-                    <TabsTrigger value="courses" className="text-xs py-2">🎓 Cursos</TabsTrigger>
-                    <TabsTrigger value="daily" className="text-xs py-2">🗓️ Diárias</TabsTrigger>
-                    <TabsTrigger value="combined" className="text-xs py-2">🏆 Combinados</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="reading" className="space-y-3 mt-4">
-                    {getBadges().filter(b => b.type === 'books').map((badge) => (
-                      <div key={badge.id} className={`p-3 rounded-lg border-2 ${
-                        badge.unlocked ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300' : 'bg-gray-100 border-gray-300 opacity-60'
-                      }`}>
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{badge.icon}</span>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-sm sm:text-base">{badge.name}</h4>
-                            <p className="text-xs text-gray-600 mb-1">{badge.description}</p>
-                            <div className="flex items-center gap-2 text-xs">
-                              <span>Progresso: {badge.current}/{badge.requirement}</span>
-                              {badge.unlocked ? (
-                                <Badge variant="default" className="text-xs">Desbloqueado</Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">Bloqueado</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </TabsContent>
-
-                  <TabsContent value="courses" className="space-y-3 mt-4">
-                    {getBadges().filter(b => b.type === 'courses').map((badge) => (
-                      <div key={badge.id} className={`p-3 rounded-lg border-2 ${
-                        badge.unlocked ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300' : 'bg-gray-100 border-gray-300 opacity-60'
-                      }`}>
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{badge.icon}</span>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-sm sm:text-base">{badge.name}</h4>
-                            <p className="text-xs text-gray-600 mb-1">{badge.description}</p>
-                            <div className="flex items-center gap-2 text-xs">
-                              <span>Progresso: {badge.current}/{badge.requirement}</span>
-                              {badge.unlocked ? (
-                                <Badge variant="default" className="text-xs">Desbloqueado</Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">Bloqueado</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </TabsContent>
-
-                  <TabsContent value="daily" className="space-y-3 mt-4">
-                    {getBadges().filter(b => b.type === 'consecutive').map((badge) => (
-                      <div key={badge.id} className={`p-3 rounded-lg border-2 ${
-                        badge.unlocked ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300' : 'bg-gray-100 border-gray-300 opacity-60'
-                      }`}>
-                        <div className="flex items-center gap-3">
-                          <span className="text-2xl">{badge.icon}</span>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-sm sm:text-base">{badge.name}</h4>
-                            <p className="text-xs text-gray-600 mb-1">{badge.description}</p>
-                            <div className="flex items-center gap-2 text-xs">
-                              <span>Progresso: {badge.current}/{badge.requirement}</span>
-                              {badge.unlocked ? (
-                                <Badge variant="default" className="text-xs">Desbloqueado</Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">Bloqueado</Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </TabsContent>
-
-                  <TabsContent value="combined" className="space-y-3 mt-4">
-                    {/* Conteúdo para badges combinados */}
-                    <p>Em breve, badges combinados!</p>
-                  </TabsContent>
-
-                </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
     </div>
   );
