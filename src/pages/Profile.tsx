@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +23,8 @@ import {
   Activity,
   Edit,
   Save,
-  X
+  X,
+  Lock
 } from 'lucide-react';
 
 interface UserProfile {
@@ -90,18 +90,120 @@ const Profile = () => {
     return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
   };
 
-  const getBadgeInfo = (badgeId: string) => {
-    const badges = {
-      "reader-1": { icon: "📖", name: "Leitor Iniciante", description: "Começando a jornada da leitura" },
-      "reader-2": { icon: "📚", name: "Leitor Fluente", description: "Já tem o hábito da leitura" },
-      "reader-3": { icon: "🔥📚", name: "Leitor Voraz", description: "Não larga um bom livro por nada" },
-      "reader-4": { icon: "🧠✨", name: "Mente Brilhante", description: "Um verdadeiro devorador de sabedoria" },
-      "course-1": { icon: "🎓", name: "Discípulo em Formação", description: "Iniciando sua jornada de formação" },
-      "course-2": { icon: "📘🎓", name: "Aprendiz Dedicado", description: "Mostrando sede de crescimento" },
-      "course-3": { icon: "🛠️🎓", name: "Líder em Construção", description: "Preparando-se para grandes responsabilidades" },
-      "course-4": { icon: "🧙‍♂️📘", name: "Mestre da Jornada", description: "Um veterano na trilha do aprendizado" }
+  const getAllBadges = () => {
+    return {
+      "reader-1": { 
+        icon: "📖", 
+        name: "Leitor Iniciante", 
+        description: "Começando a jornada da leitura",
+        condition: "Leia 1 livro",
+        requirement: 1,
+        type: "books"
+      },
+      "reader-2": { 
+        icon: "📚", 
+        name: "Leitor Fluente", 
+        description: "Já tem o hábito da leitura",
+        condition: "Leia 3 livros",
+        requirement: 3,
+        type: "books"
+      },
+      "reader-3": { 
+        icon: "🔥📚", 
+        name: "Leitor Voraz", 
+        description: "Não larga um bom livro por nada",
+        condition: "Leia 5 livros",
+        requirement: 5,
+        type: "books"
+      },
+      "reader-4": { 
+        icon: "🧠✨", 
+        name: "Mente Brilhante", 
+        description: "Um verdadeiro devorador de sabedoria",
+        condition: "Leia 10 livros",
+        requirement: 10,
+        type: "books"
+      },
+      "course-1": { 
+        icon: "🎓", 
+        name: "Discípulo em Formação", 
+        description: "Iniciando sua jornada de formação",
+        condition: "Complete 1 curso",
+        requirement: 1,
+        type: "courses"
+      },
+      "course-2": { 
+        icon: "📘🎓", 
+        name: "Aprendiz Dedicado", 
+        description: "Mostrando sede de crescimento",
+        condition: "Complete 3 cursos",
+        requirement: 3,
+        type: "courses"
+      },
+      "course-3": { 
+        icon: "🛠️🎓", 
+        name: "Líder em Construção", 
+        description: "Preparando-se para grandes responsabilidades",
+        condition: "Complete 5 cursos",
+        requirement: 5,
+        type: "courses"
+      },
+      "course-4": { 
+        icon: "🧙‍♂️📘", 
+        name: "Mestre da Jornada", 
+        description: "Um veterano na trilha do aprendizado",
+        condition: "Complete 10 cursos",
+        requirement: 10,
+        type: "courses"
+      },
+      "mission-1": {
+        icon: "🎯",
+        name: "Primeiro Passo",
+        description: "Completou sua primeira missão",
+        condition: "Complete 1 missão",
+        requirement: 1,
+        type: "missions"
+      },
+      "mission-2": {
+        icon: "🏹",
+        name: "Focado no Alvo",
+        description: "Mantendo a consistência",
+        condition: "Complete 5 missões",
+        requirement: 5,
+        type: "missions"
+      },
+      "mission-3": {
+        icon: "🏆",
+        name: "Guerreiro Dedicado",
+        description: "Mostrando determinação",
+        condition: "Complete 10 missões",
+        requirement: 10,
+        type: "missions"
+      }
     };
-    return badges[badgeId as keyof typeof badges] || { icon: "🏅", name: "Badge", description: "" };
+  };
+
+  const getBadgeInfo = (badgeId: string) => {
+    const badges = getAllBadges();
+    return badges[badgeId as keyof typeof badges] || { icon: "🏅", name: "Badge", description: "", condition: "", requirement: 0, type: "" };
+  };
+
+  const checkBadgeEligibility = (badgeId: string) => {
+    const badge = getBadgeInfo(badgeId);
+    const userBadges = currentUser?.badges || [];
+    
+    if (userBadges.includes(badgeId)) return { earned: true, progress: badge.requirement };
+    
+    let currentCount = 0;
+    if (badge.type === 'books') {
+      currentCount = userActivities.filter(a => a.type === 'book').length;
+    } else if (badge.type === 'courses') {
+      currentCount = userActivities.filter(a => a.type === 'course').length;
+    } else if (badge.type === 'missions') {
+      currentCount = userActivities.filter(a => a.type === 'mission').length;
+    }
+    
+    return { earned: false, progress: currentCount };
   };
 
   const getRoleIcon = (role: string) => {
@@ -173,6 +275,7 @@ const Profile = () => {
 
   const currentPhase = getUserPhase(currentUser.points);
   const phaseProgress = getPhaseProgress();
+  const allBadges = getAllBadges();
 
   const missionActivities = userActivities.filter(a => a.type === 'mission');
   const bookActivities = userActivities.filter(a => a.type === 'book');
@@ -223,7 +326,7 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Badges Display */}
+                {/* Badges Display - Show earned badges */}
                 {(currentUser.badges || []).length > 0 && (
                   <div className="flex gap-2 flex-wrap">
                     <span className="text-sm text-white/80 mr-2">Badges:</span>
@@ -324,13 +427,14 @@ const Profile = () => {
         <Card>
           <CardContent className="p-0">
             <Tabs defaultValue="timeline" className="w-full">
-              <TabsList className="grid w-full grid-cols-6 h-auto rounded-none">
+              <TabsList className="grid w-full grid-cols-7 h-auto rounded-none">
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
                 <TabsTrigger value="info">Informações</TabsTrigger>
                 <TabsTrigger value="missions">Missões</TabsTrigger>
                 <TabsTrigger value="books">Livros</TabsTrigger>
                 <TabsTrigger value="courses">Cursos</TabsTrigger>
                 <TabsTrigger value="badges">Badges</TabsTrigger>
+                <TabsTrigger value="all-badges">Conquistas</TabsTrigger>
               </TabsList>
 
               <TabsContent value="timeline" className="p-6 space-y-4 m-0">
@@ -557,6 +661,64 @@ const Profile = () => {
                     })}
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="all-badges" className="p-6 space-y-4 m-0">
+                <h3 className="font-semibold">Todas as Conquistas Disponíveis</h3>
+                <div className="grid grid-cols-1 gap-3">
+                  {Object.entries(allBadges).map(([badgeId, badge]) => {
+                    const eligibility = checkBadgeEligibility(badgeId);
+                    const isEarned = eligibility.earned;
+                    const progressPercent = Math.min((eligibility.progress / badge.requirement) * 100, 100);
+                    
+                    return (
+                      <div 
+                        key={badgeId} 
+                        className={`flex items-center gap-3 p-3 rounded-lg border ${
+                          isEarned 
+                            ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200' 
+                            : 'bg-gray-50 border-gray-200'
+                        }`}
+                      >
+                        <div className="relative">
+                          <span className={`text-2xl ${!isEarned ? 'grayscale opacity-50' : ''}`}>
+                            {badge.icon}
+                          </span>
+                          {!isEarned && (
+                            <Lock className="w-3 h-3 absolute -top-1 -right-1 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className={`font-medium ${!isEarned ? 'text-gray-500' : ''}`}>
+                              {badge.name}
+                            </h4>
+                            {isEarned && (
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
+                                Conquistado!
+                              </Badge>
+                            )}
+                          </div>
+                          <p className={`text-sm ${!isEarned ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {badge.description}
+                          </p>
+                          <p className={`text-xs mt-1 ${!isEarned ? 'text-gray-400' : 'text-blue-600'}`}>
+                            {badge.condition}
+                          </p>
+                          {!isEarned && (
+                            <div className="mt-2">
+                              <div className="flex justify-between text-xs text-gray-500">
+                                <span>Progresso: {eligibility.progress}/{badge.requirement}</span>
+                                <span>{Math.round(progressPercent)}%</span>
+                              </div>
+                              <Progress value={progressPercent} className="h-1 mt-1" />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </TabsContent>
             </Tabs>
           </CardContent>
