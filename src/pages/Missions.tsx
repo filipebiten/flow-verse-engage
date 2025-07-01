@@ -66,7 +66,7 @@ const Missions = () => {
   const loadCompletedItems = (userId: string) => {
     const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
     const userActivities = activities.filter((a: any) => a.userId === userId);
-    const completedIds = new Set(userActivities.map((a: any) => a.itemId));
+    const completedIds = new Set(userActivities.map((a: any) => a.itemId as string));
     setCompletedItems(completedIds);
   };
 
