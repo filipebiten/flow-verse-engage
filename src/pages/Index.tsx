@@ -37,7 +37,8 @@ const Index = ({ onLogin }: IndexProps) => {
     confirmPassword: "",
     profilePhoto: null as File | null,
     participatesFlowUp: false,
-    participatesIrmandade: false
+    participatesIrmandade: false,
+    isAdmin: false
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -177,7 +178,7 @@ const Index = ({ onLogin }: IndexProps) => {
       pgmRole: registerForm.pgmRole,
       pgmNumber: registerForm.pgmNumber,
       password: registerForm.password,
-      isAdmin: false,
+      isAdmin: registerForm.isAdmin,
       phase: "Riacho",
       points: 0,
       profilePhoto: previewUrl,
@@ -189,7 +190,7 @@ const Index = ({ onLogin }: IndexProps) => {
       participatesIrmandade: registerForm.gender === "Masculino" ? registerForm.participatesIrmandade : false,
       badges: [],
       consecutiveDays: 0,
-      role: 'user'
+      role: registerForm.isAdmin ? 'admin' : 'user'
     };
 
     users.push(newUser);
@@ -415,6 +416,15 @@ const Index = ({ onLogin }: IndexProps) => {
                     />
                   </div>
                 )}
+
+                <div className="flex items-center space-x-2 p-2 bg-orange-50 border border-orange-200 rounded">
+                  <Checkbox
+                    id="isAdmin"
+                    checked={registerForm.isAdmin}
+                    onCheckedChange={(checked) => setRegisterForm(prev => ({ ...prev, isAdmin: !!checked }))}
+                  />
+                  <Label htmlFor="isAdmin" className="text-sm font-medium text-orange-700">Sou Administrador</Label>
+                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="photo">Foto de Perfil (Opcional)</Label>
