@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getUserPhase, applyPhaseColors } from '@/utils/phaseUtils';
 
 interface PhaseChangeDialogProps {
   isOpen: boolean;
@@ -15,6 +14,37 @@ interface PhaseChangeDialogProps {
 const PhaseChangeDialog = ({ isOpen, onClose, newPoints, previousPoints }: PhaseChangeDialogProps) => {
   const [showConfetti, setShowConfetti] = useState(false);
   
+  const getUserPhase = (points: number) => {
+    if (points >= 1000) return { 
+      name: 'Oceano', 
+      icon: '🌊', 
+      phrase: 'Profundamente imerso em Deus', 
+      description: 'Você alcançou a fase máxima! Continue fluindo com Deus.',
+      color: 'from-blue-900 to-indigo-900'
+    };
+    if (points >= 500) return { 
+      name: 'Cachoeira', 
+      icon: '💥', 
+      phrase: 'Entregue ao movimento de Deus', 
+      description: 'Sua jornada está ganhando força e impacto.',
+      color: 'from-purple-600 to-blue-600'
+    };
+    if (points >= 250) return { 
+      name: 'Correnteza', 
+      icon: '🌊', 
+      phrase: 'Sendo levado por algo maior', 
+      description: 'Você está fluindo com o propósito de Deus.',
+      color: 'from-blue-500 to-teal-500'
+    };
+    return { 
+      name: 'Riacho', 
+      icon: '🌀', 
+      phrase: 'Começando a fluir', 
+      description: 'O início de uma jornada transformadora.',
+      color: 'from-green-400 to-blue-400'
+    };
+  };
+
   const previousPhase = getUserPhase(previousPoints);
   const newPhase = getUserPhase(newPoints);
   
@@ -23,7 +53,11 @@ const PhaseChangeDialog = ({ isOpen, onClose, newPoints, previousPoints }: Phase
   useEffect(() => {
     if (isOpen && hasPhaseChanged) {
       setShowConfetti(true);
-      applyPhaseColors(newPhase);
+      
+      // Apply phase colors to body
+      const root = document.documentElement;
+      root.style.setProperty('--phase-gradient', `linear-gradient(135deg, ${newPhase.color.replace('from-', '').replace('to-', ', ')})`);
+      
       setTimeout(() => setShowConfetti(false), 3000);
     }
   }, [isOpen, hasPhaseChanged, newPhase]);
@@ -32,7 +66,7 @@ const PhaseChangeDialog = ({ isOpen, onClose, newPoints, previousPoints }: Phase
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-6 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg">
+      <DialogContent className="max-w-md mx-auto">
         <DialogHeader className="text-center">
           <DialogTitle className="text-2xl font-bold text-primary">
             🎉 Nova Fase Alcançada! 🎉
@@ -42,7 +76,7 @@ const PhaseChangeDialog = ({ isOpen, onClose, newPoints, previousPoints }: Phase
         <div className="text-center space-y-4">
           <div className="text-6xl mb-4">{newPhase.icon}</div>
           
-          <Badge className="text-lg px-4 py-2 bg-primary text-primary-foreground">
+          <Badge className={`text-lg px-4 py-2 bg-gradient-to-r ${newPhase.color} text-white`}>
             {newPhase.name}
           </Badge>
           

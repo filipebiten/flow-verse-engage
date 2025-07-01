@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,45 +17,66 @@ import {
   Shield,
   Clock,
   CheckCircle,
-  Award
+  Award,
+  Activity
 } from 'lucide-react';
 
 interface UserProfile {
   id: string;
   name: string;
-  pgm: string;
+  pgmNumber: string;
   email: string;
-  phone: string;
-  role: string;
-  irmandade: boolean;
-  flowUp: boolean;
-  flowUpLevel: number;
+  whatsapp: string;
+  birthDate: string;
+  gender: string;
+  pgmRole: string;
+  participatesIrmandade: boolean;
+  participatesFlowUp: boolean;
   phase: string;
-  completedMissions: number;
-  totalMissions: number;
-  badges: string[];
-  completedBooks: string[];
-  completedCourses: string[];
   points: number;
+  badges: string[];
+  booksRead: string[];
+  coursesCompleted: string[];
+  joinDate: string;
 }
 
-interface MissionActivity {
+interface Activity {
   id: string;
-  type: 'mission' | 'book' | 'course';
-  title: string;
-  description: string;
+  userId: string;
+  userName: string;
+  missionName: string;
+  points: number;
   timestamp: string;
+  type: 'mission' | 'book' | 'course';
   period?: string;
-  completedAt?: string;
 }
 
 const Profile = () => {
-  // Get current user data
-  const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const missionActivities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
-  
-  // Filter activities for current user
-  const userActivities = missionActivities.filter((activity: any) => activity.userId === currentUser.id);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [userActivities, setUserActivities] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    if (user.id) {
+      setCurrentUser(user);
+      loadUserActivities(user.id);
+    }
+  }, []);
+
+  const loadUserActivities = (userId: string) => {
+    const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+    const userActivities = activities
+      .filter((activity: Activity) => activity.userId === userId)
+      .sort((a: Activity, b: Activity) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    setUserActivities(userActivities);
+  };
+
+  const getUserPhase = (points: number) => {
+    if (points >= 1000) return { name: 'Oceano', icon: '🌊', phrase: 'Profundamente imerso em Deus', color: 'from-blue-900 to-indigo-900' };
+    if (points >= 500) return { name: 'Cachoeira', icon: '💥', phrase: 'Entregue ao movimento de Deus', color: 'from-purple-600 to-blue-600' };
+    if (points >= 250) return { name: 'Correnteza', icon: '🌊', phrase: 'Sendo levado por algo maior', color: 'from-blue-500 to-teal-500' };
+    return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
+  };
 
   const getBadgeInfo = (badgeId: string) => {
     const badges = {
@@ -73,11 +94,11 @@ const Profile = () => {
 
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'pastor': return <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />;
-      case 'coordenador': return <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-purple-500" />;
-      case 'supervisor': return <Star className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />;
-      case 'líder': return <Award className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />;
-      default: return <User className="w-3 h-3 sm:w-4 sm:h-4 text-gray-500" />;
+      case 'pastor': return <Crown className="w-4 h-4 text-yellow-500" />;
+      case 'coordenador': return <Shield className="w-4 h-4 text-purple-500" />;
+      case 'supervisor': return <Star className="w-4 h-4 text-blue-500" />;
+      case 'líder': return <Award className="w-4 h-4 text-green-500" />;
+      default: return <User className="w-4 h-4 text-gray-500" />;
     }
   };
 
@@ -91,185 +112,237 @@ const Profile = () => {
     });
   };
 
+  const formatTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
+    
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+    return `${Math.floor(diffInMinutes / 1440)}d`;
+  };
+
   const getPhaseProgress = () => {
-    const points = currentUser.points || 0;
-    // Simulate phase progress based on points
-    const phaseThresholds = [0, 100, 250, 500, 1000];
-    const currentPhaseIndex = phaseThresholds.findIndex(threshold => points < threshold) - 1;
-    const currentPhase = Math.max(0, currentPhaseIndex);
-    const nextThreshold = phaseThresholds[currentPhase + 1] || 1000;
-    const prevThreshold = phaseThresholds[currentPhase] || 0;
+    const points = currentUser?.points || 0;
+    const nextPhaseThreshold = points >= 1000 ? 1000 : 
+                             points >= 500 ? 1000 :
+                             points >= 250 ? 500 : 250;
+    const prevPhaseThreshold = points >= 1000 ? 1000 :
+                             points >= 500 ? 500 :
+                             points >= 250 ? 250 : 0;
     
     return {
-      current: currentPhase + 1,
-      progress: ((points - prevThreshold) / (nextThreshold - prevThreshold)) * 100,
-      remaining: nextThreshold - points
+      current: points >= 1000 ? 4 : points >= 500 ? 3 : points >= 250 ? 2 : 1,
+      progress: points >= 1000 ? 100 : ((points - prevPhaseThreshold) / (nextPhaseThreshold - prevPhaseThreshold)) * 100,
+      remaining: points >= 1000 ? 0 : nextPhaseThreshold - points,
+      nextThreshold: nextPhaseThreshold
     };
   };
 
+  if (!currentUser) return null;
+
+  const currentPhase = getUserPhase(currentUser.points);
   const phaseProgress = getPhaseProgress();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-2 sm:p-4 lg:p-6">
-      <div className="max-w-6xl mx-auto space-y-3 sm:space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
         {/* Header */}
         <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6">
-              <div className="w-12 h-12 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm sm:text-2xl font-bold flex-shrink-0">
+          <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
+            <div className="flex items-center gap-6">
+              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-2xl font-bold">
                 {currentUser.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
               </div>
               
-              <div className="flex-1 min-w-0 w-full">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-2 sm:mb-3">
-                  <div className="min-w-0">
-                    <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{currentUser.name}</h1>
-                    <p className="text-xs sm:text-sm text-gray-600">{currentUser.pgmNumber}</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 sm:gap-2 self-start sm:self-center">
-                    {getRoleIcon(currentUser.pgmRole)}
-                    <span className="text-xs sm:text-sm font-medium capitalize">{currentUser.pgmRole}</span>
-                  </div>
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold mb-1">{currentUser.name}</h1>
+                <p className="text-white/80 mb-2">{currentUser.pgmNumber}</p>
+                
+                <div className="flex items-center gap-2 mb-3">
+                  {getRoleIcon(currentUser.pgmRole)}
+                  <span className="text-sm font-medium capitalize">{currentUser.pgmRole}</span>
                 </div>
 
-                <div className="flex flex-wrap gap-1 mb-2 sm:mb-3">
+                <div className="flex gap-2 mb-3">
                   {currentUser.participatesIrmandade && (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5">Irmandade</Badge>
+                    <Badge className="bg-white/20 text-white border-white/30">Irmandade</Badge>
                   )}
                   {currentUser.participatesFlowUp && (
-                    <Badge variant="secondary" className="text-xs px-1.5 py-0.5">Flow Up</Badge>
+                    <Badge className="bg-white/20 text-white border-white/30">Flow Up</Badge>
                   )}
-                  <Badge variant="outline" className="text-xs px-1.5 py-0.5">{currentUser.phase}</Badge>
-                  <Badge variant="secondary" className="text-xs px-1.5 py-0.5">{currentUser.points || 0} pts</Badge>
+                  <Badge className="bg-white/20 text-white border-white/30">{currentUser.points} pts</Badge>
                 </div>
 
-                {/* User Badges */}
-                <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
-                  {(currentUser.badges || []).map((badgeId: string, index: number) => {
-                    const badge = getBadgeInfo(badgeId);
-                    return (
-                      <div 
-                        key={index}
-                        className="flex items-center gap-1 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs whitespace-nowrap flex-shrink-0"
-                      >
-                        <span className="text-sm">{badge.icon}</span>
-                        <span className="hidden sm:inline text-xs">{badge.name}</span>
-                      </div>
-                    );
-                  })}
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl">{currentPhase.icon}</div>
+                  <div>
+                    <div className="text-lg font-bold">{currentPhase.name}</div>
+                    <div className="text-sm text-white/80">"{currentPhase.phrase}"</div>
+                  </div>
                 </div>
               </div>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="p-2 sm:p-4">
+            <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Target className="w-5 h-5 sm:w-8 sm:h-8 text-blue-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-600">Missões</p>
-                  <p className="text-sm sm:text-xl font-bold">{userActivities.filter((a: any) => a.type === 'mission').length}</p>
+                <Target className="w-8 h-8 text-blue-500" />
+                <div>
+                  <p className="text-sm text-gray-600">Missões</p>
+                  <p className="text-xl font-bold">{userActivities.filter(a => a.type === 'mission').length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-2 sm:p-4">
+            <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <BookOpen className="w-5 h-5 sm:w-8 sm:h-8 text-green-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-600">Livros</p>
-                  <p className="text-sm sm:text-xl font-bold">{(currentUser.booksRead || []).length}</p>
+                <BookOpen className="w-8 h-8 text-green-500" />
+                <div>
+                  <p className="text-sm text-gray-600">Livros</p>
+                  <p className="text-xl font-bold">{(currentUser.booksRead || []).length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-2 sm:p-4">
+            <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <GraduationCap className="w-5 h-5 sm:w-8 sm:h-8 text-purple-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-600">Cursos</p>
-                  <p className="text-sm sm:text-xl font-bold">{(currentUser.coursesCompleted || []).length}</p>
+                <GraduationCap className="w-8 h-8 text-purple-500" />
+                <div>
+                  <p className="text-sm text-gray-600">Cursos</p>
+                  <p className="text-xl font-bold">{(currentUser.coursesCompleted || []).length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-2 sm:p-4">
+            <CardContent className="p-4">
               <div className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 sm:w-8 sm:h-8 text-yellow-500 flex-shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs text-gray-600">Badges</p>
-                  <p className="text-sm sm:text-xl font-bold">{(currentUser.badges || []).length}</p>
+                <Trophy className="w-8 h-8 text-yellow-500" />
+                <div>
+                  <p className="text-sm text-gray-600">Badges</p>
+                  <p className="text-xl font-bold">{(currentUser.badges || []).length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Phase Progress */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Progresso da Fase</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between">
+                <span className="font-medium">Fase {phaseProgress.current} - {currentPhase.name}</span>
+                <span className="text-sm text-gray-600">
+                  {currentUser.points >= 1000 ? '100%' : `${Math.round(phaseProgress.progress)}%`}
+                </span>
+              </div>
+              <Progress value={phaseProgress.progress} className="h-3" />
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>{currentUser.points} pontos</span>
+                <span>
+                  {phaseProgress.remaining > 0 
+                    ? `${phaseProgress.remaining} pontos para próxima fase` 
+                    : 'Fase máxima alcançada! Continue acumulando pontos.'
+                  }
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Tabs */}
         <Card>
           <CardContent className="p-0">
-            <Tabs defaultValue="info" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 h-auto rounded-none">
-                <TabsTrigger value="info" className="text-xs sm:text-sm py-2 px-1">Informações</TabsTrigger>
-                <TabsTrigger value="books" className="text-xs sm:text-sm py-2 px-1">Livros</TabsTrigger>
-                <TabsTrigger value="courses" className="text-xs sm:text-sm py-2 px-1">Cursos</TabsTrigger>
-                <TabsTrigger value="badges" className="text-xs sm:text-sm py-2 px-1">Badges</TabsTrigger>
+            <Tabs defaultValue="timeline" className="w-full">
+              <TabsList className="grid w-full grid-cols-5 h-auto rounded-none">
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="info">Informações</TabsTrigger>
+                <TabsTrigger value="books">Livros</TabsTrigger>
+                <TabsTrigger value="courses">Cursos</TabsTrigger>
+                <TabsTrigger value="badges">Badges</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="info" className="p-3 sm:p-6 space-y-3 sm:space-y-4 m-0">
-                <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                  <div>
-                    <h3 className="font-semibold mb-2 text-sm sm:text-base">Informações Pessoais</h3>
-                    <div className="space-y-1 sm:space-y-2 text-xs sm:text-sm">
-                      <p><span className="font-medium">Email:</span> {currentUser.email}</p>
-                      <p><span className="font-medium">WhatsApp:</span> {currentUser.whatsapp}</p>
-                      <p><span className="font-medium">Data de Nascimento:</span> {currentUser.birthDate}</p>
-                      <p><span className="font-medium">Gênero:</span> {currentUser.gender}</p>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <h3 className="font-semibold mb-2 text-sm sm:text-base">Progresso da Fase</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs sm:text-sm">
-                        <span>Fase {phaseProgress.current}</span>
-                        <span>{Math.round(phaseProgress.progress)}%</span>
+              <TabsContent value="timeline" className="p-6 space-y-4 m-0">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="w-5 h-5" />
+                  <h3 className="font-semibold">Minha Timeline</h3>
+                </div>
+                
+                {userActivities.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">Nenhuma atividade ainda</p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Complete missões, livros e cursos para aparecerem aqui
+                    </p>
+                  </Card>
+                ) : (
+                  <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {userActivities.map((activity) => (
+                      <div key={activity.id} className="flex items-start gap-3 p-4 border rounded-lg bg-white">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium">{activity.missionName}</span>
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                              +{activity.points}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <span>
+                              {activity.type === 'mission' ? '🎯 Missão' : 
+                               activity.type === 'book' ? '📚 Livro' : '🎓 Curso'}
+                            </span>
+                            <span>•</span>
+                            <span>{formatTimeAgo(activity.timestamp)}</span>
+                          </div>
+                        </div>
                       </div>
-                      <Progress value={phaseProgress.progress} className="h-2 sm:h-3" />
-                      <p className="text-xs text-gray-600">
-                        {phaseProgress.remaining > 0 ? `${phaseProgress.remaining} pontos para a próxima fase` : 'Fase máxima alcançada!'}
-                      </p>
-                    </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="info" className="p-6 space-y-4 m-0">
+                <div>
+                  <h3 className="font-semibold mb-2">Informações Pessoais</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-medium">Email:</span> {currentUser.email}</p>
+                    <p><span className="font-medium">WhatsApp:</span> {currentUser.whatsapp}</p>
+                    <p><span className="font-medium">Data de Nascimento:</span> {currentUser.birthDate}</p>
+                    <p><span className="font-medium">Gênero:</span> {currentUser.gender}</p>
+                    <p><span className="font-medium">Membro desde:</span> {formatDate(currentUser.joinDate)}</p>
                   </div>
                 </div>
               </TabsContent>
 
-              <TabsContent value="books" className="p-3 sm:p-6 m-0">
+              <TabsContent value="books" className="p-6 m-0">
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm sm:text-base">Livros Lidos ({(currentUser.booksRead || []).length})</h3>
+                  <h3 className="font-semibold">Livros Lidos ({(currentUser.booksRead || []).length})</h3>
                   {(currentUser.booksRead || []).length === 0 ? (
                     <Card className="p-8 text-center">
                       <p className="text-muted-foreground">Nenhum livro lido ainda</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Complete missões de leitura para aparecerem aqui
-                      </p>
                     </Card>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {(currentUser.booksRead || []).map((book: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2 text-xs sm:text-sm p-2 bg-green-50 rounded">
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 flex-shrink-0" />
-                          <span className="truncate">{book}</span>
+                        <div key={index} className="flex items-center gap-2 p-3 bg-green-50 rounded border">
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                          <span className="flex-1">{book}</span>
                         </div>
                       ))}
                     </div>
@@ -277,22 +350,19 @@ const Profile = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="courses" className="p-3 sm:p-6 m-0">
+              <TabsContent value="courses" className="p-6 m-0">
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm sm:text-base">Cursos Concluídos ({(currentUser.coursesCompleted || []).length})</h3>
+                  <h3 className="font-semibold">Cursos Concluídos ({(currentUser.coursesCompleted || []).length})</h3>
                   {(currentUser.coursesCompleted || []).length === 0 ? (
                     <Card className="p-8 text-center">
                       <p className="text-muted-foreground">Nenhum curso concluído ainda</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Complete missões de cursos para aparecerem aqui
-                      </p>
                     </Card>
                   ) : (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {(currentUser.coursesCompleted || []).map((course: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2 text-xs sm:text-sm p-2 bg-blue-50 rounded">
-                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500 flex-shrink-0" />
-                          <span className="truncate">{course}</span>
+                        <div key={index} className="flex items-center gap-2 p-3 bg-blue-50 rounded border">
+                          <CheckCircle className="w-4 h-4 text-blue-500" />
+                          <span className="flex-1">{course}</span>
                         </div>
                       ))}
                     </div>
@@ -300,33 +370,28 @@ const Profile = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="badges" className="p-3 sm:p-6 space-y-3 sm:space-y-4 m-0">
-                <div>
-                  <h3 className="font-semibold mb-2 sm:mb-3 text-sm sm:text-base">Badges Conquistados ({(currentUser.badges || []).length})</h3>
-                  {(currentUser.badges || []).length === 0 ? (
-                    <Card className="p-8 text-center">
-                      <p className="text-muted-foreground">Nenhum badge conquistado ainda</p>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Complete missões para conquistar badges
-                      </p>
-                    </Card>
-                  ) : (
-                    <div className="grid grid-cols-1 gap-2 sm:gap-3">
-                      {(currentUser.badges || []).map((badgeId: string, index: number) => {
-                        const badge = getBadgeInfo(badgeId);
-                        return (
-                          <div key={index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                            <span className="text-lg sm:text-2xl">{badge.icon}</span>
-                            <div className="min-w-0">
-                              <h4 className="font-medium text-xs sm:text-sm">{badge.name}</h4>
-                              <p className="text-xs text-gray-600">{badge.description}</p>
-                            </div>
+              <TabsContent value="badges" className="p-6 space-y-4 m-0">
+                <h3 className="font-semibold">Badges Conquistados ({(currentUser.badges || []).length})</h3>
+                {(currentUser.badges || []).length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">Nenhum badge conquistado ainda</p>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {(currentUser.badges || []).map((badgeId: string, index: number) => {
+                      const badge = getBadgeInfo(badgeId);
+                      return (
+                        <div key={index} className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                          <span className="text-2xl">{badge.icon}</span>
+                          <div>
+                            <h4 className="font-medium">{badge.name}</h4>
+                            <p className="text-sm text-gray-600">{badge.description}</p>
                           </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
