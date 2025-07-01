@@ -1,4 +1,6 @@
+
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,12 +24,15 @@ interface FeedActivity {
   userId: string;
   userName: string;
   userPgm: string;
+  userPhoto?: string;
   type: 'mission' | 'book' | 'course' | 'badge' | 'phase';
   title: string;
   description: string;
   timestamp: string;
   likes: number;
   comments: number;
+  missionName?: string;
+  points?: number;
   bookImage?: string;
   badgeInfo?: {
     name: string;
@@ -37,50 +42,33 @@ interface FeedActivity {
 }
 
 const Feed = () => {
-  const [activities] = useState<FeedActivity[]>([
-    {
-      id: "1",
-      userId: "user1",
-      userName: "João Silva",
-      userPgm: "PGM001",
-      type: "mission",
-      title: "Oração Matinal",
-      description: "Completou a missão de oração matinal",
-      timestamp: "2024-01-15T08:30:00Z",
-      likes: 5,
-      comments: 2
-    },
-    {
-      id: "2",
-      userId: "user1",
-      userName: "João Silva", 
-      userPgm: "PGM001",
-      type: "book",
-      title: "Livro da Vida",
-      description: "Concluiu a leitura do livro",
-      timestamp: "2024-01-14T20:00:00Z",
-      likes: 8,
-      comments: 4,
-      bookImage: "/placeholder.svg"
-    },
-    {
-      id: "3",
-      userId: "user2",
-      userName: "Maria Santos",
-      userPgm: "PGM002", 
-      type: "badge",
-      title: "Novo Badge Conquistado!",
-      description: "Conquistou o badge Leitor Iniciante",
-      timestamp: "2024-01-13T15:00:00Z",
-      likes: 12,
-      comments: 6,
-      badgeInfo: {
-        name: "Leitor Iniciante",
-        icon: "📖",
-        description: "Começando a jornada da leitura"
-      }
-    }
-  ]);
+  const navigate = useNavigate();
+  
+  // Load activities from localStorage
+  const [activities] = useState<FeedActivity[]>(() => {
+    const missionActivities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // Convert mission activities to feed activities
+    return missionActivities.map((activity: any) => {
+      const user = users.find((u: any) => u.id === activity.userId);
+      return {
+        id: activity.id,
+        userId: activity.userId,
+        userName: activity.userName,
+        userPgm: user?.pgmNumber || 'PGM000',
+        userPhoto: user?.profilePhoto,
+        type: activity.type || 'mission',
+        title: activity.missionName,
+        description: `Completou: ${activity.missionName}`,
+        timestamp: activity.timestamp,
+        likes: Math.floor(Math.random() * 10),
+        comments: Math.floor(Math.random() * 5),
+        missionName: activity.missionName,
+        points: activity.points
+      };
+    }).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  });
 
   const getActivityIcon = (type: FeedActivity['type']) => {
     switch (type) {
@@ -107,6 +95,10 @@ const Feed = () => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
+  const handleUserClick = (userId: string) => {
+    navigate(`/user/${userId}`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-2 sm:p-4 lg:p-6">
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
@@ -126,93 +118,121 @@ const Feed = () => {
 
         {/* Activities Feed */}
         <div className="space-y-3 sm:space-y-4">
-          {activities.map((activity) => (
-            <Card key={activity.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-3 sm:p-6">
-                {/* User Header */}
-                <div className="flex items-start gap-3 mb-3 sm:mb-4">
-                  <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
-                    <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm sm:text-base font-semibold">
-                      {getUserInitials(activity.userName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-sm sm:text-base truncate">{activity.userName}</h3>
-                        <p className="text-xs text-gray-500">{activity.userPgm}</p>
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        {getActivityIcon(activity.type)}
-                        <span>{formatTimeAgo(activity.timestamp)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Activity Content */}
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-medium text-sm sm:text-base mb-1">{activity.title}</h4>
-                    <p className="text-xs sm:text-sm text-gray-600">{activity.description}</p>
-                  </div>
-
-                  {/* Special Content Based on Type */}
-                  {activity.type === 'book' && activity.bookImage && (
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <img 
-                        src={activity.bookImage} 
-                        alt={activity.title}
-                        className="w-12 h-16 sm:w-16 sm:h-20 object-cover rounded shadow-sm flex-shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-green-800">📚 Livro Concluído</p>
-                        <p className="text-xs text-green-600">Disponível para toda a comunidade ler!</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {activity.type === 'badge' && activity.badgeInfo && (
-                    <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                      <span className="text-2xl sm:text-3xl flex-shrink-0">{activity.badgeInfo.icon}</span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-yellow-800">{activity.badgeInfo.name}</p>
-                        <p className="text-xs text-yellow-600">{activity.badgeInfo.description}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex items-center gap-4 sm:gap-6">
-                      <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
-                        <ThumbsUp className="w-4 h-4 mr-1" />
-                        <span className="text-xs sm:text-sm">{activity.likes}</span>
-                      </Button>
-                      
-                      <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
-                        <MessageCircle className="w-4 h-4 mr-1" />
-                        <span className="text-xs sm:text-sm">{activity.comments}</span>
-                      </Button>
-                    </div>
-
-                    <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
-                      <Share2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
+          {activities.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">Nenhuma atividade ainda</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                As atividades da comunidade aparecerão aqui
+              </p>
             </Card>
-          ))}
+          ) : (
+            activities.map((activity) => (
+              <Card key={activity.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-3 sm:p-6">
+                  {/* User Header */}
+                  <div className="flex items-start gap-3 mb-3 sm:mb-4">
+                    <Avatar 
+                      className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 cursor-pointer"
+                      onClick={() => handleUserClick(activity.userId)}
+                    >
+                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm sm:text-base font-semibold">
+                        {getUserInitials(activity.userName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2">
+                        <div className="min-w-0">
+                          <h3 
+                            className="font-semibold text-sm sm:text-base truncate cursor-pointer hover:text-blue-600"
+                            onClick={() => handleUserClick(activity.userId)}
+                          >
+                            {activity.userName}
+                          </h3>
+                          <p className="text-xs text-gray-500">{activity.userPgm}</p>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          {getActivityIcon(activity.type)}
+                          <span>{formatTimeAgo(activity.timestamp)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Activity Content */}
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-medium text-sm sm:text-base mb-1">{activity.title}</h4>
+                      <p className="text-xs sm:text-sm text-gray-600">{activity.description}</p>
+                    </div>
+
+                    {/* Points Badge */}
+                    {activity.points && (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-green-100 text-green-700">
+                          +{activity.points} pontos
+                        </Badge>
+                      </div>
+                    )}
+
+                    {/* Special Content Based on Type */}
+                    {activity.type === 'book' && activity.bookImage && (
+                      <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <img 
+                          src={activity.bookImage} 
+                          alt={activity.title}
+                          className="w-12 h-16 sm:w-16 sm:h-20 object-cover rounded shadow-sm flex-shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-green-800">📚 Livro Concluído</p>
+                          <p className="text-xs text-green-600">Disponível para toda a comunidade ler!</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {activity.type === 'badge' && activity.badgeInfo && (
+                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
+                        <span className="text-2xl sm:text-3xl flex-shrink-0">{activity.badgeInfo.icon}</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-yellow-800">{activity.badgeInfo.name}</p>
+                          <p className="text-xs text-yellow-600">{activity.badgeInfo.description}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <div className="flex items-center gap-4 sm:gap-6">
+                        <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
+                          <ThumbsUp className="w-4 h-4 mr-1" />
+                          <span className="text-xs sm:text-sm">{activity.likes}</span>
+                        </Button>
+                        
+                        <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
+                          <MessageCircle className="w-4 h-4 mr-1" />
+                          <span className="text-xs sm:text-sm">{activity.comments}</span>
+                        </Button>
+                      </div>
+
+                      <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
+                        <Share2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Load More */}
-        <div className="flex justify-center pt-4">
-          <Button variant="outline" className="w-full sm:w-auto">
-            Carregar Mais Atividades
-          </Button>
-        </div>
+        {activities.length > 0 && (
+          <div className="flex justify-center pt-4">
+            <Button variant="outline" className="w-full sm:w-auto">
+              Carregar Mais Atividades
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

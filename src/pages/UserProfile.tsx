@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, CheckSquare, BookOpen, GraduationCap, Award, Clock } from "lucide-react";
+import { ArrowLeft, CheckSquare, BookOpen, GraduationCap, Award, Clock, Target } from "lucide-react";
 
 interface User {
   id: string;
@@ -61,12 +61,15 @@ const UserProfile = () => {
     const foundUser = users.find((u: User) => u.id === userId);
     
     if (foundUser) {
-      // Ensure books are arrays with proper structure
+      // Ensure arrays are properly initialized
       if (!foundUser.booksRead || !Array.isArray(foundUser.booksRead)) {
         foundUser.booksRead = [];
       }
       if (!foundUser.badges || !Array.isArray(foundUser.badges)) {
         foundUser.badges = [];
+      }
+      if (!foundUser.coursesCompleted || !Array.isArray(foundUser.coursesCompleted)) {
+        foundUser.coursesCompleted = [];
       }
       
       setUser(foundUser);
@@ -151,21 +154,11 @@ const UserProfile = () => {
             </Button>
             <h1 className="text-2xl font-bold text-teal-700">Perfil de {user?.name}</h1>
           </div>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate('/missions')}
-            className="text-teal-600 border-teal-200"
-          >
-            <CheckSquare className="w-4 h-4 mr-1" />
-            Minhas Missões
-          </Button>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Profile Header */}
+        {/* Profile Header - Only show public info */}
         <Card>
           <CardContent className="p-6">
             <div className="flex items-start space-x-6">
@@ -192,11 +185,6 @@ const UserProfile = () => {
                   <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                     {user.points} pontos
                   </Badge>
-                  {user.isAdmin && (
-                    <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                      Administrador
-                    </Badge>
-                  )}
                   {user.participatesFlowUp && (
                     <Badge variant="secondary" className="bg-orange-100 text-orange-800">
                       FLOW UP
@@ -303,7 +291,10 @@ const UserProfile = () => {
           <TabsContent value="missions">
             <Card>
               <CardHeader>
-                <CardTitle>📈 Histórico de Missões</CardTitle>
+                <CardTitle className="flex items-center">
+                  <Target className="w-5 h-5 mr-2" />
+                  Histórico de Missões
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {userActivities.filter(a => a.type === 'mission').length === 0 ? (
