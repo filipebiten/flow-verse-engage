@@ -4,10 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   Heart, 
-  MessageCircle, 
   Share2, 
   Trophy, 
   Target, 
@@ -30,15 +29,10 @@ interface FeedActivity {
   description: string;
   timestamp: string;
   likes: number;
-  comments: number;
   missionName?: string;
   points?: number;
-  bookImage?: string;
-  badgeInfo?: {
-    name: string;
-    icon: string;
-    description: string;
-  };
+  period?: string;
+  school?: string;
 }
 
 const Feed = () => {
@@ -63,9 +57,10 @@ const Feed = () => {
         description: `Completou: ${activity.missionName}`,
         timestamp: activity.timestamp,
         likes: Math.floor(Math.random() * 10),
-        comments: Math.floor(Math.random() * 5),
         missionName: activity.missionName,
-        points: activity.points
+        points: activity.points,
+        period: activity.period,
+        school: activity.school
       };
     }).sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   });
@@ -82,13 +77,13 @@ const Feed = () => {
   };
 
   const formatTimeAgo = (timestamp: string) => {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 60) return `${diffInMinutes}m`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
-    return `${Math.floor(diffInMinutes / 1440)}d`;
+    return new Date(timestamp).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const getUserInitials = (name: string) => {
@@ -109,7 +104,7 @@ const Feed = () => {
             <div className="flex items-center gap-3">
               <Flame className="w-6 h-6 sm:w-8 sm:h-8 text-orange-500" />
               <div>
-                <CardTitle className="text-lg sm:text-2xl">Feed da Comunidade</CardTitle>
+                <CardTitle className="text-lg sm:text-2xl">Feed da Rede FLOW</CardTitle>
                 <p className="text-sm text-gray-600">Acompanhe o progresso da comunidade</p>
               </div>
             </div>
@@ -135,9 +130,13 @@ const Feed = () => {
                       className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 cursor-pointer"
                       onClick={() => handleUserClick(activity.userId)}
                     >
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm sm:text-base font-semibold">
-                        {getUserInitials(activity.userName)}
-                      </AvatarFallback>
+                      {activity.userPhoto ? (
+                        <AvatarImage src={activity.userPhoto} alt={activity.userName} />
+                      ) : (
+                        <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-sm sm:text-base font-semibold">
+                          {getUserInitials(activity.userName)}
+                        </AvatarFallback>
+                      )}
                     </Avatar>
                     
                     <div className="flex-1 min-w-0">
@@ -166,39 +165,20 @@ const Feed = () => {
                       <p className="text-xs sm:text-sm text-gray-600">{activity.description}</p>
                     </div>
 
-                    {/* Points Badge */}
-                    {activity.points && (
-                      <div className="flex items-center gap-2">
+                    {/* Points and Metadata */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {activity.points && (
                         <Badge variant="secondary" className="bg-green-100 text-green-700">
                           +{activity.points} pontos
                         </Badge>
-                      </div>
-                    )}
-
-                    {/* Special Content Based on Type */}
-                    {activity.type === 'book' && activity.bookImage && (
-                      <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                        <img 
-                          src={activity.bookImage} 
-                          alt={activity.title}
-                          className="w-12 h-16 sm:w-16 sm:h-20 object-cover rounded shadow-sm flex-shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-green-800">📚 Livro Concluído</p>
-                          <p className="text-xs text-green-600">Disponível para toda a comunidade ler!</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {activity.type === 'badge' && activity.badgeInfo && (
-                      <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg border border-yellow-200">
-                        <span className="text-2xl sm:text-3xl flex-shrink-0">{activity.badgeInfo.icon}</span>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-yellow-800">{activity.badgeInfo.name}</p>
-                          <p className="text-xs text-yellow-600">{activity.badgeInfo.description}</p>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                      {activity.period && (
+                        <Badge variant="outline">{activity.period}</Badge>
+                      )}
+                      {activity.school && (
+                        <Badge variant="outline">{activity.school}</Badge>
+                      )}
+                    </div>
 
                     {/* Action Buttons */}
                     <div className="flex items-center justify-between pt-2 border-t">
@@ -206,11 +186,6 @@ const Feed = () => {
                         <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
                           <ThumbsUp className="w-4 h-4 mr-1" />
                           <span className="text-xs sm:text-sm">{activity.likes}</span>
-                        </Button>
-                        
-                        <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
-                          <MessageCircle className="w-4 h-4 mr-1" />
-                          <span className="text-xs sm:text-sm">{activity.comments}</span>
                         </Button>
                       </div>
 

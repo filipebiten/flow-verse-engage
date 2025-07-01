@@ -17,11 +17,10 @@ import {
   Users, 
   Target, 
   User, 
-  Settings, 
   Shield,
   LogOut
 } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getUserPhase } from '@/utils/phaseUtils';
@@ -56,7 +55,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = currentUser?.isAdmin;
   const userPhase = getUserPhase(currentUser?.points || 0);
 
   const getUserInitials = (name: string) => {
@@ -66,20 +65,55 @@ export function AppSidebar() {
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
-    window.location.reload(); // This will trigger the app to show login page
+    window.location.reload();
+  };
+
+  const handleProfileClick = () => {
+    navigate('/profile');
   };
 
   return (
     <Sidebar className="border-r">
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">F</span>
+        {/* User Info moved to top */}
+        <div className="flex items-center gap-3 mb-4">
+          <Avatar 
+            className="w-10 h-10 cursor-pointer"
+            onClick={handleProfileClick}
+          >
+            {currentUser?.profilePhoto ? (
+              <AvatarImage src={currentUser.profilePhoto} alt={currentUser.name} />
+            ) : (
+              <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-sm font-semibold">
+                {getUserInitials(currentUser?.name || 'Usuário')}
+              </AvatarFallback>
+            )}
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <p 
+              className="text-sm font-medium truncate cursor-pointer hover:text-blue-600"
+              onClick={handleProfileClick}
+            >
+              {currentUser?.name || 'Usuário'}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {currentUser?.pgmNumber ? `PGM ${currentUser.pgmNumber}` : currentUser?.pgmRole || 'Usuário'}
+            </p>
           </div>
-          <div>
-            <h2 className="font-bold text-lg bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">REDE FLOW</h2>
-            <p className="text-xs text-muted-foreground">POSTURA | IDENTIDADE | OBEDIÊNCIA</p>
+        </div>
+
+        {/* Phase Info */}
+        <div className="space-y-2 mb-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Fase Atual</span>
+            <Badge variant="outline" className="text-xs">
+              {userPhase.icon} {userPhase.name}
+            </Badge>
           </div>
+          <div className="text-xs text-muted-foreground">
+            <span className="font-medium">{currentUser?.points || 0}</span> pontos
+          </div>
+          <p className="text-xs italic text-center">"{userPhase.phrase}"</p>
         </div>
       </SidebarHeader>
 
@@ -98,12 +132,6 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={handleLogout}>
-                  <LogOut className="w-4 h-4" />
-                  <span>Sair</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -131,42 +159,27 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 space-y-3">
-        {/* User Info */}
+        {/* REDE FLOW branding moved to bottom */}
         <div className="flex items-center gap-3">
-          <Avatar className="w-8 h-8">
-            <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs">
-              {getUserInitials(currentUser?.name || 'Usuário')}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{currentUser?.name || 'Usuário'}</p>
-            <p className="text-xs text-muted-foreground truncate">
-              {currentUser?.pgmNumber ? `PGM ${currentUser.pgmNumber}` : currentUser?.pgmRole || 'Usuário'}
-            </p>
+          <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">F</span>
+          </div>
+          <div>
+            <h2 className="font-bold text-sm bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">REDE FLOW</h2>
+            <p className="text-xs text-muted-foreground">POSTURA | IDENTIDADE | OBEDIÊNCIA</p>
           </div>
         </div>
 
-        {/* Phase Info */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Fase Atual</span>
-            <Badge variant="outline" className="text-xs">
-              {userPhase.icon} {userPhase.name}
-            </Badge>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            <span className="font-medium">{currentUser?.points || 0}</span> pontos
-          </div>
-          <p className="text-xs italic text-center">"{userPhase.phrase}"</p>
-        </div>
-
-        {/* Admin Mode Toggle */}
-        {isAdmin && (
-          <Button variant="outline" size="sm" className="w-full text-xs">
-            <Settings className="w-3 h-3 mr-1" />
-            Modo Admin
-          </Button>
-        )}
+        {/* Logout Button */}
+        <Button 
+          variant="destructive" 
+          size="sm" 
+          className="w-full"
+          onClick={handleLogout}
+        >
+          <LogOut className="w-4 h-4 mr-2" />
+          Sair
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );

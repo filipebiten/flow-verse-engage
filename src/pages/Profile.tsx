@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   User, 
   Trophy, 
@@ -18,7 +21,10 @@ import {
   Clock,
   CheckCircle,
   Award,
-  Activity
+  Activity,
+  Edit,
+  Save,
+  X
 } from 'lucide-react';
 
 interface UserProfile {
@@ -37,7 +43,9 @@ interface UserProfile {
   badges: string[];
   booksRead: string[];
   coursesCompleted: string[];
+  missionsCompleted: string[];
   joinDate: string;
+  profilePhoto?: string;
 }
 
 interface Activity {
@@ -49,16 +57,20 @@ interface Activity {
   timestamp: string;
   type: 'mission' | 'book' | 'course';
   period?: string;
+  school?: string;
 }
 
 const Profile = () => {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [userActivities, setUserActivities] = useState<Activity[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
     if (user.id) {
       setCurrentUser(user);
+      setEditForm(user);
       loadUserActivities(user.id);
     }
   }, []);
@@ -113,13 +125,13 @@ const Profile = () => {
   };
 
   const formatTimeAgo = (timestamp: string) => {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
-    
-    if (diffInMinutes < 60) return `${diffInMinutes}m`;
-    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
-    return `${Math.floor(diffInMinutes / 1440)}d`;
+    return new Date(timestamp).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
   const getPhaseProgress = () => {
@@ -139,10 +151,32 @@ const Profile = () => {
     };
   };
 
+  const getUserInitials = (name: string) => {
+    if (!name) return 'U';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const handleSaveProfile = () => {
+    const updatedUser = { ...currentUser, ...editForm };
+    setCurrentUser(updatedUser);
+    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+    
+    // Update in users array
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const updatedUsers = users.map((u: any) => u.id === currentUser?.id ? updatedUser : u);
+    localStorage.setItem('users', JSON.stringify(updatedUsers));
+    
+    setIsEditing(false);
+  };
+
   if (!currentUser) return null;
 
   const currentPhase = getUserPhase(currentUser.points);
   const phaseProgress = getPhaseProgress();
+
+  const missionActivities = userActivities.filter(a => a.type === 'mission');
+  const bookActivities = userActivities.filter(a => a.type === 'book');
+  const courseActivities = userActivities.filter(a => a.type === 'course');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
@@ -152,9 +186,15 @@ const Profile = () => {
         <Card className="overflow-hidden">
           <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-2xl font-bold">
-                {currentUser.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
-              </div>
+              <Avatar className="w-20 h-20 border-4 border-white/20">
+                {currentUser.profilePhoto ? (
+                  <AvatarImage src={currentUser.profilePhoto} alt={currentUser.name} />
+                ) : (
+                  <AvatarFallback className="bg-white/20 text-white text-2xl font-bold">
+                    {getUserInitials(currentUser.name)}
+                  </AvatarFallback>
+                )}
+              </Avatar>
               
               <div className="flex-1">
                 <h1 className="text-2xl font-bold mb-1">{currentUser.name}</h1>
@@ -165,7 +205,7 @@ const Profile = () => {
                   <span className="text-sm font-medium capitalize">{currentUser.pgmRole}</span>
                 </div>
 
-                <div className="flex gap-2 mb-3">
+                <div className="flex gap-2 mb-3 flex-wrap">
                   {currentUser.participatesIrmandade && (
                     <Badge className="bg-white/20 text-white border-white/30">Irmandade</Badge>
                   )}
@@ -175,13 +215,28 @@ const Profile = () => {
                   <Badge className="bg-white/20 text-white border-white/30">{currentUser.points} pts</Badge>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 mb-3">
                   <div className="text-3xl">{currentPhase.icon}</div>
                   <div>
                     <div className="text-lg font-bold">{currentPhase.name}</div>
                     <div className="text-sm text-white/80">"{currentPhase.phrase}"</div>
                   </div>
                 </div>
+
+                {/* Badges Display */}
+                {(currentUser.badges || []).length > 0 && (
+                  <div className="flex gap-2 flex-wrap">
+                    <span className="text-sm text-white/80 mr-2">Badges:</span>
+                    {(currentUser.badges || []).map((badgeId: string, index: number) => {
+                      const badge = getBadgeInfo(badgeId);
+                      return (
+                        <span key={index} className="text-xl" title={badge.name}>
+                          {badge.icon}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -195,7 +250,7 @@ const Profile = () => {
                 <Target className="w-8 h-8 text-blue-500" />
                 <div>
                   <p className="text-sm text-gray-600">Missões</p>
-                  <p className="text-xl font-bold">{userActivities.filter(a => a.type === 'mission').length}</p>
+                  <p className="text-xl font-bold">{missionActivities.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -207,7 +262,7 @@ const Profile = () => {
                 <BookOpen className="w-8 h-8 text-green-500" />
                 <div>
                   <p className="text-sm text-gray-600">Livros</p>
-                  <p className="text-xl font-bold">{(currentUser.booksRead || []).length}</p>
+                  <p className="text-xl font-bold">{bookActivities.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -219,7 +274,7 @@ const Profile = () => {
                 <GraduationCap className="w-8 h-8 text-purple-500" />
                 <div>
                   <p className="text-sm text-gray-600">Cursos</p>
-                  <p className="text-xl font-bold">{(currentUser.coursesCompleted || []).length}</p>
+                  <p className="text-xl font-bold">{courseActivities.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -269,9 +324,10 @@ const Profile = () => {
         <Card>
           <CardContent className="p-0">
             <Tabs defaultValue="timeline" className="w-full">
-              <TabsList className="grid w-full grid-cols-5 h-auto rounded-none">
+              <TabsList className="grid w-full grid-cols-6 h-auto rounded-none">
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
                 <TabsTrigger value="info">Informações</TabsTrigger>
+                <TabsTrigger value="missions">Missões</TabsTrigger>
                 <TabsTrigger value="books">Livros</TabsTrigger>
                 <TabsTrigger value="courses">Cursos</TabsTrigger>
                 <TabsTrigger value="badges">Badges</TabsTrigger>
@@ -302,13 +358,25 @@ const Profile = () => {
                               +{activity.points}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <div className="flex items-center gap-2 text-sm text-gray-500 flex-wrap">
                             <span>
                               {activity.type === 'mission' ? '🎯 Missão' : 
                                activity.type === 'book' ? '📚 Livro' : '🎓 Curso'}
                             </span>
                             <span>•</span>
                             <span>{formatTimeAgo(activity.timestamp)}</span>
+                            {activity.period && (
+                              <>
+                                <span>•</span>
+                                <span>{activity.period}</span>
+                              </>
+                            )}
+                            {activity.school && (
+                              <>
+                                <span>•</span>
+                                <span>{activity.school}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -318,8 +386,65 @@ const Profile = () => {
               </TabsContent>
 
               <TabsContent value="info" className="p-6 space-y-4 m-0">
-                <div>
-                  <h3 className="font-semibold mb-2">Informações Pessoais</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">Informações Pessoais</h3>
+                  <Button
+                    variant={isEditing ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => {
+                      if (isEditing) {
+                        setEditForm(currentUser);
+                      }
+                      setIsEditing(!isEditing);
+                    }}
+                  >
+                    {isEditing ? <X className="w-4 h-4 mr-1" /> : <Edit className="w-4 h-4 mr-1" />}
+                    {isEditing ? 'Cancelar' : 'Editar'}
+                  </Button>
+                </div>
+
+                {isEditing ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="name">Nome</Label>
+                        <Input
+                          id="name"
+                          value={editForm.name || ''}
+                          onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          value={editForm.email || ''}
+                          onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="whatsapp">WhatsApp</Label>
+                        <Input
+                          id="whatsapp"
+                          value={editForm.whatsapp || ''}
+                          onChange={(e) => setEditForm({...editForm, whatsapp: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="birthDate">Data de Nascimento</Label>
+                        <Input
+                          id="birthDate"
+                          value={editForm.birthDate || ''}
+                          onChange={(e) => setEditForm({...editForm, birthDate: e.target.value})}
+                        />
+                      </div>
+                    </div>
+                    <Button onClick={handleSaveProfile} className="w-full">
+                      <Save className="w-4 h-4 mr-1" />
+                      Salvar Alterações
+                    </Button>
+                  </div>
+                ) : (
                   <div className="space-y-2 text-sm">
                     <p><span className="font-medium">Email:</span> {currentUser.email}</p>
                     <p><span className="font-medium">WhatsApp:</span> {currentUser.whatsapp}</p>
@@ -327,22 +452,55 @@ const Profile = () => {
                     <p><span className="font-medium">Gênero:</span> {currentUser.gender}</p>
                     <p><span className="font-medium">Membro desde:</span> {formatDate(currentUser.joinDate)}</p>
                   </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="missions" className="p-6 m-0">
+                <div className="space-y-3">
+                  <h3 className="font-semibold">Missões Completadas ({missionActivities.length})</h3>
+                  {missionActivities.length === 0 ? (
+                    <Card className="p-8 text-center">
+                      <p className="text-muted-foreground">Nenhuma missão completada ainda</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-2">
+                      {missionActivities.map((activity: Activity) => (
+                        <div key={activity.id} className="flex items-center gap-2 p-3 bg-blue-50 rounded border">
+                          <CheckCircle className="w-4 h-4 text-blue-500" />
+                          <div className="flex-1">
+                            <span className="font-medium">{activity.missionName}</span>
+                            <div className="text-xs text-gray-500">
+                              {formatTimeAgo(activity.timestamp)}
+                              {activity.period && ` • ${activity.period}`}
+                            </div>
+                          </div>
+                          <Badge variant="secondary">+{activity.points}</Badge>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
               <TabsContent value="books" className="p-6 m-0">
                 <div className="space-y-3">
-                  <h3 className="font-semibold">Livros Lidos ({(currentUser.booksRead || []).length})</h3>
-                  {(currentUser.booksRead || []).length === 0 ? (
+                  <h3 className="font-semibold">Livros Lidos ({bookActivities.length})</h3>
+                  {bookActivities.length === 0 ? (
                     <Card className="p-8 text-center">
                       <p className="text-muted-foreground">Nenhum livro lido ainda</p>
                     </Card>
                   ) : (
                     <div className="space-y-2">
-                      {(currentUser.booksRead || []).map((book: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2 p-3 bg-green-50 rounded border">
+                      {bookActivities.map((activity: Activity) => (
+                        <div key={activity.id} className="flex items-center gap-2 p-3 bg-green-50 rounded border">
                           <CheckCircle className="w-4 h-4 text-green-500" />
-                          <span className="flex-1">{book}</span>
+                          <div className="flex-1">
+                            <span className="font-medium">{activity.missionName}</span>
+                            <div className="text-xs text-gray-500">
+                              {formatTimeAgo(activity.timestamp)}
+                            </div>
+                          </div>
+                          <Badge variant="secondary">+{activity.points}</Badge>
                         </div>
                       ))}
                     </div>
@@ -352,17 +510,24 @@ const Profile = () => {
 
               <TabsContent value="courses" className="p-6 m-0">
                 <div className="space-y-3">
-                  <h3 className="font-semibold">Cursos Concluídos ({(currentUser.coursesCompleted || []).length})</h3>
-                  {(currentUser.coursesCompleted || []).length === 0 ? (
+                  <h3 className="font-semibold">Cursos Concluídos ({courseActivities.length})</h3>
+                  {courseActivities.length === 0 ? (
                     <Card className="p-8 text-center">
                       <p className="text-muted-foreground">Nenhum curso concluído ainda</p>
                     </Card>
                   ) : (
                     <div className="space-y-2">
-                      {(currentUser.coursesCompleted || []).map((course: string, index: number) => (
-                        <div key={index} className="flex items-center gap-2 p-3 bg-blue-50 rounded border">
-                          <CheckCircle className="w-4 h-4 text-blue-500" />
-                          <span className="flex-1">{course}</span>
+                      {courseActivities.map((activity: Activity) => (
+                        <div key={activity.id} className="flex items-center gap-2 p-3 bg-purple-50 rounded border">
+                          <CheckCircle className="w-4 h-4 text-purple-500" />
+                          <div className="flex-1">
+                            <span className="font-medium">{activity.missionName}</span>
+                            <div className="text-xs text-gray-500">
+                              {formatTimeAgo(activity.timestamp)}
+                              {activity.school && ` • ${activity.school}`}
+                            </div>
+                          </div>
+                          <Badge variant="secondary">+{activity.points}</Badge>
                         </div>
                       ))}
                     </div>

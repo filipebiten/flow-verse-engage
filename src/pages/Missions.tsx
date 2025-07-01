@@ -25,9 +25,21 @@ interface Mission {
   description: string;
   points: number;
   type: 'mission' | 'book' | 'course';
-  category: string;
-  difficulty: 'easy' | 'medium' | 'hard';
   period?: string;
+  school?: string;
+}
+
+interface Activity {
+  id: string;
+  userId: string;
+  userName: string;
+  userPhoto: string;
+  missionName: string;
+  points: number;
+  timestamp: string;
+  type: string;
+  period?: string;
+  itemId: string;
 }
 
 const Missions = () => {
@@ -64,9 +76,9 @@ const Missions = () => {
   };
 
   const loadCompletedItems = (userId: string) => {
-    const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
-    const userActivities = activities.filter((a: any) => a.userId === userId);
-    const completedIds = new Set(userActivities.map((a: any) => a.itemId as string));
+    const activities: Activity[] = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+    const userActivities = activities.filter((a: Activity) => a.userId === userId);
+    const completedIds = new Set(userActivities.map((a: Activity) => a.itemId));
     setCompletedItems(completedIds);
   };
 
@@ -123,7 +135,7 @@ const Missions = () => {
     localStorage.setItem('users', JSON.stringify(updatedUsers));
     localStorage.setItem('currentUser', JSON.stringify(updatedUser));
 
-    // Add to activities
+    // Add to activities with timestamp
     const activity = {
       id: Date.now().toString(),
       userId: currentUser.id,
@@ -134,6 +146,7 @@ const Missions = () => {
       timestamp: new Date().toISOString(),
       type: item.type,
       period: item.period || '',
+      school: item.school || '',
       itemId: item.id
     };
 
@@ -190,9 +203,8 @@ const Missions = () => {
                       <p className="text-sm text-gray-600 mb-2">{item.description}</p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge variant="secondary">+{item.points} pts</Badge>
-                        <Badge variant="outline" className="capitalize">{item.difficulty}</Badge>
-                        <Badge variant="outline">{item.category}</Badge>
                         {item.period && <Badge variant="outline">{item.period}</Badge>}
+                        {item.school && <Badge variant="outline">{item.school}</Badge>}
                       </div>
                     </div>
                     <Button

@@ -29,13 +29,13 @@ const Admin = () => {
   
   // Form states
   const [missionForm, setMissionForm] = useState({
-    name: '', description: '', points: '', category: '', difficulty: 'easy', period: ''
+    name: '', description: '', points: '', period: 'diário'
   });
   const [bookForm, setBookForm] = useState({
-    name: '', description: '', points: '', category: '', difficulty: 'easy'
+    name: '', description: '', points: ''
   });
   const [courseForm, setCourseForm] = useState({
-    name: '', description: '', points: '', category: '', difficulty: 'easy'
+    name: '', description: '', points: '', school: 'Escola do Discípulo'
   });
   const [adminEmail, setAdminEmail] = useState('');
 
@@ -72,7 +72,7 @@ const Admin = () => {
     setMissions(updatedMissions);
     localStorage.setItem('missions', JSON.stringify(updatedMissions));
     
-    setMissionForm({ name: '', description: '', points: '', category: '', difficulty: 'easy', period: '' });
+    setMissionForm({ name: '', description: '', points: '', period: 'diário' });
     toast({ title: "Sucesso", description: "Missão adicionada com sucesso!" });
   };
 
@@ -93,7 +93,7 @@ const Admin = () => {
     setBooks(updatedBooks);
     localStorage.setItem('books', JSON.stringify(updatedBooks));
     
-    setBookForm({ name: '', description: '', points: '', category: '', difficulty: 'easy' });
+    setBookForm({ name: '', description: '', points: '' });
     toast({ title: "Sucesso", description: "Livro adicionado com sucesso!" });
   };
 
@@ -114,27 +114,23 @@ const Admin = () => {
     setCourses(updatedCourses);
     localStorage.setItem('courses', JSON.stringify(updatedCourses));
     
-    setCourseForm({ name: '', description: '', points: '', category: '', difficulty: 'easy' });
+    setCourseForm({ name: '', description: '', points: '', school: 'Escola do Discípulo' });
     toast({ title: "Sucesso", description: "Curso adicionado com sucesso!" });
   };
 
   const deleteItem = (id: string, type: 'missions' | 'books' | 'courses') => {
     let updatedItems: any[] = [];
-    let currentItems: any[] = [];
     
     switch (type) {
       case 'missions':
-        currentItems = missions;
         updatedItems = missions.filter(item => item.id !== id);
         setMissions(updatedItems);
         break;
       case 'books':
-        currentItems = books;
         updatedItems = books.filter(item => item.id !== id);
         setBooks(updatedItems);
         break;
       case 'courses':
-        currentItems = courses;
         updatedItems = courses.filter(item => item.id !== id);
         setCourses(updatedItems);
         break;
@@ -196,7 +192,7 @@ const Admin = () => {
                 id={field.key}
                 value={form[field.key]}
                 onChange={(e) => setForm({ ...form, [field.key]: e.target.value })}
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-white"
               >
                 {field.options.map((option: any) => (
                   <option key={option.value} value={option.value}>
@@ -241,7 +237,11 @@ const Admin = () => {
                 <div className="flex-1">
                   <h4 className="font-medium">{item.name}</h4>
                   <p className="text-sm text-gray-600">{item.description}</p>
-                  <Badge variant="secondary">+{item.points} pts</Badge>
+                  <div className="flex gap-2 mt-1">
+                    <Badge variant="secondary">+{item.points} pts</Badge>
+                    {item.period && <Badge variant="outline">{item.period}</Badge>}
+                    {item.school && <Badge variant="outline">{item.school}</Badge>}
+                  </div>
                 </div>
                 <Button
                   variant="destructive"
@@ -262,16 +262,17 @@ const Admin = () => {
     { key: 'name', label: 'Nome da Missão', type: 'text', placeholder: 'Ex: Ler Salmo 23' },
     { key: 'description', label: 'Descrição', type: 'textarea', placeholder: 'Descreva a missão...' },
     { key: 'points', label: 'Pontos', type: 'number', placeholder: '50' },
-    { key: 'category', label: 'Categoria', type: 'text', placeholder: 'Ex: Leitura Bíblica' },
-    { key: 'period', label: 'Período', type: 'text', placeholder: 'Ex: Semanal' },
     { 
-      key: 'difficulty', 
-      label: 'Dificuldade', 
+      key: 'period', 
+      label: 'Período', 
       type: 'select', 
       options: [
-        { value: 'easy', label: 'Fácil' },
-        { value: 'medium', label: 'Médio' },
-        { value: 'hard', label: 'Difícil' }
+        { value: 'diário', label: 'Diário' },
+        { value: 'semanal', label: 'Semanal' },
+        { value: 'mensal', label: 'Mensal' },
+        { value: 'semestral', label: 'Semestral' },
+        { value: 'anual', label: 'Anual' },
+        { value: 'especial', label: 'Missão Especial' }
       ]
     }
   ];
@@ -279,33 +280,20 @@ const Admin = () => {
   const bookFields = [
     { key: 'name', label: 'Nome do Livro', type: 'text', placeholder: 'Ex: O Peregrino' },
     { key: 'description', label: 'Descrição', type: 'textarea', placeholder: 'Descreva o livro...' },
-    { key: 'points', label: 'Pontos', type: 'number', placeholder: '100' },
-    { key: 'category', label: 'Categoria', type: 'text', placeholder: 'Ex: Teologia' },
-    { 
-      key: 'difficulty', 
-      label: 'Dificuldade', 
-      type: 'select', 
-      options: [
-        { value: 'easy', label: 'Fácil' },
-        { value: 'medium', label: 'Médio' },
-        { value: 'hard', label: 'Difícil' }
-      ]
-    }
+    { key: 'points', label: 'Pontos', type: 'number', placeholder: '100' }
   ];
 
   const courseFields = [
     { key: 'name', label: 'Nome do Curso', type: 'text', placeholder: 'Ex: Fundamentos da Fé' },
     { key: 'description', label: 'Descrição', type: 'textarea', placeholder: 'Descreva o curso...' },
     { key: 'points', label: 'Pontos', type: 'number', placeholder: '200' },
-    { key: 'category', label: 'Categoria', type: 'text', placeholder: 'Ex: Discipulado' },
     { 
-      key: 'difficulty', 
-      label: 'Dificuldade', 
+      key: 'school', 
+      label: 'Escola', 
       type: 'select', 
       options: [
-        { value: 'easy', label: 'Fácil' },
-        { value: 'medium', label: 'Médio' },
-        { value: 'hard', label: 'Difícil' }
+        { value: 'Escola do Discípulo', label: 'Escola do Discípulo' },
+        { value: 'Escola da Família', label: 'Escola da Família' }
       ]
     }
   ];
