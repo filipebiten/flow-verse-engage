@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import PhaseChangeDialog from '@/components/PhaseChangeDialog';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Target, 
   CheckCircle, 
@@ -29,17 +30,16 @@ interface Mission {
   school?: string;
 }
 
-interface Activity {
+interface CompletedMission {
   id: string;
-  userId: string;
-  userName: string;
-  userPhoto: string;
-  missionName: string;
+  user_id: string;
+  mission_id: string;
+  mission_name: string;
+  mission_type: string;
   points: number;
-  timestamp: string;
-  type: string;
+  completed_at: string;
   period?: string;
-  itemId: string;
+  school?: string;
 }
 
 const Missions = () => {
@@ -52,18 +52,34 @@ const Missions = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showPhaseDialog, setShowPhaseDialog] = useState(false);
   const [previousPoints, setPreviousPoints] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    if (!user.id) {
-      navigate('/');
-      return;
-    }
-    setCurrentUser(user);
-    setPreviousPoints(user.points || 0);
-    loadMissions();
-    loadCompletedItems(user.id);
+    checkUser();
   }, [navigate]);
+
+  const checkUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      // If no user is authenticated, fall back to localStorage for demo purposes
+      const localUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+      if (!localUser.id) {
+        navigate('/');
+        return;
+      }
+      setCurrentUser(localUser);
+      setPreviousPoints(localUser.points || 0);
+      loadMissions();
+      loadCompletedItemsLocal(localUser.id);
+    } else {
+      // User is authenticated, use Supabase data
+      setCurrentUser(user);
+      setPreviousPoints(0); // Will be loaded from database
+      loadMissions();
+      loadCompletedItems();
+    }
+  };
 
   const loadMissions = () => {
     const storedMissions = JSON.parse(localStorage.getItem('missions') || '[]');
@@ -73,12 +89,31 @@ const Missions = () => {
     setMissions(storedMissions);
     setBooks(storedBooks);
     setCourses(storedCourses);
+    setLoading(false);
   };
 
-  const loadCompletedItems = (userId: string) => {
-    const activities: Activity[] = JSON.parse(localStorage.getItem('missionActivities') || '[]');
-    const userActivities = activities.filter((a: Activity) => a.userId === userId);
-    const completedIds = new Set(userActivities.map((a: Activity) => a.itemId));
+  const loadCompletedItems = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('missions_completed')
+        .select('mission_id');
+
+      if (error) {
+        console.error('Error loading completed missions:', error);
+        return;
+      }
+
+      const completedIds = new Set(data?.map(item => item.mission_id) || []);
+      setCompletedItems(completedIds);
+    } catch (error) {
+      console.error('Error loading completed items:', error);
+    }
+  };
+
+  const loadCompletedItemsLocal = (userId: string) => {
+    const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+    const userActivities = activities.filter((a: any) => a.userId === userId);
+    const completedIds = new Set(userActivities.map((a: any) => a.itemId));
     setCompletedItems(completedIds);
   };
 
@@ -89,85 +124,107 @@ const Missions = () => {
     return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
   };
 
-  const getBadgeForPoints = (points: number, type: 'book' | 'course') => {
-    if (type === 'book') {
-      if (points >= 400) return 'reader-4';
-      if (points >= 200) return 'reader-3';
-      if (points >= 100) return 'reader-2';
-      if (points >= 50) return 'reader-1';
-    } else {
-      if (points >= 400) return 'course-4';
-      if (points >= 200) return 'course-3';
-      if (points >= 100) return 'course-2';
-      if (points >= 50) return 'course-1';
-    }
-    return null;
-  };
-
-  const completeItem = (item: Mission) => {
+  const completeItem = async (item: Mission) => {
     if (completedItems.has(item.id)) return;
 
-    const newPoints = (currentUser.points || 0) + item.points;
-    const previousPhase = getUserPhase(currentUser.points || 0);
-    const newPhase = getUserPhase(newPoints);
+    const { data: { user } } = await supabase.auth.getUser();
 
-    // Update user data
-    const updatedUser = {
-      ...currentUser,
-      points: newPoints,
-      phase: newPhase.name,
-      booksRead: item.type === 'book' ? [...(currentUser.booksRead || []), item.name] : (currentUser.booksRead || []),
-      coursesCompleted: item.type === 'course' ? [...(currentUser.coursesCompleted || []), item.name] : (currentUser.coursesCompleted || [])
-    };
+    if (user) {
+      // Save to Supabase
+      try {
+        const { error } = await supabase
+          .from('missions_completed')
+          .insert({
+            user_id: user.id,
+            mission_id: item.id,
+            mission_name: item.name,
+            mission_type: item.type,
+            points: item.points,
+            period: item.period || null,
+            school: item.school || null
+          });
 
-    // Check for new badges
-    if (item.type === 'book' || item.type === 'course') {
-      const typePoints = (currentUser.points || 0) + item.points;
-      const newBadge = getBadgeForPoints(typePoints, item.type);
-      if (newBadge && !(currentUser.badges || []).includes(newBadge)) {
-        updatedUser.badges = [...(currentUser.badges || []), newBadge];
+        if (error) {
+          console.error('Error saving mission:', error);
+          toast({
+            title: "Erro",
+            description: "Não foi possível salvar a missão completada.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        // Update completed items set
+        setCompletedItems(prev => new Set([...prev, item.id]));
+
+        toast({
+          title: "Parabéns! 🎉",
+          description: `Você completou "${item.name}" e ganhou ${item.points} pontos!`,
+        });
+
+      } catch (error) {
+        console.error('Error completing mission:', error);
+        toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao completar a missão.",
+          variant: "destructive"
+        });
       }
+    } else {
+      // Fall back to localStorage for demo purposes
+      const newPoints = (currentUser.points || 0) + item.points;
+      const previousPhase = getUserPhase(currentUser.points || 0);
+      const newPhase = getUserPhase(newPoints);
+
+      // Update user data
+      const updatedUser = {
+        ...currentUser,
+        points: newPoints,
+        phase: newPhase.name,
+        booksRead: item.type === 'book' ? [...(currentUser.booksRead || []), item.name] : (currentUser.booksRead || []),
+        coursesCompleted: item.type === 'course' ? [...(currentUser.coursesCompleted || []), item.name] : (currentUser.coursesCompleted || [])
+      };
+
+      // Update users array
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+      const updatedUsers = users.map((u: any) => u.id === currentUser.id ? updatedUser : u);
+      localStorage.setItem('users', JSON.stringify(updatedUsers));
+      localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+      // Add to activities with timestamp
+      const activity = {
+        id: Date.now().toString(),
+        userId: currentUser.id,
+        userName: currentUser.name,
+        userPhoto: currentUser.profilePhoto,
+        missionName: item.name,
+        points: item.points,
+        timestamp: new Date().toISOString(),
+        type: item.type,
+        period: item.period || '',
+        school: item.school || '',
+        itemId: item.id
+      };
+
+      const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
+      activities.push(activity);
+      localStorage.setItem('missionActivities', JSON.stringify(activities));
+
+      // Update state
+      setCurrentUser(updatedUser);
+      setCompletedItems(prev => new Set([...prev, item.id]));
+
+      // Show phase change dialog if phase changed
+      if (previousPhase.name !== newPhase.name) {
+        setPreviousPoints(currentUser.points || 0);
+        setShowPhaseDialog(true);
+      }
+
+      toast({
+        title: "Parabéns! 🎉",
+        description: `Você completou "${item.name}" e ganhou ${item.points} pontos!`,
+      });
     }
-
-    // Update users array
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const updatedUsers = users.map((u: any) => u.id === currentUser.id ? updatedUser : u);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-
-    // Add to activities with timestamp
-    const activity = {
-      id: Date.now().toString(),
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userPhoto: currentUser.profilePhoto,
-      missionName: item.name,
-      points: item.points,
-      timestamp: new Date().toISOString(),
-      type: item.type,
-      period: item.period || '',
-      school: item.school || '',
-      itemId: item.id
-    };
-
-    const activities = JSON.parse(localStorage.getItem('missionActivities') || '[]');
-    activities.push(activity);
-    localStorage.setItem('missionActivities', JSON.stringify(activities));
-
-    // Update state
-    setCurrentUser(updatedUser);
-    setCompletedItems(prev => new Set([...prev, item.id]));
-
-    // Show phase change dialog if phase changed
-    if (previousPhase.name !== newPhase.name) {
-      setPreviousPoints(currentUser.points || 0);
-      setShowPhaseDialog(true);
-    }
-
-    toast({
-      title: "Parabéns! 🎉",
-      description: `Você completou "${item.name}" e ganhou ${item.points} pontos!`,
-    });
   };
 
   const renderItems = (items: Mission[], title: string, icon: React.ReactNode, emptyMessage: string) => (
@@ -225,7 +282,16 @@ const Missions = () => {
     </Card>
   );
 
-  if (!currentUser) return null;
+  if (loading || !currentUser) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   const currentPhase = getUserPhase(currentUser.points || 0);
   const nextPhaseThreshold = currentUser.points >= 1000 ? 1000 : 
