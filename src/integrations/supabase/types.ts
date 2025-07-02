@@ -9,6 +9,93 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      books: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          mission_type: string | null
+          name: string
+          points: number
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          mission_type?: string | null
+          name: string
+          points: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          mission_type?: string | null
+          name?: string
+          points?: number
+        }
+        Relationships: []
+      }
+      courses: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          mission_type: string | null
+          name: string
+          points: number
+          school: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          mission_type?: string | null
+          name: string
+          points: number
+          school?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          mission_type?: string | null
+          name?: string
+          points?: number
+          school?: string | null
+        }
+        Relationships: []
+      }
+      missions: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          mission_type: string | null
+          name: string
+          period: string | null
+          points: number
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          mission_type?: string | null
+          name: string
+          period?: string | null
+          points: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          mission_type?: string | null
+          name?: string
+          period?: string | null
+          points?: number
+        }
+        Relationships: []
+      }
       missions_completed: {
         Row: {
           completed_at: string
@@ -41,6 +128,120 @@ export type Database = {
           period?: string | null
           points?: number
           school?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      phase_changes: {
+        Row: {
+          changed_at: string | null
+          id: string
+          new_phase: string
+          phase_icon: string | null
+          previous_phase: string
+          total_points: number
+          user_id: string
+        }
+        Insert: {
+          changed_at?: string | null
+          id?: string
+          new_phase: string
+          phase_icon?: string | null
+          previous_phase: string
+          total_points: number
+          user_id: string
+        }
+        Update: {
+          changed_at?: string | null
+          id?: string
+          new_phase?: string
+          phase_icon?: string | null
+          previous_phase?: string
+          total_points?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          birth_date: string | null
+          consecutive_days: number | null
+          created_at: string | null
+          email: string
+          gender: string | null
+          id: string
+          is_admin: boolean | null
+          name: string
+          participates_flow_up: boolean | null
+          participates_irmandade: boolean | null
+          pgm_number: string | null
+          pgm_role: string | null
+          phase: string | null
+          points: number | null
+          profile_photo_url: string | null
+          updated_at: string | null
+          whatsapp: string | null
+        }
+        Insert: {
+          birth_date?: string | null
+          consecutive_days?: number | null
+          created_at?: string | null
+          email: string
+          gender?: string | null
+          id: string
+          is_admin?: boolean | null
+          name: string
+          participates_flow_up?: boolean | null
+          participates_irmandade?: boolean | null
+          pgm_number?: string | null
+          pgm_role?: string | null
+          phase?: string | null
+          points?: number | null
+          profile_photo_url?: string | null
+          updated_at?: string | null
+          whatsapp?: string | null
+        }
+        Update: {
+          birth_date?: string | null
+          consecutive_days?: number | null
+          created_at?: string | null
+          email?: string
+          gender?: string | null
+          id?: string
+          is_admin?: boolean | null
+          name?: string
+          participates_flow_up?: boolean | null
+          participates_irmandade?: boolean | null
+          pgm_number?: string | null
+          pgm_role?: string | null
+          phase?: string | null
+          points?: number | null
+          profile_photo_url?: string | null
+          updated_at?: string | null
+          whatsapp?: string | null
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          badge_icon: string | null
+          badge_name: string
+          earned_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          badge_icon?: string | null
+          badge_name: string
+          earned_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          badge_icon?: string | null
+          badge_name?: string
+          earned_at?: string | null
+          id?: string
           user_id?: string
         }
         Relationships: []
