@@ -15,12 +15,46 @@ export const useAuth = () => {
         console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
-        setLoading(false);
+        
+        // Fetch and store user profile when signed in
+        if (session?.user && event === 'SIGNED_IN') {
+          try {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (profile) {
+              localStorage.setItem('currentUser', JSON.stringify({
+                id: profile.id,
+                name: profile.name,
+                email: profile.email,
+                isAdmin: profile.is_admin,
+                points: profile.points || 0,
+                pgmRole: profile.pgm_role,
+                pgmNumber: profile.pgm_number,
+                profilePhoto: profile.profile_photo_url,
+                whatsapp: profile.whatsapp,
+                birthDate: profile.birth_date,
+                gender: profile.gender,
+                participatesFlowUp: profile.participates_flow_up,
+                participatesIrmandade: profile.participates_irmandade,
+                phase: profile.phase,
+                consecutiveDays: profile.consecutive_days
+              }));
+            }
+          } catch (error) {
+            console.error('Error fetching profile:', error);
+          }
+        }
         
         // Clear localStorage when signing out
         if (event === 'SIGNED_OUT') {
           localStorage.removeItem('currentUser');
         }
+        
+        setLoading(false);
       }
     );
 

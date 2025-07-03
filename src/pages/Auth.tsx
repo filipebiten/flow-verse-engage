@@ -9,14 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertTriangle, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -25,6 +28,9 @@ const Auth = () => {
   const [pgmNumber, setPgmNumber] = useState('');
   const [participatesFlowUp, setParticipatesFlowUp] = useState(false);
   const [participatesIrmandade, setParticipatesIrmandade] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string>('');
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -53,12 +59,70 @@ const Auth = () => {
   const isMale = gender === 'Homem';
   const showPgmNumber = pgmRole === 'Participante' || pgmRole === 'Líder';
 
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setProfilePhoto(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setProfilePhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setProfilePhoto(null);
+    setProfilePhotoPreview('');
+  };
+
+  const uploadProfilePhoto = async (userId: string) => {
+    if (!profilePhoto) return null;
+
+    const fileExt = profilePhoto.name.split('.').pop();
+    const fileName = `${userId}.${fileExt}`;
+    const filePath = `profile-photos/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, profilePhoto);
+
+    if (uploadError) {
+      console.error('Error uploading photo:', uploadError);
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from('avatars')
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "Erro na confirmação",
+        description: "As senhas não coincidem.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (password.length < 6) {
+      toast({
+        title: "Senha muito curta",
+        description: "A senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Check if email is the admin email
       const isAdminEmail = email === 'filipebiten@gmail.com';
       
       const { data, error } = await supabase.auth.signUp({
@@ -95,7 +159,13 @@ const Auth = () => {
           });
         }
       } else {
-        // Update profile with additional data
+        // Upload profile photo if provided
+        let profilePhotoUrl = null;
+        if (data.user && profilePhoto) {
+          profilePhotoUrl = await uploadProfilePhoto(data.user.id);
+        }
+
+        // Update profile with additional data including photo
         if (data.user) {
           await supabase
             .from('profiles')
@@ -107,15 +177,13 @@ const Auth = () => {
               pgm_number: pgmNumber,
               participates_flow_up: participatesFlowUp,
               participates_irmandade: participatesIrmandade,
-              is_admin: isAdminEmail
+              is_admin: isAdminEmail,
+              profile_photo_url: profilePhotoUrl
             })
             .eq('id', data.user.id);
         }
 
-        toast({
-          title: "Cadastro realizado!",
-          description: isAdminEmail ? "Conta admin criada com sucesso!" : "Verifique seu email para confirmar a conta.",
-        });
+        setShowEmailConfirmation(true);
       }
     } catch (error) {
       toast({
@@ -143,6 +211,12 @@ const Auth = () => {
           toast({
             title: "Credenciais inválidas",
             description: "Email ou senha incorretos.",
+            variant: "destructive"
+          });
+        } else if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email não confirmado",
+            description: "Verifique seu email e clique no link de confirmação.",
             variant: "destructive"
           });
         } else {
@@ -202,7 +276,7 @@ const Auth = () => {
             <TabsContent value="login" className="space-y-4">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email ou WhatsApp</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -253,6 +327,50 @@ const Auth = () => {
                     placeholder="Seu nome completo"
                     required
                   />
+                </div>
+
+                {/* Profile Photo Upload */}
+                <div className="space-y-2">
+                  <Label>Foto do Perfil (Opcional)</Label>
+                  <div className="flex items-center gap-4">
+                    {profilePhotoPreview ? (
+                      <div className="relative">
+                        <img
+                          src={profilePhotoPreview}
+                          alt="Preview"
+                          className="w-16 h-16 rounded-full object-cover"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+                          onClick={removePhoto}
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+                        <Upload className="w-6 h-6 text-gray-400" />
+                      </div>
+                    )}
+                    <div>
+                      <Input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoUpload}
+                        className="hidden"
+                        id="photo-upload"
+                      />
+                      <Label
+                        htmlFor="photo-upload"
+                        className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md text-sm transition-colors"
+                      >
+                        Escolher Foto
+                      </Label>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
@@ -377,6 +495,30 @@ const Auth = () => {
                     </Button>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirmar Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirme sua senha"
+                      required
+                      minLength={6}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
                 
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -387,6 +529,25 @@ const Auth = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Email Confirmation Dialog */}
+      <AlertDialog open={showEmailConfirmation} onOpenChange={setShowEmailConfirmation}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>✅ Cadastro Realizado!</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enviamos um email de confirmação para <strong>{email}</strong>.
+              <br /><br />
+              Acesse sua caixa de entrada e clique no link para confirmar sua conta antes de fazer login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowEmailConfirmation(false)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
