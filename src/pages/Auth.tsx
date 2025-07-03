@@ -5,9 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Auth = () => {
@@ -15,12 +17,18 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [name, setName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [gender, setGender] = useState('');
+  const [pgmRole, setPgmRole] = useState('');
+  const [pgmNumber, setPgmNumber] = useState('');
+  const [participatesFlowUp, setParticipatesFlowUp] = useState(false);
+  const [participatesIrmandade, setParticipatesIrmandade] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
@@ -30,18 +38,40 @@ const Auth = () => {
     checkUser();
   }, [navigate]);
 
+  const calculateAge = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const isOver25 = birthDate ? calculateAge(birthDate) >= 25 : false;
+  const isMale = gender === 'Homem';
+  const showPgmNumber = pgmRole === 'Participante' || pgmRole === 'Líder';
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
-            name: name
+            name: name,
+            whatsapp: whatsapp,
+            birth_date: birthDate,
+            gender: gender,
+            pgm_role: pgmRole,
+            pgm_number: pgmNumber,
+            participates_flow_up: participatesFlowUp,
+            participates_irmandade: participatesIrmandade
           }
         }
       });
@@ -61,6 +91,22 @@ const Auth = () => {
           });
         }
       } else {
+        // Update profile with additional data
+        if (data.user) {
+          await supabase
+            .from('profiles')
+            .update({
+              whatsapp: whatsapp,
+              birth_date: birthDate,
+              gender: gender,
+              pgm_role: pgmRole,
+              pgm_number: pgmNumber,
+              participates_flow_up: participatesFlowUp,
+              participates_irmandade: participatesIrmandade
+            })
+            .eq('id', data.user.id);
+        }
+
         toast({
           title: "Cadastro realizado!",
           description: "Verifique seu email para confirmar a conta.",
@@ -121,12 +167,25 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Rede FLOW
           </CardTitle>
           <p className="text-muted-foreground">Entre ou crie sua conta</p>
+          
+          {/* Warning Message */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-yellow-600" />
+              <p className="text-sm text-yellow-800 font-medium">
+                ⚠️ Este app está em fase de testes.
+              </p>
+            </div>
+            <p className="text-xs text-yellow-700 mt-1">
+              Login administrador: filipebiten@gmail.com
+            </p>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
@@ -138,7 +197,7 @@ const Auth = () => {
             <TabsContent value="login" className="space-y-4">
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email ou WhatsApp</Label>
                   <Input
                     id="email"
                     type="email"
@@ -180,9 +239,9 @@ const Auth = () => {
             <TabsContent value="signup" className="space-y-4">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Nome</Label>
+                  <Label htmlFor="signup-name">Nome Completo</Label>
                   <Input
-                    id="name"
+                    id="signup-name"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -190,6 +249,19 @@ const Auth = () => {
                     required
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="signup-whatsapp">WhatsApp</Label>
+                  <Input
+                    id="signup-whatsapp"
+                    type="tel"
+                    value={whatsapp}
+                    onChange={(e) => setWhatsapp(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    required
+                  />
+                </div>
+                
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input
@@ -201,6 +273,82 @@ const Auth = () => {
                     required
                   />
                 </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="birth-date">Data de Nascimento</Label>
+                  <Input
+                    id="birth-date"
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Gênero</Label>
+                  <Select value={gender} onValueChange={setGender} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione seu gênero" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Homem">Homem</SelectItem>
+                      <SelectItem value="Mulher">Mulher</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {isOver25 && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="flow-up"
+                      checked={participatesFlowUp}
+                      onCheckedChange={setParticipatesFlowUp}
+                    />
+                    <Label htmlFor="flow-up">Participa do FLOW UP</Label>
+                  </div>
+                )}
+
+                {isMale && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="irmandade"
+                      checked={participatesIrmandade}
+                      onCheckedChange={setParticipatesIrmandade}
+                    />
+                    <Label htmlFor="irmandade">Participa da IRMANDADE</Label>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="pgm-role">Situação no PGM</Label>
+                  <Select value={pgmRole} onValueChange={setPgmRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione sua situação" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Participante">Participante</SelectItem>
+                      <SelectItem value="Líder">Líder</SelectItem>
+                      <SelectItem value="Supervisor">Supervisor</SelectItem>
+                      <SelectItem value="Coordenador">Coordenador</SelectItem>
+                      <SelectItem value="Pastor de Rede">Pastor de Rede</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {showPgmNumber && (
+                  <div className="space-y-2">
+                    <Label htmlFor="pgm-number">Número do PGM</Label>
+                    <Input
+                      id="pgm-number"
+                      type="text"
+                      value={pgmNumber}
+                      onChange={(e) => setPgmNumber(e.target.value)}
+                      placeholder="Ex: PGM001"
+                    />
+                  </div>
+                )}
+                
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
                   <div className="relative">
@@ -224,6 +372,7 @@ const Auth = () => {
                     </Button>
                   </div>
                 </div>
+                
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Criar Conta

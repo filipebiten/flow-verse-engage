@@ -55,21 +55,49 @@ const Missions = () => {
       setUserProfile(profile);
       setPreviousPoints(profile?.points || 0);
 
-      // Load missions, books, courses
+      // Load missions, books, courses and transform them
       const [missionsResult, booksResult, coursesResult] = await Promise.all([
         supabase.from('missions').select('*'),
         supabase.from('books').select('*'),
         supabase.from('courses').select('*')
       ]);
 
-      setMissions(missionsResult.data || []);
-      setBooks(booksResult.data || []);
-      setCourses(coursesResult.data || []);
+      // Transform database results to match Mission interface
+      const transformedMissions = (missionsResult.data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        points: item.points,
+        type: 'mission' as const,
+        period: item.period
+      }));
+
+      const transformedBooks = (booksResult.data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        points: item.points,
+        type: 'book' as const
+      }));
+
+      const transformedCourses = (coursesResult.data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        points: item.points,
+        type: 'course' as const,
+        school: item.school
+      }));
+
+      setMissions(transformedMissions);
+      setBooks(transformedBooks);
+      setCourses(transformedCourses);
 
       // Load completed items
       const { data: completed } = await supabase
         .from('missions_completed')
-        .select('mission_id');
+        .select('mission_id')
+        .eq('user_id', user?.id);
 
       const completedIds = new Set(completed?.map(item => item.mission_id) || []);
       setCompletedItems(completedIds);
