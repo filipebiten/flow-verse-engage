@@ -303,7 +303,7 @@ const Auth = () => {
                     <Checkbox
                       id="flow-up"
                       checked={participatesFlowUp}
-                      onCheckedChange={setParticipatesFlowUp}
+                      onCheckedChange={(checked) => setParticipatesFlowUp(checked === true)}
                     />
                     <Label htmlFor="flow-up">Participa do FLOW UP</Label>
                   </div>
@@ -314,7 +314,7 @@ const Auth = () => {
                     <Checkbox
                       id="irmandade"
                       checked={participatesIrmandade}
-                      onCheckedChange={setParticipatesIrmandade}
+                      onCheckedChange={(checked) => setParticipatesIrmandade(checked === true)}
                     />
                     <Label htmlFor="irmandade">Participa da IRMANDADE</Label>
                   </div>
