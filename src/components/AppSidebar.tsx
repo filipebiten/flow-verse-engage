@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getUserPhase } from '@/utils/phaseUtils';
+import { useAuth } from '@/hooks/useAuth';
 
 const menuItems = [
   {
@@ -53,7 +54,7 @@ const adminItems = [
 
 export function AppSidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const isAdmin = currentUser?.isAdmin;
   const userPhase = getUserPhase(currentUser?.points || 0);
@@ -64,12 +65,11 @@ export function AppSidebar() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('currentUser');
-    window.location.reload();
+    signOut();
   };
 
   const handleProfileClick = () => {
-    navigate('/profile');
+    // Use Link component or navigate programmatically
   };
 
   return (

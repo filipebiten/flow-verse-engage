@@ -58,6 +58,9 @@ const Auth = () => {
     setLoading(true);
 
     try {
+      // Check if email is the admin email
+      const isAdminEmail = email === 'filipebiten@gmail.com';
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -71,7 +74,8 @@ const Auth = () => {
             pgm_role: pgmRole,
             pgm_number: pgmNumber,
             participates_flow_up: participatesFlowUp,
-            participates_irmandade: participatesIrmandade
+            participates_irmandade: participatesIrmandade,
+            is_admin: isAdminEmail
           }
         }
       });
@@ -102,14 +106,15 @@ const Auth = () => {
               pgm_role: pgmRole,
               pgm_number: pgmNumber,
               participates_flow_up: participatesFlowUp,
-              participates_irmandade: participatesIrmandade
+              participates_irmandade: participatesIrmandade,
+              is_admin: isAdminEmail
             })
             .eq('id', data.user.id);
         }
 
         toast({
           title: "Cadastro realizado!",
-          description: "Verifique seu email para confirmar a conta.",
+          description: isAdminEmail ? "Conta admin criada com sucesso!" : "Verifique seu email para confirmar a conta.",
         });
       }
     } catch (error) {
