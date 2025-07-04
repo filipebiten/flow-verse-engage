@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import PhaseChangeDialog from '@/components/PhaseChangeDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -26,23 +25,19 @@ interface Mission {
   school?: string;
 }
 
-interface UserBadge {
+interface UserProfile {
   id: string;
-  badge_name: string;
-  badge_icon: string;
-  earned_at: string;
+  name: string;
+  points: number;
+  phase: string;
 }
 
-interface CompletedMission {
-  id: string;
-  mission_id: string;
-  mission_name: string;
-  mission_type: string;
-  points: number;
-  completed_at: string;
-  period?: string;
-  school?: string;
-}
+const getUserPhase = (points: number) => {
+  if (points >= 1000) return { name: 'Oceano', icon: '🌊', phrase: 'Profundamente imerso em Deus', color: 'from-blue-900 to-indigo-900' };
+  if (points >= 500) return { name: 'Cachoeira', icon: '💥', phrase: 'Entregue ao movimento de Deus', color: 'from-purple-600 to-blue-600' };
+  if (points >= 250) return { name: 'Correnteza', icon: '🌊', phrase: 'Sendo levado por algo maior', color: 'from-blue-500 to-teal-500' };
+  return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
+};
 
 const Missions = () => {
   const { user } = useAuth();
@@ -51,24 +46,8 @@ const Missions = () => {
   const [books, setBooks] = useState<Mission[]>([]);
   const [courses, setCourses] = useState<Mission[]>([]);
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
-  const [userProfile, setUserProfile] = useState<any>(null);
-  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
-  const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
-  const [showPhaseDialog, setShowPhaseDialog] = useState(false);
-  const [previousPoints, setPreviousPoints] = useState(0);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Badge definitions
-  const badgeDefinitions = [
-    { id: '1', badge_key: 'reader-1', name: 'Leitor Iniciante', description: 'Leu primeiro livro', icon: '📖', requirement_type: 'books', requirement_count: 1 },
-    { id: '2', badge_key: 'reader-2', name: 'Leitor Fluente', description: 'Leu 3 livros', icon: '📚', requirement_type: 'books', requirement_count: 3 },
-    { id: '3', badge_key: 'reader-3', name: 'Leitor Voraz', description: 'Leu 5 livros', icon: '🔥📚', requirement_type: 'books', requirement_count: 5 },
-    { id: '4', badge_key: 'course-1', name: 'Discípulo em Formação', description: 'Completou primeiro curso', icon: '🎓', requirement_type: 'courses', requirement_count: 1 },
-    { id: '5', badge_key: 'course-2', name: 'Aprendiz Dedicado', description: 'Completou 3 cursos', icon: '📘🎓', requirement_type: 'courses', requirement_count: 3 },
-    { id: '6', badge_key: 'mission-1', name: 'Primeiro Passo', description: 'Completou primeira missão', icon: '🎯', requirement_type: 'missions', requirement_count: 1 },
-    { id: '7', badge_key: 'mission-2', name: 'Focado no Alvo', description: 'Completou 5 missões', icon: '🏹', requirement_type: 'missions', requirement_count: 5 },
-    { id: '8', badge_key: 'points-1', name: 'Pontuador Iniciante', description: 'Alcançou 100 pontos', icon: '⭐', requirement_type: 'points', requirement_count: 100 }
-  ];
 
   useEffect(() => {
     if (user) {
@@ -90,8 +69,8 @@ const Missions = () => {
       if (profileError) {
         console.error('Error loading profile:', profileError);
       } else {
+        console.log('Profile loaded:', profile);
         setUserProfile(profile);
-        setPreviousPoints(profile?.points || 0);
       }
 
       // Load missions
@@ -100,23 +79,25 @@ const Missions = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      console.log('Missions loaded:', missionsData, 'Error:', missionsError);
+      console.log('Missions query result:', { missionsData, missionsError });
 
+      // Load books
       const { data: booksData, error: booksError } = await supabase
         .from('books')
         .select('*')
         .order('created_at', { ascending: false });
 
-      console.log('Books loaded:', booksData, 'Error:', booksError);
+      console.log('Books query result:', { booksData, booksError });
 
+      // Load courses
       const { data: coursesData, error: coursesError } = await supabase
         .from('courses')
         .select('*')
         .order('created_at', { ascending: false });
 
-      console.log('Courses loaded:', coursesData, 'Error:', coursesError);
+      console.log('Courses query result:', { coursesData, coursesError });
 
-      // Transform database results to match Mission interface
+      // Transform data
       const transformedMissions = (missionsData || []).map(item => ({
         id: item.id,
         name: item.name,
@@ -143,6 +124,12 @@ const Missions = () => {
         school: item.school
       }));
 
+      console.log('Transformed data:', { 
+        missions: transformedMissions, 
+        books: transformedBooks, 
+        courses: transformedCourses 
+      });
+
       setMissions(transformedMissions);
       setBooks(transformedBooks);
       setCourses(transformedCourses);
@@ -153,23 +140,12 @@ const Missions = () => {
         .select('*')
         .eq('user_id', user?.id);
 
-      console.log('Completed missions:', completed, 'Error:', completedError);
+      console.log('Completed missions result:', { completed, completedError });
 
       if (completed) {
         const completedIds = new Set(completed.map(item => item.mission_id));
         setCompletedItems(completedIds);
-        setCompletedMissions(completed);
       }
-
-      // Load user badges
-      const { data: userBadgesResult, error: badgesError } = await supabase
-        .from('user_badges')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('earned_at', { ascending: false });
-
-      console.log('User badges:', userBadgesResult, 'Error:', badgesError);
-      setUserBadges(userBadgesResult || []);
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -180,71 +156,6 @@ const Missions = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getUserPhase = (points: number) => {
-    if (points >= 1000) return { name: 'Oceano', icon: '🌊', phrase: 'Profundamente imerso em Deus', color: 'from-blue-900 to-indigo-900' };
-    if (points >= 500) return { name: 'Cachoeira', icon: '💥', phrase: 'Entregue ao movimento de Deus', color: 'from-purple-600 to-blue-600' };
-    if (points >= 250) return { name: 'Correnteza', icon: '🌊', phrase: 'Sendo levado por algo maior', color: 'from-blue-500 to-teal-500' };
-    return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
-  };
-
-  const checkAndAwardBadges = async (newStats: any) => {
-    const earnedBadges = new Set(userBadges.map(b => b.badge_name));
-    const newBadges = [];
-
-    for (const badgeDef of badgeDefinitions) {
-      if (!earnedBadges.has(badgeDef.name)) {
-        let earned = false;
-
-        switch (badgeDef.requirement_type) {
-          case 'books':
-            earned = newStats.booksCount >= badgeDef.requirement_count;
-            break;
-          case 'courses':
-            earned = newStats.coursesCount >= badgeDef.requirement_count;
-            break;
-          case 'missions':
-            earned = newStats.missionsCount >= badgeDef.requirement_count;
-            break;
-          case 'points':
-            earned = newStats.totalPoints >= badgeDef.requirement_count;
-            break;
-        }
-
-        if (earned) {
-          newBadges.push({
-            user_id: user?.id,
-            badge_name: badgeDef.name,
-            badge_icon: badgeDef.icon
-          });
-        }
-      }
-    }
-
-    if (newBadges.length > 0) {
-      const { error } = await supabase
-        .from('user_badges')
-        .insert(newBadges);
-
-      if (!error) {
-        for (const badge of newBadges) {
-          toast({
-            title: "Novo Badge! 🏆",
-            description: `Você ganhou o badge "${badge.badge_name}"!`,
-          });
-        }
-        
-        // Reload badges
-        const { data: updatedBadges } = await supabase
-          .from('user_badges')
-          .select('*')
-          .eq('user_id', user?.id)
-          .order('earned_at', { ascending: false });
-        
-        setUserBadges(updatedBadges || []);
-      }
     }
   };
 
@@ -279,7 +190,6 @@ const Missions = () => {
 
       // Update user points
       const newPoints = (userProfile?.points || 0) + item.points;
-      const previousPhase = getUserPhase(userProfile?.points || 0);
       const newPhase = getUserPhase(newPoints);
 
       const { error: updateError } = await supabase
@@ -301,36 +211,8 @@ const Missions = () => {
       }
 
       // Update local state
-      setUserProfile({ ...userProfile, points: newPoints, phase: newPhase.name });
+      setUserProfile({ ...userProfile!, points: newPoints, phase: newPhase.name });
       setCompletedItems(prev => new Set([...prev, item.id]));
-
-      // Check and award badges
-      const booksCount = completedMissions.filter(m => m.mission_type === 'book').length + (item.type === 'book' ? 1 : 0);
-      const coursesCount = completedMissions.filter(m => m.mission_type === 'course').length + (item.type === 'course' ? 1 : 0);
-      const missionsOnlyCount = completedMissions.filter(m => m.mission_type === 'mission').length + (item.type === 'mission' ? 1 : 0);
-
-      await checkAndAwardBadges({
-        totalPoints: newPoints,
-        booksCount,
-        coursesCount,
-        missionsCount: missionsOnlyCount
-      });
-
-      // Check for phase change
-      if (previousPhase.name !== newPhase.name) {
-        await supabase
-          .from('phase_changes')
-          .insert({
-            user_id: user.id,
-            previous_phase: previousPhase.name,
-            new_phase: newPhase.name,
-            phase_icon: newPhase.icon,
-            total_points: newPoints
-          });
-
-        setPreviousPoints(userProfile?.points || 0);
-        setShowPhaseDialog(true);
-      }
 
       toast({
         title: "Parabéns! 🎉",
@@ -345,63 +227,6 @@ const Missions = () => {
         variant: "destructive"
       });
     }
-  };
-
-  const renderBadgesSection = () => {
-    const earnedBadgeNames = new Set(userBadges.map(badge => badge.badge_name));
-    
-    return (
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="w-5 h-5" />
-            Badges e Conquistas ({userBadges.length}/{badgeDefinitions.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {badgeDefinitions.map((badgeDef) => {
-              const isEarned = earnedBadgeNames.has(badgeDef.name);
-              
-              return (
-                <div
-                  key={badgeDef.id}
-                  className={`p-4 rounded-lg border text-center transition-all ${
-                    isEarned 
-                      ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300 shadow-md' 
-                      : 'bg-gray-50 border-gray-200 opacity-60'
-                  }`}
-                >
-                  <div className={`text-3xl mb-2 ${isEarned ? '' : 'grayscale'}`}>
-                    {badgeDef.icon}
-                  </div>
-                  <h4 className={`font-semibold text-sm ${isEarned ? 'text-yellow-800' : 'text-gray-500'}`}>
-                    {badgeDef.name}
-                  </h4>
-                  <p className={`text-xs mt-1 ${isEarned ? 'text-yellow-700' : 'text-gray-400'}`}>
-                    {badgeDef.description}
-                  </p>
-                  <div className={`text-xs mt-2 ${isEarned ? 'text-green-600' : 'text-gray-400'}`}>
-                    {isEarned ? (
-                      <span>✓ Conquistado</span>
-                    ) : (
-                      <span>
-                        {badgeDef.requirement_count} {
-                          badgeDef.requirement_type === 'books' ? 'livros' :
-                          badgeDef.requirement_type === 'courses' ? 'cursos' :
-                          badgeDef.requirement_type === 'missions' ? 'missões' :
-                          'pontos'
-                        }
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    );
   };
 
   const renderItems = (items: Mission[], title: string, icon: React.ReactNode, emptyMessage: string) => (
@@ -471,15 +296,6 @@ const Missions = () => {
   }
 
   const currentPhase = getUserPhase(userProfile?.points || 0);
-  const nextPhaseThreshold = userProfile?.points >= 1000 ? 1000 : 
-                           userProfile?.points >= 500 ? 1000 :
-                           userProfile?.points >= 250 ? 500 : 250;
-  const prevPhaseThreshold = userProfile?.points >= 1000 ? 1000 :
-                           userProfile?.points >= 500 ? 500 :
-                           userProfile?.points >= 250 ? 250 : 0;
-  
-  const phaseProgress = userProfile?.points >= 1000 ? 100 : 
-                       (((userProfile?.points || 0) - prevPhaseThreshold) / (nextPhaseThreshold - prevPhaseThreshold)) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
@@ -500,7 +316,7 @@ const Missions = () => {
             </div>
           </div>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{userProfile?.points || 0}</div>
                 <p className="text-sm text-gray-600">Pontos Totais</p>
@@ -513,31 +329,9 @@ const Missions = () => {
                 <div className="text-2xl font-bold text-purple-600">{currentPhase.name}</div>
                 <p className="text-sm text-gray-600">Fase Atual</p>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">{userBadges.length}</div>
-                <p className="text-sm text-gray-600">Badges</p>
-              </div>
-            </div>
-            
-            {/* Phase Progress */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span>Progresso da Fase</span>
-                <span>{userProfile?.points >= 1000 ? '100%' : `${Math.round(phaseProgress)}%`}</span>
-              </div>
-              <Progress value={phaseProgress} className="h-3" />
-              <p className="text-xs text-gray-600">
-                {userProfile?.points >= 1000 
-                  ? 'Fase máxima alcançada! Continue acumulando pontos.' 
-                  : `${nextPhaseThreshold - (userProfile?.points || 0)} pontos para a próxima fase`
-                }
-              </p>
             </div>
           </CardContent>
         </Card>
-
-        {/* Badges Section */}
-        {renderBadgesSection()}
 
         {/* Missions, Books, Courses */}
         <div className="space-y-6">
@@ -545,13 +339,6 @@ const Missions = () => {
           {renderItems(books, "Livros", <BookOpen className="w-5 h-5" />, "Nenhum livro disponível")}
           {renderItems(courses, "Cursos", <GraduationCap className="w-5 h-5" />, "Nenhum curso disponível")}
         </div>
-
-        <PhaseChangeDialog
-          isOpen={showPhaseDialog}
-          onClose={() => setShowPhaseDialog(false)}
-          newPoints={userProfile?.points || 0}
-          previousPoints={previousPoints}
-        />
       </div>
     </div>
   );

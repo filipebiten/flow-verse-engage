@@ -1,106 +1,158 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useUserProfile } from '@/hooks/useUserProfile';
-import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { 
-  Settings, 
+  User, 
+  Calendar, 
+  Phone, 
+  Mail, 
   Trophy, 
   BookOpen, 
-  GraduationCap, 
   Target,
-  Upload,
   Award,
-  Edit,
-  Save,
-  X
+  Camera
 } from 'lucide-react';
 
-// Função para obter informações da fase
-const getPhaseInfo = (phase: string) => {
-  const phases = {
-    "Riacho": { emoji: "🌀", color: "bg-green-100 text-green-800", phrase: "Começando a fluir" },
-    "Correnteza": { emoji: "🌊", color: "bg-blue-100 text-blue-800", phrase: "Sendo levado por algo maior" },
-    "Cachoeira": { emoji: "💥", color: "bg-purple-100 text-purple-800", phrase: "Entregue ao movimento de Deus" },
-    "Oceano": { emoji: "🌌", color: "bg-gray-900 text-white", phrase: "Profundamente imerso em Deus" }
-  };
-  return phases[phase as keyof typeof phases] || phases["Riacho"];
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  points: number;
+  phase: string;
+  whatsapp?: string;
+  birth_date?: string;
+  gender?: string;
+  pgm_role?: string;
+  pgm_number?: string;
+  participates_flow_up: boolean;
+  participates_irmandade: boolean;
+  profile_photo_url?: string;
+  consecutive_days?: number;
+}
+
+interface CompletedMission {
+  id: string;
+  mission_name: string;
+  mission_type: string;
+  points: number;
+  completed_at: string;
+}
+
+interface UserBadge {
+  id: string;
+  badge_name: string;
+  badge_icon: string;
+  earned_at: string;
+}
+
+const getPhaseInfo = (points: number) => {
+  if (points >= 1000) return { name: 'Oceano', icon: '🌊', phrase: 'Profundamente imerso em Deus', color: 'from-blue-900 to-indigo-900' };
+  if (points >= 500) return { name: 'Cachoeira', icon: '💥', phrase: 'Entregue ao movimento de Deus', color: 'from-purple-600 to-blue-600' };
+  if (points >= 250) return { name: 'Correnteza', icon: '🌊', phrase: 'Sendo levado por algo maior', color: 'from-blue-500 to-teal-500' };
+  return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
 };
 
 const Profile = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
-  const { profile, completedMissions, userBadges, refreshUserData, loading } = useUserProfile();
-  const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [birthDate, setBirthDate] = useState('');
-  const [gender, setGender] = useState('');
-  const [pgmRole, setPgmRole] = useState('');
-  const [pgmNumber, setPgmNumber] = useState('');
-  const [participatesFlowUp, setParticipatesFlowUp] = useState(false);
-  const [participatesIrmandade, setParticipatesIrmandade] = useState(false);
-  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | undefined>('');
-  const [uploading, setUploading] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [formData, setFormData] = useState<Partial<UserProfile>>({});
 
   useEffect(() => {
-    if (profile) {
-      setName(profile.name || '');
-      setWhatsapp(profile.whatsapp || '');
-      setBirthDate(profile.birth_date || '');
-      setGender(profile.gender || '');
-      setPgmRole(profile.pgm_role || '');
-      setPgmNumber(profile.pgm_number || '');
-      setParticipatesFlowUp(profile.participates_flow_up || false);
-      setParticipatesIrmandade(profile.participates_irmandade || false);
-      setProfilePhotoUrl(profile.profile_photo_url);
+    if (user) {
+      loadUserData();
     }
-  }, [profile]);
+  }, [user]);
 
-  const handleEditClick = () => {
-    setIsEditing(true);
+  const loadUserData = async () => {
+    if (!user) return;
+    
+    try {
+      console.log('Loading user data for:', user.id);
+      
+      // Load profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+        toast({
+          title: "Erro",
+          description: "Não foi possível carregar o perfil.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Profile loaded:', profileData);
+      setProfile(profileData);
+      setFormData(profileData);
+
+      // Load completed missions
+      const { data: missionsData, error: missionsError } = await supabase
+        .from('missions_completed')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: false });
+
+      if (missionsError) {
+        console.error('Error loading completed missions:', missionsError);
+      } else {
+        console.log('Completed missions loaded:', missionsData);
+        setCompletedMissions(missionsData || []);
+      }
+
+      // Load user badges
+      const { data: badgesData, error: badgesError } = await supabase
+        .from('user_badges')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('earned_at', { ascending: false });
+
+      if (badgesError) {
+        console.error('Error loading badges:', badgesError);
+      } else {
+        console.log('User badges loaded:', badgesData);
+        setUserBadges(badgesData || []);
+      }
+
+    } catch (error) {
+      console.error('Error loading user data:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao carregar os dados.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCancelClick = () => {
-    setIsEditing(false);
-    if (profile) {
-      setName(profile.name || '');
-      setWhatsapp(profile.whatsapp || '');
-      setBirthDate(profile.birth_date || '');
-      setGender(profile.gender || '');
-      setPgmRole(profile.pgm_role || '');
-      setPgmNumber(profile.pgm_number || '');
-      setParticipatesFlowUp(profile.participates_flow_up || false);
-      setParticipatesIrmandade(profile.participates_irmandade || false);
-      setProfilePhotoUrl(profile.profile_photo_url);
-    }
-  };
-
-  const handleSaveClick = async () => {
+  const handleUpdateProfile = async () => {
     if (!user || !profile) return;
 
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({
-          name,
-          whatsapp,
-          birth_date: birthDate,
-          gender,
-          pgm_role: pgmRole,
-          pgm_number: pgmNumber,
-          participates_flow_up: participatesFlowUp,
-          participates_irmandade: participatesIrmandade,
-          profile_photo_url: profilePhotoUrl
-        })
+        .update(formData)
         .eq('id', user.id);
 
       if (error) {
@@ -113,14 +165,15 @@ const Profile = () => {
         return;
       }
 
-      refreshUserData();
-      setIsEditing(false);
+      setProfile({ ...profile, ...formData });
+      setEditing(false);
       toast({
         title: "Sucesso",
         description: "Perfil atualizado com sucesso!",
       });
+
     } catch (error) {
-      console.error('Error during profile update:', error);
+      console.error('Error updating profile:', error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao atualizar o perfil.",
@@ -129,73 +182,11 @@ const Profile = () => {
     }
   };
 
-  const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    try {
-      setUploading(true);
-
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `profile-photos/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error('Error uploading image:', error);
-        toast({
-          title: "Erro",
-          description: "Não foi possível fazer upload da imagem.",
-          variant: "destructive"
-        });
-      } else {
-        const { data: { publicUrl } } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-        
-        setProfilePhotoUrl(publicUrl);
-        toast({
-          title: "Sucesso",
-          description: "Foto de perfil atualizada!",
-        });
-      }
-    } catch (error) {
-      console.error('Error during image upload:', error);
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao fazer upload da imagem.",
-        variant: "destructive"
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const getBadgeInfo = (badgeId: string) => {
-    const badges = {
-      'Leitor Iniciante': { name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.' },
-      'Leitor Fluente': { name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.' },
-      'Leitor Voraz': { name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.' },
-      'Discípulo em Formação': { name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.' },
-      'Aprendiz Dedicado': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.' },
-      'Primeiro Passo': { name: 'Primeiro Passo', icon: '🎯', description: 'Completou a primeira missão.' },
-      'Focado no Alvo': { name: 'Focado no Alvo', icon: '🏹', description: 'Completou 5 missões.' },
-      'Pontuador Iniciante': { name: 'Pontuador Iniciante', icon: '⭐', description: 'Alcançou 100 pontos.' }
-    };
-    return badges[badgeId as keyof typeof badges] || { name: badgeId, icon: '🏆', description: 'Badge conquistado!' };
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Carregando perfil...</p>
         </div>
       </div>
@@ -204,350 +195,217 @@ const Profile = () => {
 
   if (!profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">Perfil não encontrado.</p>
-          <Button onClick={() => window.location.reload()} className="mt-4">
-            Recarregar
+          <Button onClick={loadUserData} className="mt-4">
+            Tentar Novamente
           </Button>
         </div>
       </div>
     );
   }
 
-  const phaseInfo = getPhaseInfo(profile.phase || 'Riacho');
+  const currentPhase = getPhaseInfo(profile.points || 0);
+  const booksCount = completedMissions.filter(m => m.mission_type === 'book').length;
+  const coursesCount = completedMissions.filter(m => m.mission_type === 'course').length;
+  const missionsCount = completedMissions.filter(m => m.mission_type === 'mission').length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-teal-700">Meu Perfil</h1>
-          <Button variant="destructive" size="sm" onClick={signOut}>
-            Sair
-          </Button>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Profile Header */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-start space-x-6">
-              <Avatar className="w-24 h-24">
-                <AvatarImage src={profilePhotoUrl || ''} />
-                <AvatarFallback className="bg-teal-100 text-teal-700 text-2xl">
-                  {profile?.name?.charAt(0)}
-                </AvatarFallback>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+      <div className="max-w-4xl mx-auto space-y-6">
+        
+        {/* Header Card */}
+        <Card className="overflow-hidden">
+          <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
+            <div className="flex items-center gap-6">
+              <Avatar className="w-20 h-20 border-4 border-white">
+                {profile.profile_photo_url ? (
+                  <AvatarImage src={profile.profile_photo_url} alt={profile.name} />
+                ) : (
+                  <AvatarFallback className="bg-white text-gray-800 text-2xl font-bold">
+                    {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </AvatarFallback>
+                )}
               </Avatar>
-              
-              <div className="flex-1 space-y-3">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-800">{profile?.name}</h2>
-                  <p className="text-gray-600">
-                    {profile?.pgm_role} {profile?.pgm_number && `- ${profile?.pgm_number}`}
-                  </p>
-                </div>
-                
-                <div className="flex items-center space-x-3 flex-wrap">
-                  <Badge className={phaseInfo.color}>
-                    {phaseInfo.emoji} {profile?.phase}
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
+                <p className="text-white/90 mb-2">{profile.email}</p>
+                <div className="flex items-center gap-4">
+                  <Badge className="bg-white text-gray-800">
+                    {currentPhase.icon} {currentPhase.name}
                   </Badge>
-                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                    {profile?.points || 0} pontos
-                  </Badge>
-                  {profile?.participates_flow_up && (
-                    <Badge variant="secondary" className="bg-orange-100 text-orange-800">
-                      FLOW UP
-                    </Badge>
-                  )}
-                  {profile?.participates_irmandade && (
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      IRMANDADE
-                    </Badge>
-                  )}
-                  {profile?.consecutive_days && (
-                    <Badge variant="secondary" className="bg-purple-100 text-purple-800">
-                      {profile?.consecutive_days} dias seguidos
-                    </Badge>
-                  )}
-                </div>
-                
-                <div>
-                  <p className="text-lg font-medium text-gray-700">"{phaseInfo.phrase}"</p>
+                  <span className="text-white/90">{profile.points || 0} pontos</span>
                 </div>
               </div>
+              <Button 
+                variant="secondary" 
+                onClick={() => setEditing(!editing)}
+                className="bg-white text-gray-800 hover:bg-gray-100"
+              >
+                {editing ? 'Cancelar' : 'Editar Perfil'}
+              </Button>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
-        {/* Edit Profile Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Settings className="w-5 h-5 mr-2" />
-              Editar Perfil
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {isEditing ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
+        {/* Profile Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          {/* Personal Info */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="w-5 h-5" />
+                Informações Pessoais
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {editing ? (
+                <>
+                  <div className="space-y-2">
                     <Label htmlFor="name">Nome</Label>
                     <Input
-                      type="text"
                       id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="whatsapp">WhatsApp</Label>
                     <Input
-                      type="text"
                       id="whatsapp"
-                      value={whatsapp}
-                      onChange={(e) => setWhatsapp(e.target.value)}
+                      value={formData.whatsapp || ''}
+                      onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
+                      placeholder="(11) 99999-9999"
                     />
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="birthDate">Data de Nascimento</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="birth_date">Data de Nascimento</Label>
                     <Input
+                      id="birth_date"
                       type="date"
-                      id="birthDate"
-                      value={birthDate}
-                      onChange={(e) => setBirthDate(e.target.value)}
+                      value={formData.birth_date || ''}
+                      onChange={(e) => setFormData({...formData, birth_date: e.target.value})}
                     />
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <Label htmlFor="gender">Gênero</Label>
-                    <Input
-                      type="text"
-                      id="gender"
-                      value={gender}
-                      onChange={(e) => setGender(e.target.value)}
-                    />
+                    <Select value={formData.gender || ''} onValueChange={(value) => setFormData({...formData, gender: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="masculino">Masculino</SelectItem>
+                        <SelectItem value="feminino">Feminino</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="pgmRole">Função no PGM</Label>
-                    <Input
-                      type="text"
-                      id="pgmRole"
-                      value={pgmRole}
-                      onChange={(e) => setPgmRole(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="pgmNumber">Número no PGM</Label>
-                    <Input
-                      type="text"
-                      id="pgmNumber"
-                      value={pgmNumber}
-                      onChange={(e) => setPgmNumber(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <Label htmlFor="participatesFlowUp">Participa do Flow Up?</Label>
-                  <input
-                    type="checkbox"
-                    id="participatesFlowUp"
-                    checked={participatesFlowUp}
-                    onChange={(e) => setParticipatesFlowUp(e.target.checked)}
-                    className="w-5 h-5"
-                  />
-                  <Label htmlFor="participatesIrmandade">Participa da Irmandade?</Label>
-                  <input
-                    type="checkbox"
-                    id="participatesIrmandade"
-                    checked={participatesIrmandade}
-                    onChange={(e) => setParticipatesIrmandade(e.target.checked)}
-                    className="w-5 h-5"
-                  />
-                </div>
-
-                {/* Photo Upload */}
-                <div>
-                  <Label htmlFor="profilePhoto">Foto de Perfil</Label>
-                  <div className="flex items-center space-x-4">
-                    <Input
-                      type="file"
-                      id="profilePhoto"
-                      accept="image/*"
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
-                    <Label htmlFor="profilePhoto" className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-md">
-                      <Upload className="w-4 h-4 mr-2 inline-block" />
-                      {uploading ? 'Enviando...' : 'Alterar Foto'}
-                    </Label>
-                    {profilePhotoUrl && (
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={profilePhotoUrl} />
-                        <AvatarFallback className="bg-teal-100 text-teal-700 text-xl">
-                          {profile?.name?.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex justify-end space-x-2">
-                  <Button variant="ghost" onClick={handleCancelClick}>
-                    <X className="w-4 h-4 mr-2" />
-                    Cancelar
+                  <Button onClick={handleUpdateProfile} className="w-full">
+                    Salvar Alterações
                   </Button>
-                  <Button onClick={handleSaveClick}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Salvar
-                  </Button>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-500" />
+                    <span>{profile.whatsapp || 'Não informado'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-gray-500" />
+                    <span>{profile.birth_date ? new Date(profile.birth_date).toLocaleDateString('pt-BR') : 'Não informado'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <span>{profile.gender || 'Não informado'}</span>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Stats */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trophy className="w-5 h-5" />
+                Estatísticas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <BookOpen className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-blue-600">{booksCount}</div>
+                  <p className="text-sm text-gray-600">Livros Lidos</p>
                 </div>
-              </>
+                <div className="text-center p-4 bg-green-50 rounded-lg">
+                  <Target className="w-6 h-6 text-green-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-green-600">{missionsCount}</div>
+                  <p className="text-sm text-gray-600">Missões</p>
+                </div>
+                <div className="text-center p-4 bg-purple-50 rounded-lg">
+                  <Award className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-purple-600">{coursesCount}</div>
+                  <p className="text-sm text-gray-600">Cursos</p>
+                </div>
+                <div className="text-center p-4 bg-yellow-50 rounded-lg">
+                  <Trophy className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
+                  <div className="text-2xl font-bold text-yellow-600">{userBadges.length}</div>
+                  <p className="text-sm text-gray-600">Badges</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Atividades Recentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {completedMissions.length === 0 ? (
+              <p className="text-center text-gray-500 py-8">Nenhuma atividade encontrada</p>
             ) : (
-              <div className="flex justify-end">
-                <Button onClick={handleEditClick}>
-                  <Edit className="w-4 h-4 mr-2" />
-                  Editar Perfil
-                </Button>
+              <div className="space-y-3">
+                {completedMissions.slice(0, 5).map((mission) => (
+                  <div key={mission.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <h4 className="font-semibold">{mission.mission_name}</h4>
+                      <p className="text-sm text-gray-600">
+                        {new Date(mission.completed_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">+{mission.points} pts</Badge>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Badges Section */}
+        {/* Badges */}
         {userBadges.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="w-5 h-5 mr-2" />
-                Badges Conquistados ({userBadges.length})
-              </CardTitle>
+              <CardTitle>Badges Conquistados</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {userBadges.map((badge) => {
-                  const badgeInfo = getBadgeInfo(badge.badge_name);
-                  
-                  return (
-                    <div key={badge.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-                      <div className="text-2xl">{badgeInfo.icon}</div>
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-purple-700">{badgeInfo.name}</h4>
-                        <p className="text-sm text-gray-600">{badgeInfo.description}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {userBadges.map((badge) => (
+                  <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg">
+                    <div className="text-3xl mb-2">{badge.badge_icon}</div>
+                    <h4 className="font-semibold text-sm text-yellow-800">{badge.badge_name}</h4>
+                    <p className="text-xs text-yellow-700 mt-1">
+                      {new Date(badge.earned_at).toLocaleDateString('pt-BR')}
+                    </p>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
         )}
-
-        {/* Tabs for different sections */}
-        <Tabs defaultValue="missions" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="missions">Missões</TabsTrigger>
-            <TabsTrigger value="books">Livros</TabsTrigger>
-            <TabsTrigger value="courses">Cursos</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="missions">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Target className="w-5 h-5 mr-2" />
-                  Missões Concluídas ({completedMissions.filter(a => a.mission_type === 'mission').length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {completedMissions.filter(a => a.mission_type === 'mission').length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>Nenhuma missão concluída ainda.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4 max-h-96 overflow-y-auto">
-                    {completedMissions.filter(a => a.mission_type === 'mission').map((activity) => (
-                      <div key={activity.id} className="flex items-center space-x-3 p-3 rounded-lg border bg-white">
-                        <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-gray-800">{activity.mission_name}</span>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                +{activity.points}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="books">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BookOpen className="w-5 h-5 mr-2" />
-                  Livros Lidos ({completedMissions.filter(a => a.mission_type === 'book').length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {completedMissions.filter(a => a.mission_type === 'book').length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">Nenhum livro lido ainda</p>
-                ) : (
-                  <div className="space-y-2">
-                    {completedMissions.filter(a => a.mission_type === 'book').map((book, index) => (
-                      <div key={index} className="p-3 bg-green-50 rounded flex items-center">
-                        <BookOpen className="w-4 h-4 text-green-600 mr-2" />
-                        <span className="text-sm flex-1">{book.mission_name}</span>
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 text-xs">
-                          ✓ Lido
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="courses">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <GraduationCap className="w-5 h-5 mr-2" />
-                  Cursos ({completedMissions.filter(a => a.mission_type === 'course').length} concluídos)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {completedMissions.filter(a => a.mission_type === 'course').length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">Nenhum curso concluído ainda</p>
-                ) : (
-                  <div className="space-y-2">
-                    {completedMissions.filter(a => a.mission_type === 'course').map((course, index) => (
-                      <div key={index} className="p-3 bg-blue-50 rounded flex items-center">
-                        <GraduationCap className="w-4 h-4 text-blue-600 mr-2" />
-                        <span className="text-sm flex-1">{course.mission_name}</span>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-xs">
-                          ✓ Concluído
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   );
