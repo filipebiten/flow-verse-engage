@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,16 +25,6 @@ interface Mission {
   school?: string;
 }
 
-interface BadgeDefinition {
-  id: string;
-  badge_key: string;
-  name: string;
-  description: string;
-  icon: string;
-  requirement_type: string;
-  requirement_count: number;
-}
-
 interface UserBadge {
   id: string;
   badge_name: string;
@@ -52,10 +41,21 @@ const Missions = () => {
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [userProfile, setUserProfile] = useState<any>(null);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
-  const [badgeDefinitions, setBadgeDefinitions] = useState<BadgeDefinition[]>([]);
   const [showPhaseDialog, setShowPhaseDialog] = useState(false);
   const [previousPoints, setPreviousPoints] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  // Definições de badges mockadas
+  const badgeDefinitions = [
+    { id: '1', badge_key: 'reader-1', name: 'Leitor Iniciante', description: 'Leu primeiro livro', icon: '📖', requirement_type: 'books', requirement_count: 1 },
+    { id: '2', badge_key: 'reader-2', name: 'Leitor Fluente', description: 'Leu 3 livros', icon: '📚', requirement_type: 'books', requirement_count: 3 },
+    { id: '3', badge_key: 'reader-3', name: 'Leitor Voraz', description: 'Leu 5 livros', icon: '🔥📚', requirement_type: 'books', requirement_count: 5 },
+    { id: '4', badge_key: 'course-1', name: 'Discípulo em Formação', description: 'Completou primeiro curso', icon: '🎓', requirement_type: 'courses', requirement_count: 1 },
+    { id: '5', badge_key: 'course-2', name: 'Aprendiz Dedicado', description: 'Completou 3 cursos', icon: '📘🎓', requirement_type: 'courses', requirement_count: 3 },
+    { id: '6', badge_key: 'mission-1', name: 'Primeiro Passo', description: 'Completou primeira missão', icon: '🎯', requirement_type: 'missions', requirement_count: 1 },
+    { id: '7', badge_key: 'mission-2', name: 'Focado no Alvo', description: 'Completou 5 missões', icon: '🏹', requirement_type: 'missions', requirement_count: 5 },
+    { id: '8', badge_key: 'points-1', name: 'Pontuador Iniciante', description: 'Alcançou 100 pontos', icon: '⭐', requirement_type: 'points', requirement_count: 100 }
+  ];
 
   useEffect(() => {
     if (user) {
@@ -68,24 +68,44 @@ const Missions = () => {
       console.log('Loading missions data...');
       
       // Load user profile
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user?.id)
         .single();
       
-      setUserProfile(profile);
-      setPreviousPoints(profile?.points || 0);
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+      } else {
+        setUserProfile(profile);
+        setPreviousPoints(profile?.points || 0);
+      }
 
-      // Load missions, books, courses
-      const [missionsResult, booksResult, coursesResult] = await Promise.all([
-        supabase.from('missions').select('*').order('created_at', { ascending: false }),
-        supabase.from('books').select('*').order('created_at', { ascending: false }),
-        supabase.from('courses').select('*').order('created_at', { ascending: false })
-      ]);
+      // Load missions, books, courses com logs detalhados
+      console.log('Loading missions...');
+      const { data: missionsData, error: missionsError } = await supabase
+        .from('missions')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      console.log('Missions loaded:', missionsData, 'Error:', missionsError);
+
+      const { data: booksData, error: booksError } = await supabase
+        .from('books')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      console.log('Books loaded:', booksData, 'Error:', booksError);
+
+      const { data: coursesData, error: coursesError } = await supabase
+        .from('courses')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      console.log('Courses loaded:', coursesData, 'Error:', coursesError);
 
       // Transform database results to match Mission interface
-      const transformedMissions = (missionsResult.data || []).map(item => ({
+      const transformedMissions = (missionsData || []).map(item => ({
         id: item.id,
         name: item.name,
         description: item.description,
@@ -94,7 +114,7 @@ const Missions = () => {
         period: item.period
       }));
 
-      const transformedBooks = (booksResult.data || []).map(item => ({
+      const transformedBooks = (booksData || []).map(item => ({
         id: item.id,
         name: item.name,
         description: item.description,
@@ -102,7 +122,7 @@ const Missions = () => {
         type: 'book' as const
       }));
 
-      const transformedCourses = (coursesResult.data || []).map(item => ({
+      const transformedCourses = (coursesData || []).map(item => ({
         id: item.id,
         name: item.name,
         description: item.description,
@@ -111,41 +131,34 @@ const Missions = () => {
         school: item.school
       }));
 
+      console.log('Transformed missions:', transformedMissions);
+      console.log('Transformed books:', transformedBooks);
+      console.log('Transformed courses:', transformedCourses);
+
       setMissions(transformedMissions);
       setBooks(transformedBooks);
       setCourses(transformedCourses);
 
       // Load completed items
-      const { data: completed } = await supabase
+      const { data: completed, error: completedError } = await supabase
         .from('missions_completed')
         .select('mission_id')
         .eq('user_id', user?.id);
+
+      console.log('Completed missions:', completed, 'Error:', completedError);
 
       const completedIds = new Set(completed?.map(item => item.mission_id) || []);
       setCompletedItems(completedIds);
 
       // Load user badges
-      const { data: userBadgesResult } = await supabase
+      const { data: userBadgesResult, error: badgesError } = await supabase
         .from('user_badges')
         .select('*')
         .eq('user_id', user?.id)
         .order('earned_at', { ascending: false });
 
+      console.log('User badges:', userBadgesResult, 'Error:', badgesError);
       setUserBadges(userBadgesResult || []);
-
-      // Create mock badge definitions since the table doesn't exist yet
-      const mockBadgeDefinitions: BadgeDefinition[] = [
-        { id: '1', badge_key: 'reader-1', name: 'Leitor Iniciante', description: 'Leu primeiro livro', icon: '📖', requirement_type: 'books', requirement_count: 1 },
-        { id: '2', badge_key: 'reader-2', name: 'Leitor Fluente', description: 'Leu 3 livros', icon: '📚', requirement_type: 'books', requirement_count: 3 },
-        { id: '3', badge_key: 'reader-3', name: 'Leitor Voraz', description: 'Leu 5 livros', icon: '🔥📚', requirement_type: 'books', requirement_count: 5 },
-        { id: '4', badge_key: 'course-1', name: 'Discípulo em Formação', description: 'Completou primeiro curso', icon: '🎓', requirement_type: 'courses', requirement_count: 1 },
-        { id: '5', badge_key: 'course-2', name: 'Aprendiz Dedicado', description: 'Completou 3 cursos', icon: '📘🎓', requirement_type: 'courses', requirement_count: 3 },
-        { id: '6', badge_key: 'mission-1', name: 'Primeiro Passo', description: 'Completou primeira missão', icon: '🎯', requirement_type: 'missions', requirement_count: 1 },
-        { id: '7', badge_key: 'mission-2', name: 'Focado no Alvo', description: 'Completou 5 missões', icon: '🏹', requirement_type: 'missions', requirement_count: 5 },
-        { id: '8', badge_key: 'points-1', name: 'Pontuador Iniciante', description: 'Alcançou 100 pontos', icon: '⭐', requirement_type: 'points', requirement_count: 100 }
-      ];
-      
-      setBadgeDefinitions(mockBadgeDefinitions);
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -164,6 +177,64 @@ const Missions = () => {
     if (points >= 500) return { name: 'Cachoeira', icon: '💥', phrase: 'Entregue ao movimento de Deus', color: 'from-purple-600 to-blue-600' };
     if (points >= 250) return { name: 'Correnteza', icon: '🌊', phrase: 'Sendo levado por algo maior', color: 'from-blue-500 to-teal-500' };
     return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
+  };
+
+  const checkAndAwardBadges = async (newStats: any) => {
+    const earnedBadges = new Set(userBadges.map(b => b.badge_name));
+    const newBadges = [];
+
+    for (const badgeDef of badgeDefinitions) {
+      if (!earnedBadges.has(badgeDef.name)) {
+        let earned = false;
+
+        switch (badgeDef.requirement_type) {
+          case 'books':
+            earned = newStats.booksCount >= badgeDef.requirement_count;
+            break;
+          case 'courses':
+            earned = newStats.coursesCount >= badgeDef.requirement_count;
+            break;
+          case 'missions':
+            earned = newStats.missionsCount >= badgeDef.requirement_count;
+            break;
+          case 'points':
+            earned = newStats.totalPoints >= badgeDef.requirement_count;
+            break;
+        }
+
+        if (earned) {
+          newBadges.push({
+            user_id: user?.id,
+            badge_name: badgeDef.name,
+            badge_icon: badgeDef.icon
+          });
+        }
+      }
+    }
+
+    if (newBadges.length > 0) {
+      const { error } = await supabase
+        .from('user_badges')
+        .insert(newBadges);
+
+      if (!error) {
+        for (const badge of newBadges) {
+          toast({
+            title: "Novo Badge! 🏆",
+            description: `Você ganhou o badge "${badge.badge_name}"!`,
+          });
+        }
+        
+        // Reload badges
+        const { data: updatedBadges } = await supabase
+          .from('user_badges')
+          .select('*')
+          .eq('user_id', user?.id)
+          .order('earned_at', { ascending: false });
+        
+        setUserBadges(updatedBadges || []);
+      }
+    }
   };
 
   const completeItem = async (item: Mission) => {
@@ -221,6 +292,19 @@ const Missions = () => {
       // Update local state
       setUserProfile({ ...userProfile, points: newPoints, phase: newPhase.name });
       setCompletedItems(prev => new Set([...prev, item.id]));
+
+      // Check and award badges
+      const completedMissionsCount = completedItems.size + 1;
+      const booksCount = completedMissions.filter(m => m.mission_type === 'book').length + (item.type === 'book' ? 1 : 0);
+      const coursesCount = completedMissions.filter(m => m.mission_type === 'course').length + (item.type === 'course' ? 1 : 0);
+      const missionsOnlyCount = completedMissions.filter(m => m.mission_type === 'mission').length + (item.type === 'mission' ? 1 : 0);
+
+      await checkAndAwardBadges({
+        totalPoints: newPoints,
+        booksCount,
+        coursesCount,
+        missionsCount: missionsOnlyCount
+      });
 
       // Check for phase change
       if (previousPhase.name !== newPhase.name) {

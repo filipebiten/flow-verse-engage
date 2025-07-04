@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,10 +27,21 @@ import {
   X
 } from 'lucide-react';
 
+// Função para obter informações da fase (movida para o topo)
+const getPhaseInfo = (phase: string) => {
+  const phases = {
+    "Riacho": { emoji: "🌀", color: "bg-green-100 text-green-800", phrase: "Começando a fluir" },
+    "Correnteza": { emoji: "🌊", color: "bg-blue-100 text-blue-800", phrase: "Sendo levado por algo maior" },
+    "Cachoeira": { emoji: "💥", color: "bg-purple-100 text-purple-800", phrase: "Entregue ao movimento de Deus" },
+    "Oceano": { emoji: "🌌", color: "bg-gray-900 text-white", phrase: "Profundamente imerso em Deus" }
+  };
+  return phases[phase as keyof typeof phases] || phases["Riacho"];
+};
+
 const Profile = () => {
   const { toast } = useToast();
   const { user, signOut } = useAuth();
-  const { profile, completedMissions, userBadges, refreshUserData } = useUserProfile();
+  const { profile, completedMissions, userBadges, refreshUserData, loading } = useUserProfile();
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
@@ -146,7 +158,11 @@ const Profile = () => {
           variant: "destructive"
         });
       } else {
-        const publicUrl = `${supabase.storageUrl}/avatars/${filePath}`;
+        // Usar o método correto para obter URL pública
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+        
         setProfilePhotoUrl(publicUrl);
         toast({
           title: "Sucesso",
@@ -163,18 +179,6 @@ const Profile = () => {
     } finally {
       setUploading(false);
     }
-  };
-
-  const phaseInfo = profile ? getPhaseInfo(profile.phase) : getPhaseInfo('Riacho');
-
-  const getPhaseInfo = (phase: string) => {
-    const phases = {
-      "Riacho": { emoji: "🌀", color: "bg-green-100 text-green-800", phrase: "Começando a fluir" },
-      "Correnteza": { emoji: "🌊", color: "bg-blue-100 text-blue-800", phrase: "Sendo levado por algo maior" },
-      "Cachoeira": { emoji: "💥", color: "bg-purple-100 text-purple-800", phrase: "Entregue ao movimento de Deus" },
-      "Oceano": { emoji: "🌌", color: "bg-gray-900 text-white", phrase: "Profundamente imerso em Deus" }
-    };
-    return phases[phase as keyof typeof phases] || phases["Riacho"];
   };
 
   const getBadgeInfo = (badgeId: string) => {
@@ -198,6 +202,29 @@ const Profile = () => {
     };
     return badges[badgeId as keyof typeof badges];
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Perfil não encontrado.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const phaseInfo = getPhaseInfo(profile.phase || 'Riacho');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50">
