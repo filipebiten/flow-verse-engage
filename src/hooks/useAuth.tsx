@@ -17,15 +17,17 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         // Fetch and store user profile when signed in
-        if (session?.user && event === 'SIGNED_IN') {
+        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
           try {
-            const { data: profile } = await supabase
+            const { data: profile, error } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', session.user.id)
               .single();
 
-            if (profile) {
+            if (error && error.code !== 'PGRST116') {
+              console.error('Error fetching profile:', error);
+            } else if (profile) {
               localStorage.setItem('currentUser', JSON.stringify({
                 id: profile.id,
                 name: profile.name,

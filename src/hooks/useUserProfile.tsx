@@ -1,109 +1,128 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserProfile {
   id: string;
   name: string;
   email: string;
+  points: number;
+  phase: string;
+  is_admin: boolean;
   whatsapp?: string;
   birth_date?: string;
   gender?: string;
   pgm_role?: string;
   pgm_number?: string;
-  participates_flow_up?: boolean;
-  participates_irmandade?: boolean;
-  is_admin?: boolean;
-  points?: number;
+  participates_flow_up: boolean;
+  participates_irmandade: boolean;
   profile_photo_url?: string;
-  phase?: string;
+  created_at: string;
   consecutive_days?: number;
+}
+
+interface CompletedMission {
+  id: string;
+  mission_id: string;
+  mission_name: string;
+  mission_type: string;
+  points: number;
+  completed_at: string;
+  period?: string;
+  school?: string;
+}
+
+interface UserBadge {
+  id: string;
+  badge_name: string;
+  badge_icon: string;
+  earned_at: string;
 }
 
 export const useUserProfile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      setLoading(false);
-      return;
-    }
-
-    const fetchProfile = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching profile:', error);
-          setError(error.message);
-        } else {
-          setProfile(data);
-          // Store in localStorage for app-wide access
-          localStorage.setItem('currentUser', JSON.stringify({
-            id: data.id,
-            name: data.name,
-            email: data.email,
-            isAdmin: data.is_admin,
-            points: data.points || 0,
-            pgmRole: data.pgm_role,
-            pgmNumber: data.pgm_number,
-            profilePhoto: data.profile_photo_url,
-            whatsapp: data.whatsapp,
-            birthDate: data.birth_date,
-            gender: data.gender,
-            participatesFlowUp: data.participates_flow_up,
-            participatesIrmandade: data.participates_irmandade,
-            phase: data.phase,
-            consecutiveDays: data.consecutive_days
-          }));
-        }
-      } catch (err) {
-        console.error('Error in fetchProfile:', err);
-        setError('Erro ao carregar perfil');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchProfile();
-  }, [user]);
-
-  const updateProfile = async (updates: Partial<UserProfile>) => {
+  const loadUserData = async () => {
     if (!user) return;
-
+    
+    setLoading(true);
     try {
-      const { error } = await supabase
+      // Load profile
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
-      if (error) {
-        throw error;
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+        return;
       }
 
-      // Update local state
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
-      
-      // Update localStorage
-      const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-      localStorage.setItem('currentUser', JSON.stringify({
-        ...currentUser,
-        ...updates
-      }));
+      setProfile(profileData);
+
+      // Load completed missions
+      const { data: missionsData, error: missionsError } = await supabase
+        .from('missions_completed')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('completed_at', { ascending: false });
+
+      if (missionsError) {
+        console.error('Error loading completed missions:', missionsError);
+      } else {
+        setCompletedMissions(missionsData || []);
+      }
+
+      // Load user badges
+      const { data: badgesData, error: badgesError } = await supabase
+        .from('user_badges')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('earned_at', { ascending: false });
+
+      if (badgesError) {
+        console.error('Error loading badges:', badgesError);
+      } else {
+        setUserBadges(badgesData || []);
+      }
+
     } catch (error) {
-      console.error('Error updating profile:', error);
-      throw error;
+      console.error('Error loading user data:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  return { profile, loading, error, updateProfile };
+  useEffect(() => {
+    loadUserData();
+  }, [user]);
+
+  const refreshUserData = () => {
+    loadUserData();
+  };
+
+  const getMissionsByType = (type: string) => {
+    return completedMissions.filter(mission => mission.mission_type === type);
+  };
+
+  const getBooksList = () => getMissionsByType('book');
+  const getCoursesList = () => getMissionsByType('course');
+  const getMissionsList = () => getMissionsByType('mission');
+
+  return {
+    profile,
+    completedMissions,
+    userBadges,
+    loading,
+    refreshUserData,
+    getBooksList,
+    getCoursesList,
+    getMissionsList
+  };
 };

@@ -12,7 +12,8 @@ import {
   Target, 
   CheckCircle, 
   BookOpen, 
-  GraduationCap
+  GraduationCap,
+  Award
 } from 'lucide-react';
 
 interface Mission {
@@ -25,6 +26,23 @@ interface Mission {
   school?: string;
 }
 
+interface BadgeDefinition {
+  id: string;
+  badge_key: string;
+  name: string;
+  description: string;
+  icon: string;
+  requirement_type: string;
+  requirement_count: number;
+}
+
+interface UserBadge {
+  id: string;
+  badge_name: string;
+  badge_icon: string;
+  earned_at: string;
+}
+
 const Missions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -33,6 +51,8 @@ const Missions = () => {
   const [courses, setCourses] = useState<Mission[]>([]);
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [badgeDefinitions, setBadgeDefinitions] = useState<BadgeDefinition[]>([]);
   const [showPhaseDialog, setShowPhaseDialog] = useState(false);
   const [previousPoints, setPreviousPoints] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -55,11 +75,11 @@ const Missions = () => {
       setUserProfile(profile);
       setPreviousPoints(profile?.points || 0);
 
-      // Load missions, books, courses and transform them
+      // Load missions, books, courses
       const [missionsResult, booksResult, coursesResult] = await Promise.all([
-        supabase.from('missions').select('*'),
-        supabase.from('books').select('*'),
-        supabase.from('courses').select('*')
+        supabase.from('missions').select('*').order('created_at', { ascending: false }),
+        supabase.from('books').select('*').order('created_at', { ascending: false }),
+        supabase.from('courses').select('*').order('created_at', { ascending: false })
       ]);
 
       // Transform database results to match Mission interface
@@ -101,6 +121,22 @@ const Missions = () => {
 
       const completedIds = new Set(completed?.map(item => item.mission_id) || []);
       setCompletedItems(completedIds);
+
+      // Load user badges and badge definitions
+      const [userBadgesResult, badgeDefsResult] = await Promise.all([
+        supabase
+          .from('user_badges')
+          .select('*')
+          .eq('user_id', user?.id)
+          .order('earned_at', { ascending: false }),
+        supabase
+          .from('badge_definitions')
+          .select('*')
+          .order('requirement_count', { ascending: true })
+      ]);
+
+      setUserBadges(userBadgesResult.data || []);
+      setBadgeDefinitions(badgeDefsResult.data || []);
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -177,7 +213,6 @@ const Missions = () => {
 
       // Check for phase change
       if (previousPhase.name !== newPhase.name) {
-        // Save phase change
         await supabase
           .from('phase_changes')
           .insert({
@@ -190,6 +225,26 @@ const Missions = () => {
 
         setPreviousPoints(userProfile?.points || 0);
         setShowPhaseDialog(true);
+      }
+
+      // Reload badges to check for new ones
+      const { data: newUserBadges } = await supabase
+        .from('user_badges')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('earned_at', { ascending: false });
+      
+      if (newUserBadges && newUserBadges.length > userBadges.length) {
+        setUserBadges(newUserBadges);
+        const newBadge = newUserBadges.find(badge => 
+          !userBadges.some(oldBadge => oldBadge.id === badge.id)
+        );
+        if (newBadge) {
+          toast({
+            title: "🏆 Novo Badge Conquistado!",
+            description: `Você desbloqueou: ${newBadge.badge_name}`,
+          });
+        }
       }
 
       toast({
@@ -205,6 +260,64 @@ const Missions = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const renderBadgesSection = () => {
+    const earnedBadgeNames = new Set(userBadges.map(badge => badge.badge_name));
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Award className="w-5 h-5" />
+            Badges e Conquistas ({userBadges.length}/{badgeDefinitions.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {badgeDefinitions.map((badgeDef) => {
+              const isEarned = earnedBadgeNames.has(badgeDef.name);
+              const userBadge = userBadges.find(badge => badge.badge_name === badgeDef.name);
+              
+              return (
+                <div
+                  key={badgeDef.id}
+                  className={`p-4 rounded-lg border text-center transition-all ${
+                    isEarned 
+                      ? 'bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-300 shadow-md' 
+                      : 'bg-gray-50 border-gray-200 opacity-60'
+                  }`}
+                >
+                  <div className={`text-3xl mb-2 ${isEarned ? '' : 'grayscale'}`}>
+                    {badgeDef.icon}
+                  </div>
+                  <h4 className={`font-semibold text-sm ${isEarned ? 'text-yellow-800' : 'text-gray-500'}`}>
+                    {badgeDef.name}
+                  </h4>
+                  <p className={`text-xs mt-1 ${isEarned ? 'text-yellow-700' : 'text-gray-400'}`}>
+                    {badgeDef.description}
+                  </p>
+                  <div className={`text-xs mt-2 ${isEarned ? 'text-green-600' : 'text-gray-400'}`}>
+                    {isEarned ? (
+                      <span>✓ Conquistado</span>
+                    ) : (
+                      <span>
+                        {badgeDef.requirement_count} {
+                          badgeDef.requirement_type === 'books' ? 'livros' :
+                          badgeDef.requirement_type === 'courses' ? 'cursos' :
+                          badgeDef.requirement_type === 'missions' ? 'missões' :
+                          'pontos'
+                        }
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   const renderItems = (items: Mission[], title: string, icon: React.ReactNode, emptyMessage: string) => (
@@ -303,7 +416,7 @@ const Missions = () => {
             </div>
           </div>
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">{userProfile?.points || 0}</div>
                 <p className="text-sm text-gray-600">Pontos Totais</p>
@@ -315,6 +428,10 @@ const Missions = () => {
               <div className="text-center">
                 <div className="text-2xl font-bold text-purple-600">{currentPhase.name}</div>
                 <p className="text-sm text-gray-600">Fase Atual</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-yellow-600">{userBadges.length}</div>
+                <p className="text-sm text-gray-600">Badges</p>
               </div>
             </div>
             
@@ -334,6 +451,9 @@ const Missions = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Badges Section */}
+        {renderBadgesSection()}
 
         {/* Missions, Books, Courses */}
         <div className="space-y-6">
