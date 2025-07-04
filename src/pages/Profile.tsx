@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -13,21 +12,19 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-  User, 
   Settings, 
   Trophy, 
   BookOpen, 
   GraduationCap, 
   Target,
   Upload,
-  CheckSquare,
   Award,
   Edit,
   Save,
   X
 } from 'lucide-react';
 
-// Função para obter informações da fase (movida para o topo)
+// Função para obter informações da fase
 const getPhaseInfo = (phase: string) => {
   const phases = {
     "Riacho": { emoji: "🌀", color: "bg-green-100 text-green-800", phrase: "Começando a fluir" },
@@ -158,7 +155,6 @@ const Profile = () => {
           variant: "destructive"
         });
       } else {
-        // Usar o método correto para obter URL pública
         const { data: { publicUrl } } = supabase.storage
           .from('avatars')
           .getPublicUrl(filePath);
@@ -183,24 +179,16 @@ const Profile = () => {
 
   const getBadgeInfo = (badgeId: string) => {
     const badges = {
-      'consecutive-days-7': { name: '7 Dias de Consistência', icon: '🗓️', description: '7 dias seguidos completando missões.' },
-      'consecutive-days-15': { name: '15 Dias de Consistência', icon: '🔥', description: '15 dias seguidos completando missões.' },
-      'consecutive-days-30': { name: '30 Dias de Consistência', icon: '🚀', description: '30 dias seguidos completando missões.' },
-      'consecutive-days-60': { name: 'Hábito Formado', icon: '💪', description: '60 dias seguidos completando missões.' },
-      'reader-1': { name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.' },
-      'reader-2': { name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.' },
-      'reader-3': { name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.' },
-      'reader-4': { name: 'Mente Brilhante', icon: '🧠✨', description: 'Um verdadeiro devorador de sabedoria.' },
-      'course-1': { name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.' },
-      'course-2': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.' },
-      'course-3': { name: 'Líder em Construção', icon: '🛠️🎓', description: 'Preparando-se para grandes responsabilidades.' },
-      'course-4': { name: 'Mestre da Jornada', icon: '🧙‍♂️📘', description: 'Um veterano na trilha do aprendizado.' },
-      'mission-1': { name: 'Primeiro Passo', icon: '🎯', description: 'Completou a primeira missão.' },
-      'mission-5': { name: 'Focado no Alvo', icon: '🏹', description: 'Completou 5 missões.' },
-      'mission-10': { name: 'Atirador de Elite', icon: '🎯🎯', description: 'Completou 10 missões.' },
-      'mission-20': { name: 'Mestre das Missões', icon: '🏆', description: 'Completou 20 missões.' },
+      'Leitor Iniciante': { name: 'Leitor Iniciante', icon: '📖', description: 'Começando a jornada da leitura.' },
+      'Leitor Fluente': { name: 'Leitor Fluente', icon: '📚', description: 'Já tem o hábito da leitura.' },
+      'Leitor Voraz': { name: 'Leitor Voraz', icon: '🔥📚', description: 'Não larga um bom livro por nada.' },
+      'Discípulo em Formação': { name: 'Discípulo em Formação', icon: '🎓', description: 'Iniciando sua jornada de formação.' },
+      'Aprendiz Dedicado': { name: 'Aprendiz Dedicado', icon: '📘🎓', description: 'Mostrando sede de crescimento.' },
+      'Primeiro Passo': { name: 'Primeiro Passo', icon: '🎯', description: 'Completou a primeira missão.' },
+      'Focado no Alvo': { name: 'Focado no Alvo', icon: '🏹', description: 'Completou 5 missões.' },
+      'Pontuador Iniciante': { name: 'Pontuador Iniciante', icon: '⭐', description: 'Alcançou 100 pontos.' }
     };
-    return badges[badgeId as keyof typeof badges];
+    return badges[badgeId as keyof typeof badges] || { name: badgeId, icon: '🏆', description: 'Badge conquistado!' };
   };
 
   if (loading) {
@@ -219,6 +207,9 @@ const Profile = () => {
       <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600">Perfil não encontrado.</p>
+          <Button onClick={() => window.location.reload()} className="mt-4">
+            Recarregar
+          </Button>
         </div>
       </div>
     );
@@ -263,7 +254,7 @@ const Profile = () => {
                     {phaseInfo.emoji} {profile?.phase}
                   </Badge>
                   <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                    {profile?.points} pontos
+                    {profile?.points || 0} pontos
                   </Badge>
                   {profile?.participates_flow_up && (
                     <Badge variant="secondary" className="bg-orange-100 text-orange-800">
@@ -441,7 +432,6 @@ const Profile = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {userBadges.map((badge) => {
                   const badgeInfo = getBadgeInfo(badge.badge_name);
-                  if (!badgeInfo) return null;
                   
                   return (
                     <div key={badge.id} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">

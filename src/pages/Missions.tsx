@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,17 @@ interface UserBadge {
   earned_at: string;
 }
 
+interface CompletedMission {
+  id: string;
+  mission_id: string;
+  mission_name: string;
+  mission_type: string;
+  points: number;
+  completed_at: string;
+  period?: string;
+  school?: string;
+}
+
 const Missions = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -41,11 +53,12 @@ const Missions = () => {
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
   const [userProfile, setUserProfile] = useState<any>(null);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
   const [showPhaseDialog, setShowPhaseDialog] = useState(false);
   const [previousPoints, setPreviousPoints] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  // Definições de badges mockadas
+  // Badge definitions
   const badgeDefinitions = [
     { id: '1', badge_key: 'reader-1', name: 'Leitor Iniciante', description: 'Leu primeiro livro', icon: '📖', requirement_type: 'books', requirement_count: 1 },
     { id: '2', badge_key: 'reader-2', name: 'Leitor Fluente', description: 'Leu 3 livros', icon: '📚', requirement_type: 'books', requirement_count: 3 },
@@ -81,8 +94,7 @@ const Missions = () => {
         setPreviousPoints(profile?.points || 0);
       }
 
-      // Load missions, books, courses com logs detalhados
-      console.log('Loading missions...');
+      // Load missions
       const { data: missionsData, error: missionsError } = await supabase
         .from('missions')
         .select('*')
@@ -131,10 +143,6 @@ const Missions = () => {
         school: item.school
       }));
 
-      console.log('Transformed missions:', transformedMissions);
-      console.log('Transformed books:', transformedBooks);
-      console.log('Transformed courses:', transformedCourses);
-
       setMissions(transformedMissions);
       setBooks(transformedBooks);
       setCourses(transformedCourses);
@@ -142,13 +150,16 @@ const Missions = () => {
       // Load completed items
       const { data: completed, error: completedError } = await supabase
         .from('missions_completed')
-        .select('mission_id')
+        .select('*')
         .eq('user_id', user?.id);
 
       console.log('Completed missions:', completed, 'Error:', completedError);
 
-      const completedIds = new Set(completed?.map(item => item.mission_id) || []);
-      setCompletedItems(completedIds);
+      if (completed) {
+        const completedIds = new Set(completed.map(item => item.mission_id));
+        setCompletedItems(completedIds);
+        setCompletedMissions(completed);
+      }
 
       // Load user badges
       const { data: userBadgesResult, error: badgesError } = await supabase
@@ -294,7 +305,6 @@ const Missions = () => {
       setCompletedItems(prev => new Set([...prev, item.id]));
 
       // Check and award badges
-      const completedMissionsCount = completedItems.size + 1;
       const booksCount = completedMissions.filter(m => m.mission_type === 'book').length + (item.type === 'book' ? 1 : 0);
       const coursesCount = completedMissions.filter(m => m.mission_type === 'course').length + (item.type === 'course' ? 1 : 0);
       const missionsOnlyCount = completedMissions.filter(m => m.mission_type === 'mission').length + (item.type === 'mission' ? 1 : 0);
