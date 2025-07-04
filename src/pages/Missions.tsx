@@ -65,6 +65,8 @@ const Missions = () => {
 
   const loadData = async () => {
     try {
+      console.log('Loading missions data...');
+      
       // Load user profile
       const { data: profile } = await supabase
         .from('profiles')
@@ -122,21 +124,28 @@ const Missions = () => {
       const completedIds = new Set(completed?.map(item => item.mission_id) || []);
       setCompletedItems(completedIds);
 
-      // Load user badges and badge definitions
-      const [userBadgesResult, badgeDefsResult] = await Promise.all([
-        supabase
-          .from('user_badges')
-          .select('*')
-          .eq('user_id', user?.id)
-          .order('earned_at', { ascending: false }),
-        supabase
-          .from('badge_definitions')
-          .select('*')
-          .order('requirement_count', { ascending: true })
-      ]);
+      // Load user badges
+      const { data: userBadgesResult } = await supabase
+        .from('user_badges')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('earned_at', { ascending: false });
 
-      setUserBadges(userBadgesResult.data || []);
-      setBadgeDefinitions(badgeDefsResult.data || []);
+      setUserBadges(userBadgesResult || []);
+
+      // Create mock badge definitions since the table doesn't exist yet
+      const mockBadgeDefinitions: BadgeDefinition[] = [
+        { id: '1', badge_key: 'reader-1', name: 'Leitor Iniciante', description: 'Leu primeiro livro', icon: '📖', requirement_type: 'books', requirement_count: 1 },
+        { id: '2', badge_key: 'reader-2', name: 'Leitor Fluente', description: 'Leu 3 livros', icon: '📚', requirement_type: 'books', requirement_count: 3 },
+        { id: '3', badge_key: 'reader-3', name: 'Leitor Voraz', description: 'Leu 5 livros', icon: '🔥📚', requirement_type: 'books', requirement_count: 5 },
+        { id: '4', badge_key: 'course-1', name: 'Discípulo em Formação', description: 'Completou primeiro curso', icon: '🎓', requirement_type: 'courses', requirement_count: 1 },
+        { id: '5', badge_key: 'course-2', name: 'Aprendiz Dedicado', description: 'Completou 3 cursos', icon: '📘🎓', requirement_type: 'courses', requirement_count: 3 },
+        { id: '6', badge_key: 'mission-1', name: 'Primeiro Passo', description: 'Completou primeira missão', icon: '🎯', requirement_type: 'missions', requirement_count: 1 },
+        { id: '7', badge_key: 'mission-2', name: 'Focado no Alvo', description: 'Completou 5 missões', icon: '🏹', requirement_type: 'missions', requirement_count: 5 },
+        { id: '8', badge_key: 'points-1', name: 'Pontuador Iniciante', description: 'Alcançou 100 pontos', icon: '⭐', requirement_type: 'points', requirement_count: 100 }
+      ];
+      
+      setBadgeDefinitions(mockBadgeDefinitions);
 
     } catch (error) {
       console.error('Error loading data:', error);
@@ -161,6 +170,8 @@ const Missions = () => {
     if (completedItems.has(item.id) || !user) return;
 
     try {
+      console.log('Completing item:', item.name);
+      
       // Insert completed mission
       const { error } = await supabase
         .from('missions_completed')
@@ -227,26 +238,6 @@ const Missions = () => {
         setShowPhaseDialog(true);
       }
 
-      // Reload badges to check for new ones
-      const { data: newUserBadges } = await supabase
-        .from('user_badges')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('earned_at', { ascending: false });
-      
-      if (newUserBadges && newUserBadges.length > userBadges.length) {
-        setUserBadges(newUserBadges);
-        const newBadge = newUserBadges.find(badge => 
-          !userBadges.some(oldBadge => oldBadge.id === badge.id)
-        );
-        if (newBadge) {
-          toast({
-            title: "🏆 Novo Badge Conquistado!",
-            description: `Você desbloqueou: ${newBadge.badge_name}`,
-          });
-        }
-      }
-
       toast({
         title: "Parabéns! 🎉",
         description: `Você completou "${item.name}" e ganhou ${item.points} pontos!`,
@@ -277,7 +268,6 @@ const Missions = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {badgeDefinitions.map((badgeDef) => {
               const isEarned = earnedBadgeNames.has(badgeDef.name);
-              const userBadge = userBadges.find(badge => badge.badge_name === badgeDef.name);
               
               return (
                 <div

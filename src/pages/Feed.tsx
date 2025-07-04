@@ -85,99 +85,130 @@ const Feed = () => {
 
   const loadFeedData = async () => {
     try {
-      // Load recent activities with user info
+      console.log('Loading feed data...');
+      
+      // Load recent activities
       const { data: activitiesData, error: activitiesError } = await supabase
         .from('missions_completed')
-        .select(`
-          *,
-          profiles!inner(name, profile_photo_url, phase)
-        `)
+        .select('*')
         .order('completed_at', { ascending: false })
         .limit(20);
 
       if (activitiesError) {
         console.error('Error loading activities:', activitiesError);
-      } else {
-        const formattedActivities = (activitiesData || []).map(activity => ({
-          id: activity.id,
-          user_id: activity.user_id,
-          mission_name: activity.mission_name,
-          mission_type: activity.mission_type,
-          points: activity.points,
-          completed_at: activity.completed_at,
-          period: activity.period,
-          school: activity.school,
-          user_name: activity.profiles.name,
-          user_photo: activity.profiles.profile_photo_url,
-          user_phase: activity.profiles.phase
-        }));
-        setActivities(formattedActivities);
       }
+
+      // Load all profiles to get user info
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('points', { ascending: false });
+
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+      }
+
+      // Create a map of user profiles
+      const profilesMap = new Map();
+      if (profilesData) {
+        profilesData.forEach(profile => {
+          profilesMap.set(profile.id, profile);
+        });
+      }
+
+      // Format activities with user info
+      const formattedActivities: FeedActivity[] = [];
+      if (activitiesData) {
+        activitiesData.forEach(activity => {
+          const userProfile = profilesMap.get(activity.user_id);
+          if (userProfile) {
+            formattedActivities.push({
+              id: activity.id,
+              user_id: activity.user_id,
+              mission_name: activity.mission_name,
+              mission_type: activity.mission_type,
+              points: activity.points,
+              completed_at: activity.completed_at,
+              period: activity.period,
+              school: activity.school,
+              user_name: userProfile.name,
+              user_photo: userProfile.profile_photo_url,
+              user_phase: userProfile.phase
+            });
+          }
+        });
+      }
+      setActivities(formattedActivities);
 
       // Load recent phase changes
       const { data: phaseData, error: phaseError } = await supabase
         .from('phase_changes')
-        .select(`
-          *,
-          profiles!inner(name, profile_photo_url)
-        `)
+        .select('*')
         .order('changed_at', { ascending: false })
         .limit(10);
 
       if (phaseError) {
         console.error('Error loading phase changes:', phaseError);
-      } else {
-        const formattedPhaseChanges = (phaseData || []).map(change => ({
-          id: change.id,
-          user_id: change.user_id,
-          previous_phase: change.previous_phase,
-          new_phase: change.new_phase,
-          phase_icon: change.phase_icon,
-          total_points: change.total_points,
-          changed_at: change.changed_at,
-          user_name: change.profiles.name,
-          user_photo: change.profiles.profile_photo_url
-        }));
-        setPhaseChanges(formattedPhaseChanges);
       }
+
+      // Format phase changes with user info
+      const formattedPhaseChanges: PhaseChange[] = [];
+      if (phaseData) {
+        phaseData.forEach(change => {
+          const userProfile = profilesMap.get(change.user_id);
+          if (userProfile) {
+            formattedPhaseChanges.push({
+              id: change.id,
+              user_id: change.user_id,
+              previous_phase: change.previous_phase,
+              new_phase: change.new_phase,
+              phase_icon: change.phase_icon,
+              total_points: change.total_points,
+              changed_at: change.changed_at,
+              user_name: userProfile.name,
+              user_photo: userProfile.profile_photo_url
+            });
+          }
+        });
+      }
+      setPhaseChanges(formattedPhaseChanges);
 
       // Load recent badge activities
       const { data: badgeData, error: badgeError } = await supabase
         .from('user_badges')
-        .select(`
-          *,
-          profiles!inner(name, profile_photo_url)
-        `)
+        .select('*')
         .order('earned_at', { ascending: false })
         .limit(10);
 
       if (badgeError) {
         console.error('Error loading badges:', badgeError);
-      } else {
-        const formattedBadges = (badgeData || []).map(badge => ({
-          id: badge.id,
-          user_id: badge.user_id,
-          badge_name: badge.badge_name,
-          badge_icon: badge.badge_icon,
-          earned_at: badge.earned_at,
-          user_name: badge.profiles.name,
-          user_photo: badge.profiles.profile_photo_url
-        }));
-        setBadgeActivities(formattedBadges);
       }
 
-      // Load stats
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('name, points, phase, profile_photo_url')
-        .order('points', { ascending: false });
+      // Format badges with user info
+      const formattedBadges: UserBadge[] = [];
+      if (badgeData) {
+        badgeData.forEach(badge => {
+          const userProfile = profilesMap.get(badge.user_id);
+          if (userProfile) {
+            formattedBadges.push({
+              id: badge.id,
+              user_id: badge.user_id,
+              badge_name: badge.badge_name,
+              badge_icon: badge.badge_icon,
+              earned_at: badge.earned_at,
+              user_name: userProfile.name,
+              user_photo: userProfile.profile_photo_url
+            });
+          }
+        });
+      }
+      setBadgeActivities(formattedBadges);
 
-      if (profilesError) {
-        console.error('Error loading profiles:', profilesError);
-      } else {
-        const totalUsers = profilesData?.length || 0;
-        const totalPoints = profilesData?.reduce((sum, profile) => sum + (profile.points || 0), 0) || 0;
-        const topUsers = (profilesData || []).slice(0, 5).map(profile => ({
+      // Set stats
+      if (profilesData) {
+        const totalUsers = profilesData.length;
+        const totalPoints = profilesData.reduce((sum, profile) => sum + (profile.points || 0), 0);
+        const topUsers = profilesData.slice(0, 5).map(profile => ({
           name: profile.name,
           points: profile.points || 0,
           phase: profile.phase || 'Riacho',
@@ -257,17 +288,17 @@ const Feed = () => {
   // Combine all activities for timeline
   const allActivities = [
     ...activities.map(activity => ({
-      type: 'mission',
+      type: 'mission' as const,
       data: activity,
       timestamp: activity.completed_at
     })),
     ...phaseChanges.map(change => ({
-      type: 'phase',
+      type: 'phase' as const,
       data: change,
       timestamp: change.changed_at
     })),
     ...badgeActivities.map(badge => ({
-      type: 'badge',
+      type: 'badge' as const,
       data: badge,
       timestamp: badge.earned_at
     }))
@@ -365,17 +396,17 @@ const Feed = () => {
                           <div>
                             <p className="text-sm">
                               <span className="font-medium">{item.data.user_name}</span>
-                              {' '}completou o {getMissionTypeLabel(item.data.mission_type)} {' '}
-                              <span className="font-medium">{item.data.mission_name}</span>
+                              {' '}completou o {getMissionTypeLabel((item.data as FeedActivity).mission_type)} {' '}
+                              <span className="font-medium">{(item.data as FeedActivity).mission_name}</span>
                             </p>
                             <div className="flex items-center space-x-2 mt-1">
-                              {getMissionIcon(item.data.mission_type)}
+                              {getMissionIcon((item.data as FeedActivity).mission_type)}
                               <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                +{item.data.points} pts
+                                +{(item.data as FeedActivity).points} pts
                               </Badge>
-                              {item.data.period && (
+                              {(item.data as FeedActivity).period && (
                                 <Badge variant="outline" className="text-xs">
-                                  {item.data.period}
+                                  {(item.data as FeedActivity).period}
                                 </Badge>
                               )}
                               <span className="text-xs text-gray-500">
@@ -389,15 +420,15 @@ const Feed = () => {
                           <div>
                             <p className="text-sm">
                               <span className="font-medium">{item.data.user_name}</span>
-                              {' '}avançou de fase: {item.data.previous_phase} → {item.data.new_phase}
+                              {' '}avançou de fase: {(item.data as PhaseChange).previous_phase} → {(item.data as PhaseChange).new_phase}
                             </p>
                             <div className="flex items-center space-x-2 mt-1">
-                              <span className="text-lg">{item.data.phase_icon}</span>
-                              <Badge className={getPhaseInfo(item.data.new_phase).color}>
-                                {item.data.new_phase}
+                              <span className="text-lg">{(item.data as PhaseChange).phase_icon}</span>
+                              <Badge className={getPhaseInfo((item.data as PhaseChange).new_phase).color}>
+                                {(item.data as PhaseChange).new_phase}
                               </Badge>
                               <Badge variant="secondary">
-                                {item.data.total_points} pts total
+                                {(item.data as PhaseChange).total_points} pts total
                               </Badge>
                               <span className="text-xs text-gray-500">
                                 {formatTimeAgo(item.timestamp)}
@@ -413,9 +444,9 @@ const Feed = () => {
                               {' '}conquistou um novo badge!
                             </p>
                             <div className="flex items-center space-x-2 mt-1">
-                              <span className="text-lg">{item.data.badge_icon}</span>
+                              <span className="text-lg">{(item.data as UserBadge).badge_icon}</span>
                               <Badge className="bg-purple-100 text-purple-700">
-                                {item.data.badge_name}
+                                {(item.data as UserBadge).badge_name}
                               </Badge>
                               <span className="text-xs text-gray-500">
                                 {formatTimeAgo(item.timestamp)}
