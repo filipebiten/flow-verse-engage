@@ -9,65 +9,84 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
-        setSession(session);
-        setUser(session?.user ?? null);
         
-        // Fetch and store user profile when signed in
-        if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-          try {
-            const { data: profile, error } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // Fetch and store user profile when signed in
+          if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+            try {
+              const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', session.user.id)
+                .single();
 
-            if (error && error.code !== 'PGRST116') {
+              if (error && error.code !== 'PGRST116') {
+                console.error('Error fetching profile:', error);
+              } else if (profile) {
+                localStorage.setItem('currentUser', JSON.stringify({
+                  id: profile.id,
+                  name: profile.name,
+                  email: profile.email,
+                  isAdmin: profile.is_admin,
+                  points: profile.points || 0,
+                  pgmRole: profile.pgm_role,
+                  pgmNumber: profile.pgm_number,
+                  profilePhoto: profile.profile_photo_url,
+                  whatsapp: profile.whatsapp,
+                  birthDate: profile.birth_date,
+                  gender: profile.gender,
+                  participatesFlowUp: profile.participates_flow_up,
+                  participatesIrmandade: profile.participates_irmandade,
+                  phase: profile.phase,
+                  consecutiveDays: profile.consecutive_days
+                }));
+              }
+            } catch (error) {
               console.error('Error fetching profile:', error);
-            } else if (profile) {
-              localStorage.setItem('currentUser', JSON.stringify({
-                id: profile.id,
-                name: profile.name,
-                email: profile.email,
-                isAdmin: profile.is_admin,
-                points: profile.points || 0,
-                pgmRole: profile.pgm_role,
-                pgmNumber: profile.pgm_number,
-                profilePhoto: profile.profile_photo_url,
-                whatsapp: profile.whatsapp,
-                birthDate: profile.birth_date,
-                gender: profile.gender,
-                participatesFlowUp: profile.participates_flow_up,
-                participatesIrmandade: profile.participates_irmandade,
-                phase: profile.phase,
-                consecutiveDays: profile.consecutive_days
-              }));
             }
-          } catch (error) {
-            console.error('Error fetching profile:', error);
+          }
+          
+          // Clear localStorage when signing out
+          if (event === 'SIGNED_OUT') {
+            localStorage.removeItem('currentUser');
           }
         }
-        
-        // Clear localStorage when signing out
-        if (event === 'SIGNED_OUT') {
-          localStorage.removeItem('currentUser');
-        }
-        
-        setLoading(false);
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
