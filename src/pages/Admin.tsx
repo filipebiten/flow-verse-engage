@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Users, 
   Target, 
@@ -22,10 +24,12 @@ import {
 const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
   const [missions, setMissions] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Form states
   const [missionForm, setMissionForm] = useState({
@@ -40,107 +44,175 @@ const Admin = () => {
   const [adminEmail, setAdminEmail] = useState('');
 
   useEffect(() => {
-    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-    if (!currentUser.isAdmin) {
+    checkAdminAndLoadData();
+  }, [user]);
+
+  const checkAdminAndLoadData = async () => {
+    if (!user) {
       navigate('/');
       return;
     }
-    loadData();
-  }, [navigate]);
 
-  const loadData = () => {
-    setUsers(JSON.parse(localStorage.getItem('users') || '[]'));
-    setMissions(JSON.parse(localStorage.getItem('missions') || '[]'));
-    setBooks(JSON.parse(localStorage.getItem('books') || '[]'));
-    setCourses(JSON.parse(localStorage.getItem('courses') || '[]'));
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile?.is_admin) {
+        navigate('/');
+        return;
+      }
+
+      await loadData();
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      navigate('/');
+    }
   };
 
-  const addMission = () => {
+  const loadData = async () => {
+    try {
+      const [missionsResult, booksResult, coursesResult, profilesResult] = await Promise.all([
+        supabase.from('missions').select('*').order('created_at', { ascending: false }),
+        supabase.from('books').select('*').order('created_at', { ascending: false }),
+        supabase.from('courses').select('*').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*').order('created_at', { ascending: false })
+      ]);
+
+      if (missionsResult.error) console.error('Error loading missions:', missionsResult.error);
+      if (booksResult.error) console.error('Error loading books:', booksResult.error);
+      if (coursesResult.error) console.error('Error loading courses:', coursesResult.error);
+      if (profilesResult.error) console.error('Error loading profiles:', profilesResult.error);
+
+      setMissions(missionsResult.data || []);
+      setBooks(booksResult.data || []);
+      setCourses(coursesResult.data || []);
+      setUsers(profilesResult.data || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      toast({ title: "Erro", description: "Erro ao carregar dados", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addMission = async () => {
     if (!missionForm.name || !missionForm.description || !missionForm.points) {
       toast({ title: "Erro", description: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
     }
 
-    const newMission = {
-      id: Date.now().toString(),
-      ...missionForm,
-      points: parseInt(missionForm.points),
-      type: 'mission'
-    };
+    try {
+      const { data, error } = await supabase
+        .from('missions')
+        .insert({
+          name: missionForm.name,
+          description: missionForm.description,
+          points: parseInt(missionForm.points),
+          period: missionForm.period
+        })
+        .select()
+        .single();
 
-    const updatedMissions = [...missions, newMission];
-    setMissions(updatedMissions);
-    localStorage.setItem('missions', JSON.stringify(updatedMissions));
-    
-    setMissionForm({ name: '', description: '', points: '', period: 'diário' });
-    toast({ title: "Sucesso", description: "Missão adicionada com sucesso!" });
+      if (error) throw error;
+
+      setMissions([...missions, data]);
+      setMissionForm({ name: '', description: '', points: '', period: 'diário' });
+      toast({ title: "Sucesso", description: "Missão adicionada com sucesso!" });
+    } catch (error) {
+      console.error('Error adding mission:', error);
+      toast({ title: "Erro", description: "Erro ao adicionar missão", variant: "destructive" });
+    }
   };
 
-  const addBook = () => {
+  const addBook = async () => {
     if (!bookForm.name || !bookForm.description || !bookForm.points) {
       toast({ title: "Erro", description: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
     }
 
-    const newBook = {
-      id: Date.now().toString(),
-      ...bookForm,
-      points: parseInt(bookForm.points),
-      type: 'book'
-    };
+    try {
+      const { data, error } = await supabase
+        .from('books')
+        .insert({
+          name: bookForm.name,
+          description: bookForm.description,
+          points: parseInt(bookForm.points)
+        })
+        .select()
+        .single();
 
-    const updatedBooks = [...books, newBook];
-    setBooks(updatedBooks);
-    localStorage.setItem('books', JSON.stringify(updatedBooks));
-    
-    setBookForm({ name: '', description: '', points: '' });
-    toast({ title: "Sucesso", description: "Livro adicionado com sucesso!" });
+      if (error) throw error;
+
+      setBooks([...books, data]);
+      setBookForm({ name: '', description: '', points: '' });
+      toast({ title: "Sucesso", description: "Livro adicionado with sucesso!" });
+    } catch (error) {
+      console.error('Error adding book:', error);
+      toast({ title: "Erro", description: "Erro ao adicionar livro", variant: "destructive" });
+    }
   };
 
-  const addCourse = () => {
+  const addCourse = async () => {
     if (!courseForm.name || !courseForm.description || !courseForm.points) {
       toast({ title: "Erro", description: "Preencha todos os campos obrigatórios", variant: "destructive" });
       return;
     }
 
-    const newCourse = {
-      id: Date.now().toString(),
-      ...courseForm,
-      points: parseInt(courseForm.points),
-      type: 'course'
-    };
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .insert({
+          name: courseForm.name,
+          description: courseForm.description,
+          points: parseInt(courseForm.points),
+          school: courseForm.school
+        })
+        .select()
+        .single();
 
-    const updatedCourses = [...courses, newCourse];
-    setCourses(updatedCourses);
-    localStorage.setItem('courses', JSON.stringify(updatedCourses));
-    
-    setCourseForm({ name: '', description: '', points: '', school: 'Escola do Discípulo' });
-    toast({ title: "Sucesso", description: "Curso adicionado com sucesso!" });
-  };
+      if (error) throw error;
 
-  const deleteItem = (id: string, type: 'missions' | 'books' | 'courses') => {
-    let updatedItems: any[] = [];
-    
-    switch (type) {
-      case 'missions':
-        updatedItems = missions.filter(item => item.id !== id);
-        setMissions(updatedItems);
-        break;
-      case 'books':
-        updatedItems = books.filter(item => item.id !== id);
-        setBooks(updatedItems);
-        break;
-      case 'courses':
-        updatedItems = courses.filter(item => item.id !== id);
-        setCourses(updatedItems);
-        break;
+      setCourses([...courses, data]);
+      setCourseForm({ name: '', description: '', points: '', school: 'Escola do Discípulo' });
+      toast({ title: "Sucesso", description: "Curso adicionado com sucesso!" });
+    } catch (error) {
+      console.error('Error adding course:', error);
+      toast({ title: "Erro", description: "Erro ao adicionar curso", variant: "destructive" });
     }
-    
-    localStorage.setItem(type, JSON.stringify(updatedItems));
-    toast({ title: "Sucesso", description: "Item removido com sucesso!" });
   };
 
-  const addAdmin = () => {
+  const deleteItem = async (id: string, type: 'missions' | 'books' | 'courses') => {
+    try {
+      const { error } = await supabase
+        .from(type)
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      switch (type) {
+        case 'missions':
+          setMissions(missions.filter(item => item.id !== id));
+          break;
+        case 'books':
+          setBooks(books.filter(item => item.id !== id));
+          break;
+        case 'courses':
+          setCourses(courses.filter(item => item.id !== id));
+          break;
+      }
+      
+      toast({ title: "Sucesso", description: "Item removido com sucesso!" });
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast({ title: "Erro", description: "Erro ao remover item", variant: "destructive" });
+    }
+  };
+
+  const addAdmin = async () => {
     if (!adminEmail) {
       toast({ title: "Erro", description: "Digite um email válido", variant: "destructive" });
       return;
@@ -152,20 +224,31 @@ const Admin = () => {
       return;
     }
 
-    if (userToPromote.isAdmin) {
+    if (userToPromote.is_admin) {
       toast({ title: "Aviso", description: "Este usuário já é administrador", variant: "destructive" });
       return;
     }
 
-    const updatedUsers = users.map(user => 
-      user.email === adminEmail ? { ...user, isAdmin: true } : user
-    );
-    
-    setUsers(updatedUsers);
-    localStorage.setItem('users', JSON.stringify(updatedUsers));
-    setAdminEmail('');
-    
-    toast({ title: "Sucesso", description: `${userToPromote.name} agora é administrador!` });
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ is_admin: true })
+        .eq('id', userToPromote.id);
+
+      if (error) throw error;
+
+      const updatedUsers = users.map(user => 
+        user.email === adminEmail ? { ...user, is_admin: true } : user
+      );
+      
+      setUsers(updatedUsers);
+      setAdminEmail('');
+      
+      toast({ title: "Sucesso", description: `${userToPromote.name} agora é administrador!` });
+    } catch (error) {
+      console.error('Error promoting user:', error);
+      toast({ title: "Erro", description: "Erro ao promover usuário", variant: "destructive" });
+    }
   };
 
   const renderForm = (title: string, form: any, setForm: any, onSubmit: any, fields: any[]) => (
@@ -297,6 +380,17 @@ const Admin = () => {
       ]
     }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
