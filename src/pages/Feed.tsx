@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { UserProfileModal } from '@/components/UserProfileModal';
 import { 
   Trophy, 
   Target, 
@@ -58,6 +59,7 @@ interface FeedStats {
   totalActivities: number;
   totalPoints: number;
   topUsers: Array<{
+    id: string;
     name: string;
     points: number;
     phase: string;
@@ -78,6 +80,10 @@ const Feed = () => {
     topUsers: []
   });
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [userModalOpen, setUserModalOpen] = useState(false);
+  const [userBadges, setUserBadges] = useState<any[]>([]);
+  const [userMissions, setUserMissions] = useState<any[]>([]);
 
   useEffect(() => {
     loadFeedData();
@@ -209,6 +215,7 @@ const Feed = () => {
         const totalUsers = profilesData.length;
         const totalPoints = profilesData.reduce((sum, profile) => sum + (profile.points || 0), 0);
         const topUsers = profilesData.slice(0, 5).map(profile => ({
+          id: profile.id,
           name: profile.name,
           points: profile.points || 0,
           phase: profile.phase || 'Riacho',
@@ -227,6 +234,42 @@ const Feed = () => {
       console.error('Error loading feed data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openUserProfile = async (userId: string) => {
+    try {
+      // Load user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        setSelectedUser(profile);
+
+        // Load user badges
+        const { data: badges } = await supabase
+          .from('user_badges')
+          .select('*')
+          .eq('user_id', userId);
+
+        setUserBadges(badges || []);
+
+        // Load user completed missions
+        const { data: missions } = await supabase
+          .from('missions_completed')
+          .select('*')
+          .eq('user_id', userId)
+          .order('completed_at', { ascending: false });
+
+        setUserMissions(missions || []);
+
+        setUserModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
     }
   };
 
@@ -384,7 +427,10 @@ const Feed = () => {
                 ) : (
                   allActivities.map((item, index) => (
                     <div key={`${item.type}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg border bg-white">
-                      <Avatar className="w-10 h-10">
+                      <Avatar 
+                        className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                        onClick={() => openUserProfile(item.data.user_id)}
+                      >
                         <AvatarImage src={item.data.user_photo || ''} />
                         <AvatarFallback className="bg-blue-100 text-blue-700">
                           {item.data.user_name.charAt(0)}
@@ -395,7 +441,12 @@ const Feed = () => {
                         {item.type === 'mission' && (
                           <div>
                             <p className="text-sm">
-                              <span className="font-medium">{item.data.user_name}</span>
+                              <span 
+                                className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                onClick={() => openUserProfile(item.data.user_id)}
+                              >
+                                {item.data.user_name}
+                              </span>
                               {' '}completou o {getMissionTypeLabel((item.data as FeedActivity).mission_type)} {' '}
                               <span className="font-medium">{(item.data as FeedActivity).mission_name}</span>
                             </p>
@@ -419,7 +470,12 @@ const Feed = () => {
                         {item.type === 'phase' && (
                           <div>
                             <p className="text-sm">
-                              <span className="font-medium">{item.data.user_name}</span>
+                              <span 
+                                className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                onClick={() => openUserProfile(item.data.user_id)}
+                              >
+                                {item.data.user_name}
+                              </span>
                               {' '}avançou de fase: {(item.data as PhaseChange).previous_phase} → {(item.data as PhaseChange).new_phase}
                             </p>
                             <div className="flex items-center space-x-2 mt-1">
@@ -440,7 +496,12 @@ const Feed = () => {
                         {item.type === 'badge' && (
                           <div>
                             <p className="text-sm">
-                              <span className="font-medium">{item.data.user_name}</span>
+                              <span 
+                                className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                onClick={() => openUserProfile(item.data.user_id)}
+                              >
+                                {item.data.user_name}
+                              </span>
                               {' '}conquistou um novo badge!
                             </p>
                             <div className="flex items-center space-x-2 mt-1">
@@ -479,14 +540,22 @@ const Feed = () => {
                     <div className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 text-sm font-bold">
                       {index + 1}
                     </div>
-                    <Avatar className="w-8 h-8">
+                    <Avatar 
+                      className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                      onClick={() => openUserProfile(user.id)}
+                    >
                       <AvatarImage src={user.photo || ''} />
                       <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
                         {user.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">{user.name}</p>
+                      <p 
+                        className="text-sm font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                        onClick={() => openUserProfile(user.id)}
+                      >
+                        {user.name}
+                      </p>
                       <div className="flex items-center space-x-2">
                         <Badge className={`${getPhaseInfo(user.phase).color} text-xs`}>
                           {getPhaseInfo(user.phase).emoji} {user.phase}
@@ -525,6 +594,17 @@ const Feed = () => {
           </div>
         </div>
       </div>
+
+      {/* User Profile Modal */}
+      {selectedUser && (
+        <UserProfileModal
+          isOpen={userModalOpen}
+          onClose={() => setUserModalOpen(false)}
+          profile={selectedUser}
+          badges={userBadges}
+          completedMissions={userMissions}
+        />
+      )}
     </div>
   );
 };

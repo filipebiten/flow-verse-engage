@@ -21,8 +21,11 @@ import {
   BookOpen, 
   Target,
   Award,
-  Camera
+  Camera,
+  Lock,
+  Star
 } from 'lucide-react';
+import { availableBadges, getAvailableBadges, getLockedBadges, type BadgeRequirement } from '@/utils/badgeUtils';
 
 interface UserProfile {
   id: string;
@@ -47,6 +50,8 @@ interface CompletedMission {
   mission_type: string;
   points: number;
   completed_at: string;
+  period?: string;
+  school?: string;
 }
 
 interface UserBadge {
@@ -301,6 +306,47 @@ const Profile = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pgm_role">Cargo no PGM</Label>
+                    <Input
+                      id="pgm_role"
+                      value={formData.pgm_role || ''}
+                      onChange={(e) => setFormData({...formData, pgm_role: e.target.value})}
+                      placeholder="Ex: Líder, Auxiliar, Participante"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="pgm_number">Número PGM</Label>
+                    <Input
+                      id="pgm_number"
+                      value={formData.pgm_number || ''}
+                      onChange={(e) => setFormData({...formData, pgm_number: e.target.value})}
+                      placeholder="Ex: PGM 01"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Participações</Label>
+                    <div className="space-y-2">
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.participates_flow_up || false}
+                          onChange={(e) => setFormData({...formData, participates_flow_up: e.target.checked})}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">Participa do Flow Up</span>
+                      </label>
+                      <label className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          checked={formData.participates_irmandade || false}
+                          onChange={(e) => setFormData({...formData, participates_irmandade: e.target.checked})}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="text-sm">Participa da Irmandade</span>
+                      </label>
+                    </div>
+                  </div>
                   <Button onClick={handleUpdateProfile} className="w-full">
                     Salvar Alterações
                   </Button>
@@ -318,6 +364,28 @@ const Profile = () => {
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-gray-500" />
                     <span>{profile.gender || 'Não informado'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <span>{profile.pgm_role || 'Não informado'}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-500" />
+                    <span>{profile.pgm_number || 'Não informado'}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Participações:</p>
+                    <div className="flex gap-2">
+                      {profile.participates_flow_up && (
+                        <Badge variant="secondary">Flow Up</Badge>
+                      )}
+                      {profile.participates_irmandade && (
+                        <Badge variant="secondary">Irmandade</Badge>
+                      )}
+                      {!profile.participates_flow_up && !profile.participates_irmandade && (
+                        <span className="text-sm text-gray-500">Nenhuma</span>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
@@ -359,6 +427,85 @@ const Profile = () => {
           </Card>
         </div>
 
+        {/* Tabs Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Atividades e Conquistas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Livros Completados */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
+                  Livros Lidos
+                </h3>
+                {completedMissions.filter(m => m.mission_type === 'book').length === 0 ? (
+                  <p className="text-gray-500 text-sm">Nenhum livro lido ainda</p>
+                ) : (
+                  <div className="space-y-2">
+                    {completedMissions.filter(m => m.mission_type === 'book').slice(0, 5).map((mission) => (
+                      <div key={mission.id} className="p-2 bg-blue-50 rounded border">
+                        <p className="font-medium text-sm">{mission.mission_name}</p>
+                        <p className="text-xs text-gray-600">
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pts
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Cursos Completados */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-purple-600" />
+                  Cursos Feitos
+                </h3>
+                {completedMissions.filter(m => m.mission_type === 'course').length === 0 ? (
+                  <p className="text-gray-500 text-sm">Nenhum curso feito ainda</p>
+                ) : (
+                  <div className="space-y-2">
+                    {completedMissions.filter(m => m.mission_type === 'course').slice(0, 5).map((mission) => (
+                      <div key={mission.id} className="p-2 bg-purple-50 rounded border">
+                        <p className="font-medium text-sm">{mission.mission_name}</p>
+                        <p className="text-xs text-gray-600">
+                          {mission.school && `${mission.school} • `}
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pts
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Missões Completadas */}
+              <div>
+                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-green-600" />
+                  Missões Feitas
+                </h3>
+                {completedMissions.filter(m => m.mission_type === 'mission').length === 0 ? (
+                  <p className="text-gray-500 text-sm">Nenhuma missão feita ainda</p>
+                ) : (
+                  <div className="space-y-2">
+                    {completedMissions.filter(m => m.mission_type === 'mission').slice(0, 5).map((mission) => (
+                      <div key={mission.id} className="p-2 bg-green-50 rounded border">
+                        <p className="font-medium text-sm">{mission.mission_name}</p>
+                        <p className="text-xs text-gray-600">
+                          {mission.period && `${mission.period} • `}
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pts
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Recent Activity */}
         <Card>
           <CardHeader>
@@ -385,27 +532,103 @@ const Profile = () => {
           </CardContent>
         </Card>
 
-        {/* Badges */}
-        {userBadges.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Badges Conquistados</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {userBadges.map((badge) => (
-                  <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg">
-                    <div className="text-3xl mb-2">{badge.badge_icon}</div>
-                    <h4 className="font-semibold text-sm text-yellow-800">{badge.badge_name}</h4>
-                    <p className="text-xs text-yellow-700 mt-1">
-                      {new Date(badge.earned_at).toLocaleDateString('pt-BR')}
-                    </p>
+        {/* Badges Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Star className="w-5 h-5" />
+              Badges e Conquistas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              
+              {/* Earned Badges */}
+              {userBadges.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-3 text-green-700">Badges Conquistados</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {userBadges.map((badge) => (
+                      <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg">
+                        <div className="text-3xl mb-2">{badge.badge_icon}</div>
+                        <h4 className="font-semibold text-sm text-yellow-800">{badge.badge_name}</h4>
+                        <p className="text-xs text-yellow-700 mt-1">
+                          {new Date(badge.earned_at).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                </div>
+              )}
+
+              {(() => {
+                const userStats = {
+                  points: profile?.points || 0,
+                  missions: missionsCount,
+                  books: booksCount,
+                  courses: coursesCount,
+                  consecutive_days: profile?.consecutive_days || 0
+                };
+
+                const earnedBadgeIds = userBadges.map(b => {
+                  // Map current badge names to available badge IDs
+                  const foundBadge = availableBadges.find(ab => ab.name === b.badge_name);
+                  return foundBadge?.id || '';
+                }).filter(id => id !== '');
+
+                const availableForUnlock = getAvailableBadges(userStats, earnedBadgeIds);
+                const lockedBadges = getLockedBadges(userStats, earnedBadgeIds);
+
+                return (
+                  <>
+                    {/* Available to Unlock */}
+                    {availableForUnlock.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-lg mb-3 text-blue-700">Prontos para Desbloquear!</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {availableForUnlock.map((badge) => (
+                            <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-300 rounded-lg">
+                              <div className="text-3xl mb-2">{badge.icon}</div>
+                              <h4 className="font-semibold text-sm text-blue-800">{badge.name}</h4>
+                              <p className="text-xs text-blue-700 mt-1">{badge.description}</p>
+                              <Badge className="mt-2 bg-green-100 text-green-800">Desbloqueável!</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Locked Badges */}
+                    {lockedBadges.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-lg mb-3 text-gray-700">Próximos Objetivos</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {lockedBadges.slice(0, 8).map((badge) => (
+                            <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 rounded-lg opacity-75">
+                              <div className="relative">
+                                <div className="text-3xl mb-2 filter grayscale">{badge.icon}</div>
+                                <Lock className="w-4 h-4 text-gray-500 absolute top-0 right-0" />
+                              </div>
+                              <h4 className="font-semibold text-sm text-gray-700">{badge.name}</h4>
+                              <p className="text-xs text-gray-600 mt-1">{badge.description}</p>
+                              <Badge variant="outline" className="mt-2 text-gray-500">
+                                {badge.requirement.type === 'points' ? `${badge.requirement.count} pontos` :
+                                badge.requirement.type === 'missions' ? `${badge.requirement.count} missões` :
+                                badge.requirement.type === 'books' ? `${badge.requirement.count} livros` :
+                                badge.requirement.type === 'courses' ? `${badge.requirement.count} cursos` :
+                                `${badge.requirement.count} dias consecutivos`}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

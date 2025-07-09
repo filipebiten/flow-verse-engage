@@ -54,13 +54,17 @@ const Admin = () => {
     }
 
     try {
-      const { data: profile } = await supabase
+      console.log('Checking admin status for user:', user.id);
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('is_admin')
         .eq('id', user.id)
         .single();
 
-      if (!profile?.is_admin) {
+      console.log('Profile admin check result:', { profile, profileError });
+
+      if (profileError || !profile?.is_admin) {
+        console.log('User is not admin, redirecting...');
         navigate('/');
         return;
       }
@@ -74,12 +78,20 @@ const Admin = () => {
 
   const loadData = async () => {
     try {
+      console.log('Loading admin data...');
       const [missionsResult, booksResult, coursesResult, profilesResult] = await Promise.all([
         supabase.from('missions').select('*').order('created_at', { ascending: false }),
         supabase.from('books').select('*').order('created_at', { ascending: false }),
         supabase.from('courses').select('*').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*').order('created_at', { ascending: false })
       ]);
+
+      console.log('Admin data results:', {
+        missions: missionsResult,
+        books: booksResult,
+        courses: coursesResult,
+        profiles: profilesResult
+      });
 
       if (missionsResult.error) console.error('Error loading missions:', missionsResult.error);
       if (booksResult.error) console.error('Error loading books:', booksResult.error);
