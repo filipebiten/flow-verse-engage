@@ -57,6 +57,9 @@ export function AppSidebar() {
   const { signOut } = useAuth();
   const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
   const isAdmin = currentUser?.isAdmin;
+  
+  console.log('AppSidebar - currentUser from localStorage:', currentUser);
+  console.log('AppSidebar - isAdmin:', isAdmin);
   const userPhase = getUserPhase(currentUser?.points || 0);
 
   const getUserInitials = (name: string) => {

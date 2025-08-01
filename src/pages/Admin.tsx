@@ -48,32 +48,56 @@ const Admin = () => {
   }, [user]);
 
   const checkAdminAndLoadData = async () => {
+    console.log('=== ADMIN CHECK START ===');
+    console.log('User object:', user);
+    
     if (!user) {
+      console.log('No user found, redirecting to home');
       navigate('/');
       return;
     }
 
     try {
-      console.log('Checking admin status for user:', user.id);
+      console.log('Checking admin status for user:', user.id, 'email:', user.email);
+      
+      // Primeiro vamos buscar o perfil do usuário
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('*')
         .eq('id', user.id)
         .single();
 
       console.log('Profile admin check result:', { profile, profileError });
 
-      if (profileError || !profile?.is_admin) {
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        // Vamos tentar também buscar por email
+        const { data: profileByEmail, error: emailError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', user.email)
+          .single();
+        
+        console.log('Profile by email result:', { profileByEmail, emailError });
+        
+        if (emailError || !profileByEmail?.is_admin) {
+          console.log('User is not admin (via email check), redirecting...');
+          navigate('/');
+          return;
+        }
+      } else if (!profile?.is_admin) {
         console.log('User is not admin, redirecting...');
         navigate('/');
         return;
       }
 
+      console.log('User is admin, loading data...');
       await loadData();
     } catch (error) {
       console.error('Error checking admin status:', error);
       navigate('/');
     }
+    console.log('=== ADMIN CHECK END ===');
   };
 
   const loadData = async () => {
