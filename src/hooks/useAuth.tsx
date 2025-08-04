@@ -31,46 +31,48 @@ export const useAuth = () => {
 
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
         
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
           
-          // Fetch and store user profile when signed in
+          // Fetch and store user profile when signed in (defer to avoid infinite loop)
           if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
-            try {
-              const { data: profile, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', session.user.id)
-                .single();
+            setTimeout(async () => {
+              try {
+                const { data: profile, error } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single();
 
-              if (error && error.code !== 'PGRST116') {
+                if (error && error.code !== 'PGRST116') {
+                  console.error('Error fetching profile:', error);
+                } else if (profile) {
+                  localStorage.setItem('currentUser', JSON.stringify({
+                    id: profile.id,
+                    name: profile.name,
+                    email: profile.email,
+                    isAdmin: profile.is_admin,
+                    points: profile.points || 0,
+                    pgmRole: profile.pgm_role,
+                    pgmNumber: profile.pgm_number,
+                    profilePhoto: profile.profile_photo_url,
+                    whatsapp: profile.whatsapp,
+                    birthDate: profile.birth_date,
+                    gender: profile.gender,
+                    participatesFlowUp: profile.participates_flow_up,
+                    participatesIrmandade: profile.participates_irmandade,
+                    phase: profile.phase,
+                    consecutiveDays: profile.consecutive_days
+                  }));
+                }
+              } catch (error) {
                 console.error('Error fetching profile:', error);
-              } else if (profile) {
-                localStorage.setItem('currentUser', JSON.stringify({
-                  id: profile.id,
-                  name: profile.name,
-                  email: profile.email,
-                  isAdmin: profile.is_admin,
-                  points: profile.points || 0,
-                  pgmRole: profile.pgm_role,
-                  pgmNumber: profile.pgm_number,
-                  profilePhoto: profile.profile_photo_url,
-                  whatsapp: profile.whatsapp,
-                  birthDate: profile.birth_date,
-                  gender: profile.gender,
-                  participatesFlowUp: profile.participates_flow_up,
-                  participatesIrmandade: profile.participates_irmandade,
-                  phase: profile.phase,
-                  consecutiveDays: profile.consecutive_days
-                }));
               }
-            } catch (error) {
-              console.error('Error fetching profile:', error);
-            }
+            }, 0);
           }
           
           // Clear localStorage when signing out
