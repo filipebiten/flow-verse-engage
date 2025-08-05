@@ -13,7 +13,7 @@ import Feed from "./pages/Feed";
 import Missions from "./pages/Missions";
 import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
-import Admin from "./pages/Admin";
+import Admin from "./pages/admin/Admin.tsx";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

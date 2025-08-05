@@ -26,6 +26,7 @@ import {
   Star
 } from 'lucide-react';
 import { availableBadges, getAvailableBadges, getLockedBadges, type BadgeRequirement } from '@/utils/badgeUtils';
+import {phases} from "@/utils/phaseUtils.ts";
 
 interface UserProfile {
   id: string;
@@ -86,10 +87,12 @@ const Profile = () => {
 
   const loadUserData = async () => {
     if (!user) return;
-    
+
     try {
-      console.log('Loading user data for:', user.id);
-      
+      console.log('Loading user data for:', user);
+
+
+
       // Load profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
