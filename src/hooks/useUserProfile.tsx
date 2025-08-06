@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -40,7 +39,20 @@ interface UserBadge {
   earned_at: string;
 }
 
-export const useUserProfile = () => {
+interface UserProfileContextValue {
+  profile: UserProfile | null;
+  completedMissions: CompletedMission[];
+  userBadges: UserBadge[];
+  loading: boolean;
+  refreshUserData: () => void;
+  getBooksList: () => CompletedMission[];
+  getCoursesList: () => CompletedMission[];
+  getMissionsList: () => CompletedMission[];
+}
+
+const UserProfileContext = createContext<UserProfileContextValue | undefined>(undefined);
+
+export const UserProfileProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
@@ -49,80 +61,70 @@ export const useUserProfile = () => {
 
   const loadUserData = async () => {
     if (!user) return;
-    
     setLoading(true);
-    try {
-      // Load profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
 
-      if (profileError) {
-        console.error('Error loading profile:', profileError);
-        return;
-      }
+    try {
+      const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+      const { data: missionsData } = await supabase
+          .from('missions_completed')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('completed_at', { ascending: false });
+
+      const { data: badgesData } = await supabase
+          .from('user_badges')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('earned_at', { ascending: false });
 
       setProfile(profileData);
-
-      // Load completed missions
-      const { data: missionsData, error: missionsError } = await supabase
-        .from('missions_completed')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('completed_at', { ascending: false });
-
-      if (missionsError) {
-        console.error('Error loading completed missions:', missionsError);
-      } else {
-        setCompletedMissions(missionsData || []);
-      }
-
-      // Load user badges
-      const { data: badgesData, error: badgesError } = await supabase
-        .from('user_badges')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('earned_at', { ascending: false });
-
-      if (badgesError) {
-        console.error('Error loading badges:', badgesError);
-      } else {
-        setUserBadges(badgesData || []);
-      }
-
+      setCompletedMissions(missionsData || []);
+      setUserBadges(badgesData || []);
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('Erro ao carregar dados do usuário:', error);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadUserData();
+    if (user) loadUserData();
   }, [user]);
 
   const refreshUserData = () => {
     loadUserData();
   };
 
-  const getMissionsByType = (type: string) => {
-    return completedMissions.filter(mission => mission.mission_type === type);
-  };
+  const getMissionsByType = (type: string) =>
+      completedMissions.filter(m => m.mission_type === type);
 
-  const getBooksList = () => getMissionsByType('book');
-  const getCoursesList = () => getMissionsByType('course');
-  const getMissionsList = () => getMissionsByType('mission');
+  return (
+      <UserProfileContext.Provider
+          value={{
+            profile,
+            completedMissions,
+            userBadges,
+            loading,
+            refreshUserData,
+            getBooksList: () => getMissionsByType('book'),
+            getCoursesList: () => getMissionsByType('course'),
+            getMissionsList: () => getMissionsByType('mission'),
+          }}
+      >
+        {children}
+      </UserProfileContext.Provider>
+  );
+};
 
-  return {
-    profile,
-    completedMissions,
-    userBadges,
-    loading,
-    refreshUserData,
-    getBooksList,
-    getCoursesList,
-    getMissionsList
-  };
+export const useUserProfile = () => {
+  const context = useContext(UserProfileContext);
+  if (!context) {
+    throw new Error('useUserProfile deve ser usado dentro de <UserProfileProvider>');
+  }
+  return context;
 };

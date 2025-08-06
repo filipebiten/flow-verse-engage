@@ -5,7 +5,7 @@ import {Plus, Trash2} from "lucide-react";
 import React from "react";
 
 export const ListItems = (title, items, type, icon, onDelete, onAdd) => (
-    <Card className='h-[35em]'>
+    <Card className='flex flex-col flex-1 max-h-[40vh] pb-2'>
         <CardHeader>
             <CardTitle className="flex items-center gap-2 justify-between">
                 <div className="flex items-center gap-2">
@@ -18,11 +18,11 @@ export const ListItems = (title, items, type, icon, onDelete, onAdd) => (
                 </Button>
             </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className='space-y-4 overflow-y-auto flex-1'>
             {items.length === 0 ? (
                 <p className="text-center text-muted-foreground py-4">Nenhum item cadastrado</p>
             ) : (
-                <div className="space-y-2 overflow-y-auto">
+                <div className="space-y-2">
                     {items.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-3 border rounded">
                             {

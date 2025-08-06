@@ -15,6 +15,8 @@ import Profile from "./pages/Profile";
 import UserProfile from "./pages/UserProfile";
 import Admin from "./pages/admin/Admin.tsx";
 import NotFound from "./pages/NotFound";
+import {UserProfileProvider} from "@/hooks/useUserProfile.tsx";
+import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 
 const queryClient = new QueryClient();
 
@@ -22,14 +24,7 @@ const App = () => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
-        </div>
-      </div>
-    );
+      (<LoadingComponent></LoadingComponent>)
   }
 
   return (
@@ -37,26 +32,28 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
-          {!user ? (
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="*" element={<Index />} />
-            </Routes>
-          ) : (
-            <Layout>
-              <Routes>
-                <Route path="/" element={<Feed />} />
-                <Route path="/feed" element={<Feed />} />
-                <Route path="/missions" element={<Missions />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/user/:userId" element={<UserProfile />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Layout>
-          )}
-        </BrowserRouter>
+          <UserProfileProvider>
+              <BrowserRouter>
+                  {!user ? (
+                      <Routes>
+                          <Route path="/auth" element={<Auth />} />
+                          <Route path="*" element={<Index />} />
+                      </Routes>
+                  ) : (
+                      <Layout>
+                          <Routes>
+                              <Route path="/" element={<Feed />} />
+                              <Route path="/feed" element={<Feed />} />
+                              <Route path="/missions" element={<Missions />} />
+                              <Route path="/profile" element={<Profile />} />
+                              <Route path="/user/:userId" element={<UserProfile />} />
+                              <Route path="/admin" element={<Admin />} />
+                              <Route path="*" element={<NotFound />} />
+                          </Routes>
+                      </Layout>
+                  )}
+              </BrowserRouter>
+          </UserProfileProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

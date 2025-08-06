@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Award
 } from 'lucide-react';
+import {useUserProfile} from "@/hooks/useUserProfile.tsx";
 
 interface Mission {
   id: string;
@@ -41,6 +42,8 @@ const getUserPhase = (points: number) => {
 
 const Missions = () => {
   const { user } = useAuth();
+  const { refreshUserData } = useUserProfile();
+
   const { toast } = useToast();
   const [missions, setMissions] = useState<Mission[]>([]);
   const [books, setBooks] = useState<Mission[]>([]);
@@ -163,8 +166,7 @@ const Missions = () => {
     if (completedItems.has(item.id) || !user) return;
 
     try {
-      console.log('Completing item:', item.name);
-      
+
       // Insert completed mission
       const { error } = await supabase
         .from('missions_completed')
@@ -219,6 +221,8 @@ const Missions = () => {
         description: `Você completou "${item.name}" e ganhou ${item.points} pontos!`,
       });
 
+
+      refreshUserData();
     } catch (error) {
       console.error('Error completing mission:', error);
       toast({

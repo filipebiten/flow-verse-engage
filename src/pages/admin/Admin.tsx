@@ -1,5 +1,5 @@
 import React, {useState} from 'react';
-import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card.tsx';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
 import {Button} from '@/components/ui/button.tsx';
 import {Input} from '@/components/ui/input.tsx';
 import {useToast} from '@/hooks/use-toast.ts';
@@ -11,6 +11,7 @@ import {FormDialog} from "@/pages/admin/FormDialog.tsx";
 import {AdminStats} from "@/pages/admin/AdminStats.tsx";
 import {useAdminData} from "@/hooks/UseAdminData.tsx";
 import {ListItems} from "@/pages/admin/ListItems.tsx";
+import ListUsers from "@/pages/admin/ListUsers.tsx";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -183,6 +184,8 @@ const Admin = () => {
             </CardContent>
           </Card>
 
+          <ListUsers></ListUsers>
+
           {/* Listas com botões de adicionar */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {ListItems("Livros", data.books, "books", <BookOpen className="w-5 h-5" />, (id, type) => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('books'))}
@@ -202,6 +205,7 @@ const Admin = () => {
                   onOpenChange={setOpenDialog}
               />
           )}
+
         </div>
       </div>
   );

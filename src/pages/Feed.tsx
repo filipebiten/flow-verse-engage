@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,15 +7,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { UserProfileModal } from '@/components/UserProfileModal';
-import { 
-  Trophy, 
-  Target, 
-  BookOpen, 
+import {
+  Trophy,
+  Target,
+  BookOpen,
   GraduationCap,
   TrendingUp,
   Users,
   Award
 } from 'lucide-react';
+import {PhaseBadge} from "@/components/PhaseBadge.tsx";
 
 interface FeedActivity {
   id: string;
@@ -79,6 +79,7 @@ const Feed = () => {
     totalPoints: 0,
     topUsers: []
   });
+
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [userModalOpen, setUserModalOpen] = useState(false);
@@ -92,13 +93,13 @@ const Feed = () => {
   const loadFeedData = async () => {
     try {
       console.log('Loading feed data...');
-      
+
       // Load recent activities
       const { data: activitiesData, error: activitiesError } = await supabase
-        .from('missions_completed')
-        .select('*')
-        .order('completed_at', { ascending: false })
-        .limit(20);
+          .from('missions_completed')
+          .select('*')
+          .order('completed_at', { ascending: false })
+          .limit(20);
 
       if (activitiesError) {
         console.error('Error loading activities:', activitiesError);
@@ -106,9 +107,9 @@ const Feed = () => {
 
       // Load all profiles to get user info
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('points', { ascending: false });
+          .from('profiles')
+          .select('*')
+          .order('points', { ascending: false });
 
       if (profilesError) {
         console.error('Error loading profiles:', profilesError);
@@ -146,18 +147,16 @@ const Feed = () => {
       }
       setActivities(formattedActivities);
 
-      // Load recent phase changes
       const { data: phaseData, error: phaseError } = await supabase
-        .from('phase_changes')
-        .select('*')
-        .order('changed_at', { ascending: false })
-        .limit(10);
+          .from('phase_changes')
+          .select('*')
+          .order('changed_at', { ascending: false })
+          .limit(10);
 
       if (phaseError) {
         console.error('Error loading phase changes:', phaseError);
       }
 
-      // Format phase changes with user info
       const formattedPhaseChanges: PhaseChange[] = [];
       if (phaseData) {
         phaseData.forEach(change => {
@@ -179,18 +178,16 @@ const Feed = () => {
       }
       setPhaseChanges(formattedPhaseChanges);
 
-      // Load recent badge activities
       const { data: badgeData, error: badgeError } = await supabase
-        .from('user_badges')
-        .select('*')
-        .order('earned_at', { ascending: false })
-        .limit(10);
+          .from('user_badges')
+          .select('*')
+          .order('earned_at', { ascending: false })
+          .limit(10);
 
       if (badgeError) {
         console.error('Error loading badges:', badgeError);
       }
 
-      // Format badges with user info
       const formattedBadges: UserBadge[] = [];
       if (badgeData) {
         badgeData.forEach(badge => {
@@ -210,7 +207,6 @@ const Feed = () => {
       }
       setBadgeActivities(formattedBadges);
 
-      // Set stats
       if (profilesData) {
         const totalUsers = profilesData.length;
         const totalPoints = profilesData.reduce((sum, profile) => sum + (profile.points || 0), 0);
@@ -239,30 +235,28 @@ const Feed = () => {
 
   const openUserProfile = async (userId: string) => {
     try {
-      // Load user profile
+
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
 
       if (profile) {
         setSelectedUser(profile);
 
-        // Load user badges
         const { data: badges } = await supabase
-          .from('user_badges')
-          .select('*')
-          .eq('user_id', userId);
+            .from('user_badges')
+            .select('*')
+            .eq('user_id', userId);
 
         setUserBadges(badges || []);
 
-        // Load user completed missions
         const { data: missions } = await supabase
-          .from('missions_completed')
-          .select('*')
-          .eq('user_id', userId)
-          .order('completed_at', { ascending: false });
+            .from('missions_completed')
+            .select('*')
+            .eq('user_id', userId)
+            .order('completed_at', { ascending: false });
 
         setUserMissions(missions || []);
 
@@ -277,7 +271,7 @@ const Feed = () => {
     const now = new Date();
     const time = new Date(timestamp);
     const diffInMinutes = Math.floor((now.getTime() - time.getTime()) / (1000 * 60));
-    
+
     if (diffInMinutes < 1) return "Agora";
     if (diffInMinutes < 60) return `${diffInMinutes}m`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
@@ -307,24 +301,14 @@ const Feed = () => {
     }
   };
 
-  const getPhaseInfo = (phase: string) => {
-    const phases = {
-      "Riacho": { emoji: "🌀", color: "bg-green-100 text-green-800" },
-      "Correnteza": { emoji: "🌊", color: "bg-blue-100 text-blue-800" },
-      "Cachoeira": { emoji: "💥", color: "bg-purple-100 text-purple-800" },
-      "Oceano": { emoji: "🌌", color: "bg-gray-900 text-white" }
-    };
-    return phases[phase as keyof typeof phases] || phases["Riacho"];
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando feed...</p>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando feed...</p>
+          </div>
         </div>
-      </div>
     );
   }
 
@@ -348,264 +332,259 @@ const Feed = () => {
   ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Header Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Users className="w-8 h-8 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold text-blue-600">{stats.totalUsers}</p>
-                  <p className="text-sm text-gray-600">Membros</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <TrendingUp className="w-8 h-8 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold text-green-600">{stats.totalActivities}</p>
-                  <p className="text-sm text-gray-600">Atividades</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-2">
-                <Trophy className="w-8 h-8 text-yellow-600" />
-                <div>
-                  <p className="text-2xl font-bold text-yellow-600">{stats.totalPoints}</p>
-                  <p className="text-sm text-gray-600">Pontos Totais</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-center">
-                <p className="text-lg font-bold text-purple-600">Top Usuários</p>
-                <div className="flex -space-x-2 justify-center mt-2">
-                  {stats.topUsers.slice(0, 3).map((user, index) => (
-                    <Avatar key={index} className="w-8 h-8 border-2 border-white">
-                      <AvatarImage src={user.photo || ''} />
-                      <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
-                        {user.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+        <div className="max-w-6xl mx-auto flex flex-1 flex-col space-y-6"> {/* Adicione flex-1 e flex-col */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Main Feed */}
-          <div className="lg:col-span-2 space-y-4">
+          {/* Header Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2" />
-                  Feed de Atividades
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 max-h-96 overflow-y-auto">
-                {allActivities.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>Nenhuma atividade recente encontrada.</p>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Users className="w-8 h-8 text-blue-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-blue-600">{stats.totalUsers}</p>
+                    <p className="text-sm text-gray-600">Membros</p>
                   </div>
-                ) : (
-                  allActivities.map((item, index) => (
-                    <div key={`${item.type}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg border bg-white">
-                      <Avatar 
-                        className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
-                        onClick={() => openUserProfile(item.data.user_id)}
-                      >
-                        <AvatarImage src={item.data.user_photo || ''} />
-                        <AvatarFallback className="bg-blue-100 text-blue-700">
-                          {item.data.user_name.charAt(0)}
-                        </AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="flex-1">
-                        {item.type === 'mission' && (
-                          <div>
-                            <p className="text-sm">
-                              <span 
-                                className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="w-8 h-8 text-green-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-green-600">{stats.totalActivities}</p>
+                    <p className="text-sm text-gray-600">Atividades</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-2">
+                  <Trophy className="w-8 h-8 text-yellow-600" />
+                  <div>
+                    <p className="text-2xl font-bold text-yellow-600">{stats.totalPoints}</p>
+                    <p className="text-sm text-gray-600">Pontos Totais</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-center">
+                  <p className="text-lg font-bold text-purple-600">Top Usuários</p>
+                  <div className="flex -space-x-2 justify-center mt-2">
+                    {stats.topUsers.slice(0, 3).map((user, index) => (
+                        <Avatar key={index} className="w-8 h-8 border-2 border-white">
+                          <AvatarImage src={user.photo || ''} />
+                          <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
+                            {user.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1"> {/* Adicione flex-1 aqui */}
+
+            {/* Main Feed */}
+            <div className="lg:col-span-2 space-y-4 flex flex-col"> {/* Adicione flex-col */}
+              <Card className="flex flex-col flex-1"> {/* Adicione flex-col e flex-1 */}
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <TrendingUp className="w-5 h-5 mr-2" />
+                    Feed de Atividades
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 overflow-y-auto flex-1"> {/* Remova max-h-96 e adicione flex-1 */}
+                  {allActivities.length === 0 ? (
+                      <div className="text-center py-8 text-gray-500">
+                        <p>Nenhuma atividade recente encontrada.</p>
+                      </div>
+                  ) : (
+                      allActivities.map((item, index) => (
+                          <div key={`${item.type}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg border bg-white">
+                            <Avatar
+                                className="w-10 h-10 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
                                 onClick={() => openUserProfile(item.data.user_id)}
+                            >
+                              <AvatarImage src={item.data.user_photo || ''} />
+                              <AvatarFallback className="bg-blue-100 text-blue-700">
+                                {item.data.user_name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+
+                            <div className="flex-1">
+                              {item.type === 'mission' && (
+                                  <div>
+                                    <p className="text-sm">
+                              <span
+                                  className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                  onClick={() => openUserProfile(item.data.user_id)}
                               >
                                 {item.data.user_name}
                               </span>
-                              {' '}completou o {getMissionTypeLabel((item.data as FeedActivity).mission_type)} {' '}
-                              <span className="font-medium">{(item.data as FeedActivity).mission_name}</span>
-                            </p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              {getMissionIcon((item.data as FeedActivity).mission_type)}
-                              <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                +{(item.data as FeedActivity).points} pts
-                              </Badge>
-                              {(item.data as FeedActivity).period && (
-                                <Badge variant="outline" className="text-xs">
-                                  {(item.data as FeedActivity).period}
-                                </Badge>
+                                      {' '}completou o {getMissionTypeLabel((item.data as FeedActivity).mission_type)} {' '}
+                                      <span className="font-medium">{(item.data as FeedActivity).mission_name}</span>
+                                    </p>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      {getMissionIcon((item.data as FeedActivity).mission_type)}
+                                      <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                        +{(item.data as FeedActivity).points} pts
+                                      </Badge>
+                                      {(item.data as FeedActivity).period && (
+                                          <Badge variant="outline" className="text-xs">
+                                            {(item.data as FeedActivity).period}
+                                          </Badge>
+                                      )}
+                                      <span className="text-xs text-gray-500">
+                                {formatTimeAgo(item.timestamp)}
+                              </span>
+                                    </div>
+                                  </div>
                               )}
-                              <span className="text-xs text-gray-500">
-                                {formatTimeAgo(item.timestamp)}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {item.type === 'phase' && (
-                          <div>
-                            <p className="text-sm">
-                              <span 
-                                className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
-                                onClick={() => openUserProfile(item.data.user_id)}
+
+                              {item.type === 'phase' && (
+                                  <div>
+                                    <p className="text-sm">
+                              <span
+                                  className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                  onClick={() => openUserProfile(item.data.user_id)}
                               >
                                 {item.data.user_name}
                               </span>
-                              {' '}avançou de fase: {(item.data as PhaseChange).previous_phase} → {(item.data as PhaseChange).new_phase}
-                            </p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <span className="text-lg">{(item.data as PhaseChange).phase_icon}</span>
-                              <Badge className={getPhaseInfo((item.data as PhaseChange).new_phase).color}>
-                                {(item.data as PhaseChange).new_phase}
-                              </Badge>
-                              <Badge variant="secondary">
-                                {(item.data as PhaseChange).total_points} pts total
-                              </Badge>
-                              <span className="text-xs text-gray-500">
+                                      {' '}avançou de fase: {(item.data as PhaseChange).previous_phase} → {(item.data as PhaseChange).new_phase}
+                                    </p>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      <span className="text-lg">{(item.data as PhaseChange).phase_icon}</span>
+                                      <Badge className={getPhaseInfo((item.data as PhaseChange).new_phase).color}>
+                                        {(item.data as PhaseChange).new_phase}
+                                      </Badge>
+                                      <Badge variant="secondary">
+                                        {(item.data as PhaseChange).total_points} pts total
+                                      </Badge>
+                                      <span className="text-xs text-gray-500">
                                 {formatTimeAgo(item.timestamp)}
                               </span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {item.type === 'badge' && (
-                          <div>
-                            <p className="text-sm">
-                              <span 
-                                className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
-                                onClick={() => openUserProfile(item.data.user_id)}
+                                    </div>
+                                  </div>
+                              )}
+
+                              {item.type === 'badge' && (
+                                  <div>
+                                    <p className="text-sm">
+                              <span
+                                  className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                  onClick={() => openUserProfile(item.data.user_id)}
                               >
                                 {item.data.user_name}
                               </span>
-                              {' '}conquistou um novo badge!
-                            </p>
-                            <div className="flex items-center space-x-2 mt-1">
-                              <span className="text-lg">{(item.data as UserBadge).badge_icon}</span>
-                              <Badge className="bg-purple-100 text-purple-700">
-                                {(item.data as UserBadge).badge_name}
-                              </Badge>
-                              <span className="text-xs text-gray-500">
+                                      {' '}conquistou um novo badge!
+                                    </p>
+                                    <div className="flex items-center space-x-2 mt-1">
+                                      <span className="text-lg">{(item.data as UserBadge).badge_icon}</span>
+                                      <Badge className="bg-purple-100 text-purple-700">
+                                        {(item.data as UserBadge).badge_name}
+                                      </Badge>
+                                      <span className="text-xs text-gray-500">
                                 {formatTimeAgo(item.timestamp)}
                               </span>
+                                    </div>
+                                  </div>
+                              )}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
+                      ))
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Sidebar */}
-          <div className="space-y-4">
-            
-            {/* Top Users */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Trophy className="w-5 h-5 mr-2" />
-                  Top Membros
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {stats.topUsers.map((user, index) => (
-                  <div key={index} className="flex items-center space-x-3">
-                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 text-sm font-bold">
-                      {index + 1}
-                    </div>
-                    <Avatar 
-                      className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
-                      onClick={() => openUserProfile(user.id)}
-                    >
-                      <AvatarImage src={user.photo || ''} />
-                      <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
-                        {user.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p 
-                        className="text-sm font-medium cursor-pointer hover:text-blue-600 transition-colors"
-                        onClick={() => openUserProfile(user.id)}
-                      >
-                        {user.name}
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <Badge className={`${getPhaseInfo(user.phase).color} text-xs`}>
-                          {getPhaseInfo(user.phase).emoji} {user.phase}
-                        </Badge>
-                        <span className="text-xs text-gray-500">{user.points} pts</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            {/* Sidebar */}
+            <div className="space-y-4">
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Ações Rápidas</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Button 
-                  className="w-full" 
-                  onClick={() => navigate('/missions')}
-                >
-                  <Target className="w-4 h-4 mr-2" />
-                  Ver Missões
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => navigate('/profile')}
-                >
-                  <Award className="w-4 h-4 mr-2" />
-                  Meu Perfil
-                </Button>
-              </CardContent>
-            </Card>
+              {/* Top Users */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Trophy className="w-5 h-5 mr-2" />
+                    Top Membros
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {stats.topUsers.map((user, index) => (
+                      <div key={index} className="flex items-center space-x-3">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 text-sm font-bold">
+                          {index + 1}
+                        </div>
+                        <Avatar
+                            className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                            onClick={() => openUserProfile(user.id)}
+                        >
+                          <AvatarImage src={user.photo || ''} />
+                          <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
+                            {user.name.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p
+                              className="text-sm font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                              onClick={() => openUserProfile(user.id)}
+                          >
+                            {user.name}
+                          </p>
+                          <PhaseBadge userPhase={user.phase}></PhaseBadge>
+                        </div>
+                      </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {/* Quick Actions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Ações Rápidas</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button
+                      className="w-full"
+                      onClick={() => navigate('/missions')}
+                  >
+                    <Target className="w-4 h-4 mr-2" />
+                    Ver Missões
+                  </Button>
+                  <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => navigate('/profile')}
+                  >
+                    <Award className="w-4 h-4 mr-2" />
+                    Meu Perfil
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* User Profile Modal */}
-      {selectedUser && (
-        <UserProfileModal
-          isOpen={userModalOpen}
-          onClose={() => setUserModalOpen(false)}
-          profile={selectedUser}
-          badges={userBadges}
-          completedMissions={userMissions}
-        />
-      )}
-    </div>
+        {/* User Profile Modal */}
+        {selectedUser && (
+            <UserProfileModal
+                isOpen={userModalOpen}
+                onClose={() => setUserModalOpen(false)}
+                profile={selectedUser}
+                badges={userBadges}
+                completedMissions={userMissions}
+            />
+        )}
+      </div>
   );
 };
 
