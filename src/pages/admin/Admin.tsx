@@ -17,7 +17,7 @@ const Admin = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [dialogType, setDialogType] = useState(null);
+  const [dialogType, setDialogType] = useState<string | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
 
   const { data, isLoading } = useAdminData();
@@ -27,7 +27,7 @@ const Admin = () => {
   const [courseForm, setCourseForm] = useState({ name: '', description: '', points: '', school: 'Escola do Discípulo' });
   const [adminEmail, setAdminEmail] = useState('');
 
-  const handleOpenDialog = (type) => {
+  const handleOpenDialog = (type: string) => {
     setDialogType(type);
     setOpenDialog(true);
   };
@@ -38,7 +38,7 @@ const Admin = () => {
   };
 
   const addAdminMutation = useMutation({
-    mutationFn: async (email) => {
+    mutationFn: async (email: string) => {
       const userToPromote = data.users.find(u => u.email === email);
       if (!userToPromote) throw new Error("Usuário não encontrado.");
       if (userToPromote.is_admin) throw new Error("Este usuário já é administrador.");
@@ -57,7 +57,7 @@ const Admin = () => {
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: async ({ id, type }) => {
+    mutationFn: async ({ id, type }: { id: string; type: 'books' | 'courses' | 'missions' }) => {
       const { error } = await supabase.from(type).delete().eq('id', id);
       if (error) throw error;
     },
@@ -70,8 +70,8 @@ const Admin = () => {
     },
   });
 
-  const createMutation = (tableName, form, setForm) => useMutation({
-    mutationFn: async (formData) => {
+  const createMutation = (tableName: 'books' | 'courses' | 'missions', form: any, setForm: any) => useMutation({
+    mutationFn: async (formData: any) => {
       if (!formData.name || !formData.description || !formData.points) throw new Error("Preencha todos os campos obrigatórios.");
       const { error } = await supabase.from(tableName).insert({ ...formData, points: parseInt(formData.points) });
       if (error) throw error;
@@ -188,9 +188,9 @@ const Admin = () => {
 
           {/* Listas com botões de adicionar */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {ListItems("Livros", data.books, "books", <BookOpen className="w-5 h-5" />, (id, type) => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('books'))}
-            {ListItems("Cursos", data.courses, "courses", <GraduationCap className="w-5 h-5" />, (id, type) => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('courses'))}
-            {ListItems("Missões", data.missions, "missions", <Target className="w-5 h-5" />, (id, type) => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('missions'))}
+            {ListItems("Livros", data.books, "books", <BookOpen className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('books'))}
+            {ListItems("Cursos", data.courses, "courses", <GraduationCap className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('courses'))}
+            {ListItems("Missões", data.missions, "missions", <Target className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('missions'))}
           </div>
 
           {/* Dialog de Adição */}

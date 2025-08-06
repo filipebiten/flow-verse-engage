@@ -82,23 +82,24 @@ const Profile = () => {
   useEffect(() => {
     if (user) {
       loadUserData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
   const loadUserData = async () => {
     if (!user) return;
-
+    
+    setLoading(true);
     try {
       console.log('Loading user data for:', user);
-
-
 
       // Load profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('Error loading profile:', profileError);
@@ -107,6 +108,18 @@ const Profile = () => {
           description: "Não foi possível carregar o perfil.",
           variant: "destructive"
         });
+        setLoading(false);
+        return;
+      }
+
+      if (!profileData) {
+        console.log('No profile found, user might need to complete setup');
+        toast({
+          title: "Perfil não encontrado",
+          description: "Por favor, complete seu cadastro.",
+          variant: "destructive"
+        });
+        setLoading(false);
         return;
       }
 
@@ -196,6 +209,16 @@ const Profile = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-gray-600">Você precisa estar logado para ver esta página.</p>
         </div>
       </div>
     );
