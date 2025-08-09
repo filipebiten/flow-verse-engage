@@ -21,6 +21,7 @@ import {useUserProfile} from "@/hooks/useUserProfile.tsx";
 import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
 import {PhasePhrase} from "@/components/PhasePhrase.tsx";
+import {useAuth} from "@/hooks/useAuth.tsx";
 
 const menuItems = [
   {
@@ -65,7 +66,8 @@ function UserHeaderInfo(props: { onClick: () => void, profile: UserProfile, user
 }
 
 export function AppSidebar() {
-  const { profile, signOut, loading } =  useUserProfile();
+  const { profile, loading } =  useUserProfile();
+  const { signOut } = useAuth();
   const location = useLocation();
 
   const userPhase = getUserPhase(profile?.points || 0);

@@ -250,7 +250,7 @@ const Profile = () => {
         <Card className="overflow-hidden">
           <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
             <div className="flex items-center gap-6">
-              <Avatar className="w-20 h-20 border-4 border-white">
+              <Avatar className="w-40 h-40 border-4 border-white">
                 {profile.profile_photo_url ? (
                   <AvatarImage src={profile.profile_photo_url} alt={profile.name} />
                 ) : (

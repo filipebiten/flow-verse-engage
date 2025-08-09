@@ -81,11 +81,13 @@ const Auth = () => {
 
     const fileExt = profilePhoto.name.split('.').pop();
     const fileName = `${userId}.${fileExt}`;
-    const filePath = `profile-photos/${fileName}`;
+
+    // Apenas o caminho dentro do bucket, sem o nome do bucket.
+    const filePath = `${fileName}`;
 
     const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, profilePhoto);
+        .from('avatars') // Nome do bucket
+        .upload(filePath, profilePhoto);
 
     if (uploadError) {
       console.error('Error uploading photo:', uploadError);
@@ -93,15 +95,15 @@ const Auth = () => {
     }
 
     const { data } = supabase.storage
-      .from('avatars')
-      .getPublicUrl(filePath);
+        .from('avatars')
+        .getPublicUrl(filePath);
 
     return data.publicUrl;
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast({
         title: "Erro na confirmação",
@@ -124,7 +126,7 @@ const Auth = () => {
 
     try {
       const isAdminEmail = email === 'filipebiten@gmail.com';
-      
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -133,6 +135,7 @@ const Auth = () => {
           data: {
             name: name,
             whatsapp: whatsapp,
+            email: email,
             birth_date: birthDate,
             gender: gender,
             pgm_role: pgmRole,
@@ -159,28 +162,42 @@ const Auth = () => {
           });
         }
       } else {
-        // Upload profile photo if provided
-        let profilePhotoUrl = null;
-        if (data.user && profilePhoto) {
-          profilePhotoUrl = await uploadProfilePhoto(data.user.id);
-        }
-
-        // Update profile with additional data including photo
         if (data.user) {
-          await supabase
-            .from('profiles')
-            .update({
-              whatsapp: whatsapp,
-              birth_date: birthDate,
-              gender: gender,
-              pgm_role: pgmRole,
-              pgm_number: pgmNumber,
-              participates_flow_up: participatesFlowUp,
-              participates_irmandade: participatesIrmandade,
-              is_admin: isAdminEmail,
-              profile_photo_url: profilePhotoUrl
-            })
-            .eq('id', data.user.id);
+          // Espera até o perfil existir no banco antes de atualizar
+          let profileExists = false;
+          for (let i = 0; i < 10; i++) { // tenta até 10 vezes
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', data.user.id)
+                .single();
+            if (profileData) {
+              profileExists = true;
+              break;
+            }
+            await new Promise(r => setTimeout(r, 5000)); // espera 1s e tenta de novo
+          }
+
+          if (!profileExists) {
+            console.error('Perfil não foi criado pela trigger');
+            return;
+          }
+
+          let profilePhotoUrl = null;
+          if (profilePhoto) {
+            profilePhotoUrl = await uploadProfilePhoto(data.user.id);
+          }
+
+          if (profilePhotoUrl) {
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ profile_photo_url: profilePhotoUrl })
+                .eq('id', data.user.id);
+
+            if (updateError) {
+              console.error('Erro ao atualizar URL da foto:', updateError);
+            }
+          }
         }
 
         setShowEmailConfirmation(true);
@@ -188,7 +205,7 @@ const Auth = () => {
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Ocorreu um erro inesperado.",
+        description: `Ocorreu um erro inesperado.${error}`,
         variant: "destructive"
       });
     } finally {
