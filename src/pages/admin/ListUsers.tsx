@@ -102,11 +102,11 @@ function ListUsers(){
                         <div className="space-y-2">
                             {data && data.map((user: UserProfile) => ( // Usando a interface UserProfile
                                 <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg shadow-sm bg-white hover:shadow-md transition-all duration-200"> {/* Estilização aprimorada */}
-                                    {user.image_url ? (
+                                    {user.profile_photo_url ? (
                                         <img
-                                            src={user.image_url}
+                                            src={user.profile_photo_url}
                                             alt={user.name}
-                                            className="w-16 h-16 rounded-full object-cover mr-4 border-2 border-blue-300" // Imagem circular com borda
+                                            className="w-40 h-40 rounded-full object-cover mr-4 border-2 border-blue-300" // Imagem circular com borda
                                         />
                                     ) : (
                                         <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-2xl font-semibold mr-4 border-2 border-blue-300"> {/* Fallback circular */}

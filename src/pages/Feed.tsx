@@ -17,6 +17,7 @@ import {
   Award
 } from 'lucide-react';
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
+import {definePeriodBadgeColor} from "@/helpers/colorHelper.ts";
 
 interface FeedActivity {
   id: string;
@@ -440,7 +441,7 @@ const Feed = () => {
                                         +{(item.data as FeedActivity).points} pts
                                       </Badge>
                                       {(item.data as FeedActivity).period && (
-                                          <Badge variant="outline" className="text-xs">
+                                          <Badge variant="outline" className={`${definePeriodBadgeColor((item.data as FeedActivity).period)} text-xs text-white`}>
                                             {(item.data as FeedActivity).period}
                                           </Badge>
                                       )}

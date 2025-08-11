@@ -7,14 +7,16 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  Target, 
-  CheckCircle, 
-  BookOpen, 
+import {
+  Target,
+  CheckCircle,
+  BookOpen,
   GraduationCap,
   Award
 } from 'lucide-react';
 import {useUserProfile} from "@/hooks/useUserProfile.tsx";
+import { differenceInDays } from 'date-fns';
+import {definePeriodBadgeColor} from "@/helpers/colorHelper.ts";
 
 interface Mission {
   id: string;
@@ -48,7 +50,7 @@ const Missions = () => {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [books, setBooks] = useState<Mission[]>([]);
   const [courses, setCourses] = useState<Mission[]>([]);
-  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+  const [completedItems, setCompletedItems] = useState<Map<string, object>>(new Map());
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -146,7 +148,7 @@ const Missions = () => {
       console.log('Completed missions result:', { completed, completedError });
 
       if (completed) {
-        const completedIds = new Set(completed.map(item => item.mission_id));
+        const completedIds = new Map(completed.map(item => [item.mission_id, item]));
         setCompletedItems(completedIds);
       }
 
@@ -214,13 +216,12 @@ const Missions = () => {
 
       // Update local state
       setUserProfile({ ...userProfile!, points: newPoints, phase: newPhase.name });
-      setCompletedItems(prev => new Set([...prev, item.id]));
+      setCompletedItems(prev => new Map([...prev, [item.id, item]]));
 
       toast({
         title: "Parabéns! 🎉",
         description: `Você completou "${item.name}" e ganhou ${item.points} pontos!`,
       });
-
 
       refreshUserData();
     } catch (error) {
@@ -247,12 +248,33 @@ const Missions = () => {
         ) : (
           <div className="space-y-3">
             {items.map((item) => {
-              const isCompleted = completedItems.has(item.id);
+              const isCompleted = () => {
+                const completed = completedItems.get(item.id);
+
+                if (!completed)
+                  return false;
+
+                if (completed.period === null) {
+                  return true;
+                }
+
+                if (completed.period === 'diário' && differenceInDays(new Date(), new Date(completed.completed_at)) > 0)
+                  return false;
+                else if (completed.period === 'semanal' && differenceInDays(new Date(), new Date(completed.completed_at)) > 6)
+                  return false;
+                else if (completed.period === 'semestral' && differenceInDays(new Date(), new Date(completed.completed_at)) > 179)
+                  return false;
+                else if (completed.period === 'Anual' && differenceInDays(new Date(), new Date(completed.completed_at)) > 364)
+                  return false;
+
+                return true;
+              };
+
               return (
                 <div
                   key={item.id}
                   className={`p-4 border rounded-lg transition-all ${
-                    isCompleted 
+                    isCompleted()
                       ? 'bg-green-50 border-green-200' 
                       : 'bg-white hover:shadow-md'
                   }`}
@@ -261,22 +283,22 @@ const Missions = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold">{item.name}</h3>
-                        {isCompleted && <CheckCircle className="w-5 h-5 text-green-600" />}
+                        {isCompleted() && <CheckCircle className="w-5 h-5 text-green-600" />}
                       </div>
                       <p className="text-sm text-gray-600 mb-2">{item.description}</p>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant="secondary">+{item.points} pts</Badge>
-                        {item.period && <Badge variant="outline">{item.period}</Badge>}
+                        <Badge className='bg-green-500 text-white' variant="secondary">+{item.points} pts</Badge>
+                        {item.period && <Badge className={`${definePeriodBadgeColor(item.period)}`} variant="default">{item.period[0].toUpperCase() + item.period.slice(1)}</Badge>}
                         {item.school && <Badge variant="outline">{item.school}</Badge>}
                       </div>
                     </div>
                     <Button
                       onClick={() => completeItem(item)}
-                      disabled={isCompleted}
-                      variant={isCompleted ? "secondary" : "default"}
+                      disabled={isCompleted()}
+                      variant={isCompleted() ? "secondary" : "default"}
                       size="sm"
                     >
-                      {isCompleted ? "Concluído" : "Completar"}
+                      {isCompleted() ? "Concluído" : "Completar"}
                     </Button>
                   </div>
                 </div>
