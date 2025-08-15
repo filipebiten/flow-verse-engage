@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
 import {definePeriodBadgeColor} from "@/helpers/colorHelper.ts";
+import {getPhaseInfo} from "@/utils/phaseUtils.ts";
 
 interface FeedActivity {
   id: string;
@@ -93,14 +94,12 @@ const Feed = () => {
 
   const loadFeedData = async () => {
     try {
-      console.log('Loading feed data...');
 
       // Load recent activities
       const { data: activitiesData, error: activitiesError } = await supabase
           .from('missions_completed')
           .select('*')
-          .order('completed_at', { ascending: false })
-          .limit(20);
+
 
       if (activitiesError) {
         console.error('Error loading activities:', activitiesError);
@@ -181,7 +180,7 @@ const Feed = () => {
 
       const { data: badgeData, error: badgeError } = await supabase
           .from('user_badges')
-          .select('*')
+          .select('*, badges ( id, name, icon, description)')
           .order('earned_at', { ascending: false })
           .limit(10);
 
@@ -196,9 +195,9 @@ const Feed = () => {
           if (userProfile) {
             formattedBadges.push({
               id: badge.id,
-              user_id: badge.user_id,
-              badge_name: badge.badge_name,
-              badge_icon: badge.badge_icon,
+              user_id: badge.badges.user_id,
+              badge_name: badge.badges.name,
+              badge_icon: badge.badges.icon,
               earned_at: badge.earned_at,
               user_name: userProfile.name,
               user_photo: userProfile.profile_photo_url
@@ -248,7 +247,7 @@ const Feed = () => {
 
         const { data: badges } = await supabase
             .from('user_badges')
-            .select('*')
+            .select('*, badges (id, name, icon)')
             .eq('user_id', userId);
 
         setUserBadges(badges || []);
@@ -427,7 +426,7 @@ const Feed = () => {
                                   <div>
                                     <p className="text-sm">
                               <span
-                                  className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                  className="font-medium cursor-pointer text-blue-900 hover:text-blue-600 transition-colors"
                                   onClick={() => openUserProfile(item.data.user_id)}
                               >
                                 {item.data.user_name}
@@ -456,7 +455,7 @@ const Feed = () => {
                                   <div>
                                     <p className="text-sm">
                               <span
-                                  className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                  className="font-medium cursor-pointer text-blue-900 hover:text-blue-600 transition-colors"
                                   onClick={() => openUserProfile(item.data.user_id)}
                               >
                                 {item.data.user_name}
@@ -482,12 +481,12 @@ const Feed = () => {
                                   <div>
                                     <p className="text-sm">
                               <span
-                                  className="font-medium cursor-pointer hover:text-blue-600 transition-colors"
+                                  className="font-medium cursor-pointer text-blue-900 hover:text-blue-600 transition-colors"
                                   onClick={() => openUserProfile(item.data.user_id)}
                               >
                                 {item.data.user_name}
                               </span>
-                                      {' '}conquistou um novo badge!
+                                      {' '}conquistou um novo título!
                                     </p>
                                     <div className="flex items-center space-x-2 mt-1">
                                       <span className="text-lg">{(item.data as UserBadge).badge_icon}</span>

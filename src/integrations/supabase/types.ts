@@ -229,27 +229,39 @@ export type Database = {
       }
       user_badges: {
         Row: {
-          badge_icon: string | null
-          badge_name: string
           earned_at: string | null
           id: string
           user_id: string
         }
         Insert: {
-          badge_icon?: string | null
-          badge_name: string
           earned_at?: string | null
           id?: string
           user_id: string
         }
         Update: {
-          badge_icon?: string | null
-          badge_name?: string
           earned_at?: string | null
           id?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "badge_id_badge_id_fk"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badge"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
+      badges: {
+        id: number,
+        created_at: string | null,
+        name: string | null,
+        description: string | null,
+        icon: string | null,
+        requiredment_field: string,
+        requirement_value: string,
+        badge_id: number
       }
     }
     Views: {

@@ -17,6 +17,7 @@ import {
 import {useUserProfile} from "@/hooks/useUserProfile.tsx";
 import { differenceInDays } from 'date-fns';
 import {definePeriodBadgeColor} from "@/helpers/colorHelper.ts";
+import {BadgeRequirement, checkBadgeEligibility} from "@/utils/badgeUtils.ts";
 
 interface Mission {
   id: string;
@@ -29,6 +30,7 @@ interface Mission {
 }
 
 interface UserProfile {
+  consecutive_days: number;
   id: string;
   name: string;
   points: number;
@@ -44,7 +46,7 @@ const getUserPhase = (points: number) => {
 
 const Missions = () => {
   const { user } = useAuth();
-  const { refreshUserData } = useUserProfile();
+  const { refreshUserData, completedMissions } = useUserProfile();
 
   const { toast } = useToast();
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -164,11 +166,41 @@ const Missions = () => {
     }
   };
 
+  async function checkIfUserCompletedAnyBadge(userStats) {
+
+    const badgesAchieved: BadgeRequirement[] = [];
+
+    const {data: allBadges, error: error} = await supabase
+        .from('badges')
+        .select('*');
+
+    const {data: userBadges, error: badgeError } = await supabase
+        .from('user_badges')
+        .select('*');
+
+    allBadges.map((b) => {
+      return {
+        ...b,
+        requirement:{
+          type: b.requirement_field,
+          count: b.requirement_value
+        }
+      }
+    }).forEach((badge) => {
+      const res = userBadges.find((ub) => ub.badge_id === badge.id);
+
+      if (res === undefined && checkBadgeEligibility(badge, userStats)) {
+        badgesAchieved.push(badge);
+      }
+    })
+
+    return badgesAchieved;
+  }
+
   const completeItem = async (item: Mission) => {
     if (completedItems.has(item.id) || !user) return;
 
     try {
-
       // Insert completed mission
       const { error } = await supabase
         .from('missions_completed')
@@ -192,9 +224,27 @@ const Missions = () => {
         return;
       }
 
-      // Update user points
       const newPoints = (userProfile?.points || 0) + item.points;
       const newPhase = getUserPhase(newPoints);
+
+      if(userProfile.phase !== newPhase.name) {
+
+        const { errorPhase } = await supabase
+            .from('phase_changes')
+            .insert({
+              user_id: userProfile.id,
+              previous_phase: userProfile.phase,
+              new_phase: newPhase.name,
+              total_points: newPoints,
+              changed_at: new Date()
+            })
+
+        toast({
+          title: "Nova fase! 🎉",
+          className: "bg-blue-700 text-white",
+          description: `Você passou da fase ${userProfile.phase} para ${newPhase.name}`,
+        });
+      }
 
       const { error: updateError } = await supabase
         .from('profiles')
@@ -209,17 +259,45 @@ const Missions = () => {
         toast({
           title: "Erro",
           description: "Não foi possível atualizar o perfil.",
-          variant: "destructive"
+          variant: "destructive",
+          className: "bg-red-700 text-white",
         });
         return;
       }
 
-      // Update local state
       setUserProfile({ ...userProfile!, points: newPoints, phase: newPhase.name });
       setCompletedItems(prev => new Map([...prev, [item.id, item]]));
 
+      const badgesCompleted = await checkIfUserCompletedAnyBadge({
+        points: newPoints,
+        missions: completedMissions.find(c => c.mission_type === 'mission') || [],
+        books: completedMissions.find(c => c.mission_type === 'book') || [],
+        courses: completedMissions.find(c => c.mission_type === 'course') || [],
+        consecutive_days: userProfile.consecutive_days
+      });
+
+      if(badgesCompleted.length > 0) {
+        for (const badge of badgesCompleted) {
+
+          const { error } = await supabase
+              .from('user_badges')
+              .insert({
+                user_id: userProfile.id,
+                badge_id: badge.id,
+                earned_at: new Date()
+              });
+
+          toast({
+            title: "Conquista atingida!! 🎉",
+            className: "bg-green-700 text-white",
+            description: `Parabens você acaba de atingir a conquista ${badge.name}!!!!`,
+          });
+        }
+      }
+
       toast({
         title: "Parabéns! 🎉",
+        className: "bg-green-700 text-white",
         description: `Você completou "${item.name}" e ganhou ${item.points} pontos!`,
       });
 
@@ -229,6 +307,7 @@ const Missions = () => {
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao completar a missão.",
+        className: "bg-red-700 text-white",
         variant: "destructive"
       });
     }

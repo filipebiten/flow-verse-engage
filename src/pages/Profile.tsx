@@ -21,12 +21,14 @@ import {
   BookOpen, 
   Target,
   Award,
-  Camera,
   Lock,
   Star
 } from 'lucide-react';
-import { availableBadges, getAvailableBadges, getLockedBadges, type BadgeRequirement } from '@/utils/badgeUtils';
-import {phases} from "@/utils/phaseUtils.ts";
+import {
+  checkBadgeEligibility
+} from '@/utils/badgeUtils';
+import {useQuery} from "@tanstack/react-query";
+import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 
 interface UserProfile {
   id: string;
@@ -92,8 +94,6 @@ const Profile = () => {
     
     setLoading(true);
     try {
-      console.log('Loading user data for:', user);
-
       // Load profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -102,7 +102,6 @@ const Profile = () => {
         .maybeSingle();
 
       if (profileError) {
-        console.error('Error loading profile:', profileError);
         toast({
           title: "Erro",
           description: "Não foi possível carregar o perfil.",
@@ -113,7 +112,6 @@ const Profile = () => {
       }
 
       if (!profileData) {
-        console.log('No profile found, user might need to complete setup');
         toast({
           title: "Perfil não encontrado",
           description: "Por favor, complete seu cadastro.",
@@ -123,7 +121,6 @@ const Profile = () => {
         return;
       }
 
-      console.log('Profile loaded:', profileData);
       setProfile(profileData);
       setFormData(profileData);
 
@@ -137,7 +134,6 @@ const Profile = () => {
       if (missionsError) {
         console.error('Error loading completed missions:', missionsError);
       } else {
-        console.log('Completed missions loaded:', missionsData);
         setCompletedMissions(missionsData || []);
       }
 
@@ -151,7 +147,6 @@ const Profile = () => {
       if (badgesError) {
         console.error('Error loading badges:', badgesError);
       } else {
-        console.log('User badges loaded:', badgesData);
         setUserBadges(badgesData || []);
       }
 
@@ -245,7 +240,7 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
-        
+
         {/* Header Card */}
         <Card className="overflow-hidden">
           <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
@@ -269,8 +264,8 @@ const Profile = () => {
                   <span className="text-white/90">{profile.points || 0} pontos</span>
                 </div>
               </div>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 onClick={() => setEditing(!editing)}
                 className="bg-white text-gray-800 hover:bg-gray-100"
               >
@@ -282,7 +277,7 @@ const Profile = () => {
 
         {/* Profile Details */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
+
           {/* Personal Info */}
           <Card>
             <CardHeader>
@@ -446,7 +441,7 @@ const Profile = () => {
                 <div className="text-center p-4 bg-yellow-50 rounded-lg">
                   <Trophy className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-yellow-600">{userBadges.length}</div>
-                  <p className="text-sm text-gray-600">Badges</p>
+                  <p className="text-sm text-gray-600">Conquistas</p>
                 </div>
               </div>
             </CardContent>
@@ -460,7 +455,7 @@ const Profile = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
+
               {/* Livros Completados */}
               <div>
                 <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
@@ -559,33 +554,59 @@ const Profile = () => {
         </Card>
 
         {/* Badges Section */}
+        <Badges userBadges={userBadges} profile={profile} missionsCount={missionsCount} booksCount={booksCount} coursesCount={coursesCount}/>
+        </div>
+    </div>
+  );
+};
+
+const Badges = ({userBadges, profile, missionsCount, booksCount, coursesCount}) => {
+  const { data, isLoading } = useQuery({
+    queryKey: ['get_badges'],
+    staleTime: 0,
+    queryFn: async () => {
+      const {data: availableBadges, error: availableBadgesError} = await supabase
+          .from('badges')
+          .select('*');
+
+      return availableBadges.map((b) => { return {...b, requirement: { type: b.requirement_field, count: b.requirement_value }}})
+    }
+  })
+
+  if (isLoading)
+    return (
+        <LoadingComponent></LoadingComponent>
+    )
+
+  return (
+      <>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Star className="w-5 h-5" />
-              Badges e Conquistas
+              Títulos e Conquistas
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              
-              {/* Earned Badges */}
-              {userBadges.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-lg mb-3 text-green-700">Badges Conquistados</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {userBadges.map((badge) => (
-                      <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg">
-                        <div className="text-3xl mb-2">{badge.badge_icon}</div>
-                        <h4 className="font-semibold text-sm text-yellow-800">{badge.badge_name}</h4>
-                        <p className="text-xs text-yellow-700 mt-1">
-                          {new Date(badge.earned_at).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+
+              {/*/!* Earned Badges *!/*/}
+              {/*{userBadges.length > 0 && (*/}
+              {/*    <div>*/}
+              {/*      <h3 className="font-semibold text-lg mb-3 text-green-700">Badges Conquistados</h3>*/}
+              {/*      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">*/}
+              {/*        {userBadges.map((badge) => (*/}
+              {/*            <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg">*/}
+              {/*              <div className="text-3xl mb-2">{badge.badge_icon}</div>*/}
+              {/*              <h4 className="font-semibold text-sm text-yellow-800">{badge.badge_name}</h4>*/}
+              {/*              <p className="text-xs text-yellow-700 mt-1">*/}
+              {/*                {new Date(badge.earned_at).toLocaleDateString('pt-BR')}*/}
+              {/*              </p>*/}
+              {/*            </div>*/}
+              {/*        ))}*/}
+              {/*      </div>*/}
+              {/*    </div>*/}
+              {/*)}*/}
 
               {(() => {
                 const userStats = {
@@ -596,68 +617,70 @@ const Profile = () => {
                   consecutive_days: profile?.consecutive_days || 0
                 };
 
-                const earnedBadgeIds = userBadges.map(b => {
-                  // Map current badge names to available badge IDs
-                  const foundBadge = availableBadges.find(ab => ab.name === b.badge_name);
+                const earnedBadgeIds = data.map(b => {
+                  const foundBadge = userBadges.find(ab => ab.id === b.id);
                   return foundBadge?.id || '';
                 }).filter(id => id !== '');
 
-                const availableForUnlock = getAvailableBadges(userStats, earnedBadgeIds);
-                const lockedBadges = getLockedBadges(userStats, earnedBadgeIds);
+                const availableForUnlock = data.filter(badge =>
+                    !earnedBadgeIds.includes(badge.id) && checkBadgeEligibility(badge, userStats)
+                );
+
+                const lockedBadges = data.filter(badge =>
+                    !earnedBadgeIds.includes(badge.id) && !checkBadgeEligibility(badge, userStats)
+                );
 
                 return (
-                  <>
-                    {/* Available to Unlock */}
-                    {availableForUnlock.length > 0 && (
-                      <div>
-                        <h3 className="font-semibold text-lg mb-3 text-blue-700">Prontos para Desbloquear!</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {availableForUnlock.map((badge) => (
-                            <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-300 rounded-lg">
-                              <div className="text-3xl mb-2">{badge.icon}</div>
-                              <h4 className="font-semibold text-sm text-blue-800">{badge.name}</h4>
-                              <p className="text-xs text-blue-700 mt-1">{badge.description}</p>
-                              <Badge className="mt-2 bg-green-100 text-green-800">Desbloqueável!</Badge>
+                    <>
+                      {/* Available to Unlock */}
+                      {availableForUnlock.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold text-lg mb-3 text-green-700">Conquistas Adquiridas</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {availableForUnlock.map((badge) => (
+                                  <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-300 rounded-lg">
+                                    <div className="text-3xl mb-2">{badge.icon}</div>
+                                    <h4 className="font-semibold text-sm text-blue-800">{badge.name}</h4>
+                                    <p className="text-xs text-blue-700 mt-1">{badge.description}</p>
+                                  </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                          </div>
+                      )}
 
-                    {/* Locked Badges */}
-                    {lockedBadges.length > 0 && (
-                      <div>
-                        <h3 className="font-semibold text-lg mb-3 text-gray-700">Próximos Objetivos</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          {lockedBadges.slice(0, 8).map((badge) => (
-                            <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 rounded-lg opacity-75">
-                              <div className="relative">
-                                <div className="text-3xl mb-2 filter grayscale">{badge.icon}</div>
-                                <Lock className="w-4 h-4 text-gray-500 absolute top-0 right-0" />
-                              </div>
-                              <h4 className="font-semibold text-sm text-gray-700">{badge.name}</h4>
-                              <p className="text-xs text-gray-600 mt-1">{badge.description}</p>
-                              <Badge variant="outline" className="mt-2 text-gray-500">
-                                {badge.requirement.type === 'points' ? `${badge.requirement.count} pontos` :
-                                badge.requirement.type === 'missions' ? `${badge.requirement.count} missões` :
-                                badge.requirement.type === 'books' ? `${badge.requirement.count} livros` :
-                                badge.requirement.type === 'courses' ? `${badge.requirement.count} cursos` :
-                                `${badge.requirement.count} dias consecutivos`}
-                              </Badge>
+                      {/* Locked Badges */}
+                      {lockedBadges.length > 0 && (
+                          <div>
+                            <h3 className="font-semibold text-lg mb-3 text-gray-700">Próximos Objetivos</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                              {lockedBadges.slice(0, 8).map((badge) => (
+                                  <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 rounded-lg opacity-75">
+                                    <div className="relative">
+                                      <div className="text-3xl mb-2 filter grayscale">{badge.icon}</div>
+                                      <Lock className="w-4 h-4 text-gray-500 absolute top-0 right-0" />
+                                    </div>
+                                    <h4 className="font-semibold text-sm text-gray-700">{badge.name}</h4>
+                                    <p className="text-xs text-gray-600 mt-1">{badge.description}</p>
+                                    <Badge variant="outline" className="mt-2 text-gray-500">
+                                      {badge.requirement.type === 'points' ? `${badge.requirement.count} pontos` :
+                                          badge.requirement.type === 'missions' ? `${badge.requirement.count} missões` :
+                                              badge.requirement.type === 'books' ? `${badge.requirement.count} livros` :
+                                                  badge.requirement.type === 'courses' ? `${badge.requirement.count} cursos` :
+                                                      `${badge.requirement.count} dias consecutivos`}
+                                    </Badge>
+                                  </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
+                          </div>
+                      )}
+                    </>
                 );
               })()}
             </div>
           </CardContent>
         </Card>
-      </div>
-    </div>
-  );
-};
 
+      </>
+  )
+}
 export default Profile;

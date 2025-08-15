@@ -14,6 +14,16 @@ export interface Phase {
   };
 }
 
+export const getPhaseInfo = (phase: string) => {
+  const phases = {
+    "Riacho": { emoji: "🌀", color: "from-green-400 to-blue-400" },
+    "Correnteza": { emoji: "🌊", color: "from-blue-500 to-teal-500" },
+    "Cachoeira": { emoji: "💥", color: "from-purple-600 to-blue-600" },
+    "Oceano": { emoji: "🌌", color: "from-blue-900 to-indigo-900" }
+  };
+  return phases[phase as keyof typeof phases] || phases["Riacho"];
+};
+
 export const phases: Phase[] = [
   {
     name: "Riacho",

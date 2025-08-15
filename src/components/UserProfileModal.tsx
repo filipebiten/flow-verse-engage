@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, Target, BookOpen, Award } from 'lucide-react';
+import {getPhaseInfo} from "@/utils/phaseUtils.ts";
 
 interface UserProfile {
   id: string;
@@ -40,16 +41,6 @@ interface Props {
   badges: UserBadge[];
   completedMissions: CompletedMission[];
 }
-
-const getPhaseInfo = (phase: string) => {
-  const phases = {
-    "Riacho": { emoji: "🌀", color: "from-green-400 to-blue-400" },
-    "Correnteza": { emoji: "🌊", color: "from-blue-500 to-teal-500" },
-    "Cachoeira": { emoji: "💥", color: "from-purple-600 to-blue-600" },
-    "Oceano": { emoji: "🌌", color: "from-blue-900 to-indigo-900" }
-  };
-  return phases[phase as keyof typeof phases] || phases["Riacho"];
-};
 
 export const UserProfileModal: React.FC<Props> = ({
   isOpen,
@@ -93,7 +84,7 @@ export const UserProfileModal: React.FC<Props> = ({
                     <span className="text-white/90">{profile.points || 0} pontos</span>
                   </div>
                   {profile.pgm_number && (
-                    <p className="text-white/80">{profile.pgm_number}</p>
+                    <p className="text-white/80">PGM {profile.pgm_number}</p>
                   )}
                   {profile.pgm_role && (
                     <p className="text-white/80">{profile.pgm_role}</p>
@@ -146,7 +137,7 @@ export const UserProfileModal: React.FC<Props> = ({
                   <div>
                     <Trophy className="w-4 h-4 text-yellow-600 mx-auto mb-1" />
                     <div className="text-lg font-bold text-yellow-600">{badges.length}</div>
-                    <p className="text-xs text-gray-600">Badges</p>
+                    <p className="text-xs text-gray-600">Conquistas</p>
                   </div>
                 </div>
               </CardContent>
@@ -157,15 +148,15 @@ export const UserProfileModal: React.FC<Props> = ({
           {badges.length > 0 && (
             <Card>
               <CardContent className="p-4">
-                <h3 className="font-semibold mb-3">Badges Conquistados</h3>
+                <h3 className="font-semibold mb-3">Conquistas</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {badges.map((badge) => (
                     <div 
                       key={badge.id} 
                       className="text-center p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg"
                     >
-                      <div className="text-2xl mb-1">{badge.badge_icon}</div>
-                      <h4 className="font-semibold text-xs text-yellow-800">{badge.badge_name}</h4>
+                      <div className="text-2xl mb-1">{badge.badges.icon}</div>
+                      <h4 className="font-semibold text-xs text-yellow-800">{badge.badges.name}</h4>
                     </div>
                   ))}
                 </div>
