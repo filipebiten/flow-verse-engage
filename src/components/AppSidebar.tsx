@@ -22,6 +22,7 @@ import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
 import {PhasePhrase} from "@/components/PhasePhrase.tsx";
 import {useAuth} from "@/hooks/useAuth.tsx";
+import UserProfile from "@/pages/UserProfile.tsx";
 
 const menuItems = [
   {

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -11,13 +10,13 @@ import {
   Target,
   CheckCircle,
   BookOpen,
-  GraduationCap,
-  Award
+  GraduationCap
 } from 'lucide-react';
 import {useUserProfile} from "@/hooks/useUserProfile.tsx";
 import { differenceInDays } from 'date-fns';
 import {definePeriodBadgeColor} from "@/helpers/colorHelper.ts";
 import {BadgeRequirement, checkBadgeEligibility} from "@/utils/badgeUtils.ts";
+import NewPhaseDialog from "@/components/newPhaseDialog.tsx";
 
 interface Mission {
   id: string;
@@ -55,6 +54,8 @@ const Missions = () => {
   const [completedItems, setCompletedItems] = useState<Map<string, object>>(new Map());
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [newPhase, setNewPhase] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -64,8 +65,7 @@ const Missions = () => {
 
   const loadData = async () => {
     try {
-      console.log('Loading missions data...');
-      
+
       // Load user profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
@@ -86,23 +86,17 @@ const Missions = () => {
         .select('*')
         .order('created_at', { ascending: false });
 
-      console.log('Missions query result:', { missionsData, missionsError });
-
       // Load books
       const { data: booksData, error: booksError } = await supabase
         .from('books')
         .select('*')
         .order('created_at', { ascending: false });
 
-      console.log('Books query result:', { booksData, booksError });
-
       // Load courses
       const { data: coursesData, error: coursesError } = await supabase
         .from('courses')
         .select('*')
         .order('created_at', { ascending: false });
-
-      console.log('Courses query result:', { coursesData, coursesError });
 
       // Transform data
       const transformedMissions = (missionsData || []).map(item => ({
@@ -131,12 +125,6 @@ const Missions = () => {
         school: item.school
       }));
 
-      console.log('Transformed data:', { 
-        missions: transformedMissions, 
-        books: transformedBooks, 
-        courses: transformedCourses 
-      });
-
       setMissions(transformedMissions);
       setBooks(transformedBooks);
       setCourses(transformedCourses);
@@ -147,15 +135,12 @@ const Missions = () => {
         .select('*')
         .eq('user_id', user?.id);
 
-      console.log('Completed missions result:', { completed, completedError });
-
       if (completed) {
         const completedIds = new Map(completed.map(item => [item.mission_id, item]));
         setCompletedItems(completedIds);
       }
 
     } catch (error) {
-      console.error('Error loading data:', error);
       toast({
         title: "Erro",
         description: "Não foi possível carregar os dados.",
@@ -215,7 +200,6 @@ const Missions = () => {
         });
 
       if (error) {
-        console.error('Error saving mission:', error);
         toast({
           title: "Erro",
           description: "Não foi possível salvar a missão completada.",
@@ -225,37 +209,33 @@ const Missions = () => {
       }
 
       const newPoints = (userProfile?.points || 0) + item.points;
-      const newPhase = getUserPhase(newPoints);
+      setNewPhase(getUserPhase(newPoints));
 
-      if(userProfile.phase !== newPhase.name) {
+      if(userProfile.phase !== newPhase?.name) {
 
         const { errorPhase } = await supabase
             .from('phase_changes')
             .insert({
               user_id: userProfile.id,
               previous_phase: userProfile.phase,
-              new_phase: newPhase.name,
+              new_phase: newPhase?.name,
               total_points: newPoints,
               changed_at: new Date()
             })
 
-        toast({
-          title: "Nova fase! 🎉",
-          className: "bg-blue-700 text-white",
-          description: `Você passou da fase ${userProfile.phase} para ${newPhase.name}`,
-        });
+        setOpenDialog(true);
+
       }
 
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ 
           points: newPoints,
-          phase: newPhase.name
+          phase: newPhase?.name
         })
         .eq('id', user.id);
 
       if (updateError) {
-        console.error('Error updating profile:', updateError);
         toast({
           title: "Erro",
           description: "Não foi possível atualizar o perfil.",
@@ -265,7 +245,7 @@ const Missions = () => {
         return;
       }
 
-      setUserProfile({ ...userProfile!, points: newPoints, phase: newPhase.name });
+      setUserProfile({ ...userProfile!, points: newPoints, phase: newPhase?.name });
       setCompletedItems(prev => new Map([...prev, [item.id, item]]));
 
       const badgesCompleted = await checkIfUserCompletedAnyBadge({
@@ -403,49 +383,56 @@ const Missions = () => {
   const currentPhase = getUserPhase(userProfile?.points || 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
-      <div className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <Card className="overflow-hidden">
-          <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">Missões e Desafios</h1>
-                <p className="text-white/90">Continue sua jornada de crescimento</p>
+      <>
+        <NewPhaseDialog open={openDialog}
+                        setOpenDialog={setOpenDialog}
+                        currentPhaseName={userProfile.phase}
+                        newPhase={newPhase}
+                        />
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
+          <div className="max-w-6xl mx-auto space-y-6">
+
+            {/* Header */}
+            <Card className="overflow-hidden">
+              <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-3xl font-bold mb-2">Missões e Desafios</h1>
+                    <p className="text-white/90">Continue sua jornada de crescimento</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-4xl mb-2">{currentPhase.icon}</div>
+                    <Badge className="bg-white text-gray-800">{currentPhase.name}</Badge>
+                  </div>
+                </div>
               </div>
-              <div className="text-right">
-                <div className="text-4xl mb-2">{currentPhase.icon}</div>
-                <Badge className="bg-white text-gray-800">{currentPhase.name}</Badge>
-              </div>
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{userProfile?.points || 0}</div>
+                    <p className="text-sm text-gray-600">Pontos Totais</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">{completedItems.size}</div>
+                    <p className="text-sm text-gray-600">Concluídos</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">{currentPhase.name}</div>
+                    <p className="text-sm text-gray-600">Fase Atual</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Missions, Books, Courses */}
+            <div className="space-y-6">
+              {renderItems(missions, "Missões", <Target className="w-5 h-5"/>, "Nenhuma missão disponível")}
+              {renderItems(books, "Livros", <BookOpen className="w-5 h-5"/>, "Nenhum livro disponível")}
+              {renderItems(courses, "Cursos", <GraduationCap className="w-5 h-5"/>, "Nenhum curso disponível")}
             </div>
           </div>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{userProfile?.points || 0}</div>
-                <p className="text-sm text-gray-600">Pontos Totais</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{completedItems.size}</div>
-                <p className="text-sm text-gray-600">Concluídos</p>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{currentPhase.name}</div>
-                <p className="text-sm text-gray-600">Fase Atual</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Missions, Books, Courses */}
-        <div className="space-y-6">
-          {renderItems(missions, "Missões", <Target className="w-5 h-5" />, "Nenhuma missão disponível")}
-          {renderItems(books, "Livros", <BookOpen className="w-5 h-5" />, "Nenhum livro disponível")}
-          {renderItems(courses, "Cursos", <GraduationCap className="w-5 h-5" />, "Nenhum curso disponível")}
         </div>
-      </div>
-    </div>
+      </>
   );
 };
 
