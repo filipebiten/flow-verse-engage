@@ -426,7 +426,7 @@ const Feed = () => {
                                   <div>
                                     <p className="text-sm">
                               <span
-                                  className="font-medium cursor-pointer text-blue-900 hover:text-blue-600 transition-colors"
+                                  className="font-medium cursor-pointer text-blue-900 hover:text-blue-600 transition-colors break-all"
                                   onClick={() => openUserProfile(item.data.user_id)}
                               >
                                 {item.data.user_name}
@@ -533,12 +533,12 @@ const Feed = () => {
                             {user.name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
+                        <div className={`flex-1 ${user.name.includes(" ") ? "break-words" : "break-all"}`}>
                           <p
                               className="text-sm font-medium cursor-pointer hover:text-blue-600 transition-colors"
                               onClick={() => openUserProfile(user.id)}
                           >
-                            {user.name}
+                              {user.name}
                           </p>
                           <PhaseBadge userPhase={user.phase}></PhaseBadge>
                         </div>

@@ -101,7 +101,7 @@ function ListUsers(){
                     ) : (
                         <div className="space-y-2">
                             {data && data.map((user: UserProfile) => ( // Usando a interface UserProfile
-                                <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg shadow-sm bg-white hover:shadow-md transition-all duration-200"> {/* Estilização aprimorada */}
+                                <div key={user.id} className=" break-all flex items-center justify-between p-4 border rounded-lg shadow-sm bg-white hover:shadow-md transition-all duration-200"> {/* Estilização aprimorada */}
                                     {user.profile_photo_url ? (
                                         <img
                                             src={user.profile_photo_url}

@@ -18,13 +18,45 @@ const Avatar = React.forwardRef<
 ))
 Avatar.displayName = AvatarPrimitive.Root.displayName
 
+
+type AvatarContainerProps = React.ImgHTMLAttributes<HTMLImageElement> & {
+    children?: React.ReactNode
+    className?: string
+}
+
+export const AvatarContainer = ({
+    src,
+    alt,
+    children,
+    className,
+    ...props
+}: AvatarContainerProps) => {
+    return (
+        <div
+            className={cn(
+                "relative aspect-square w-40 h-40 rounded-full overflow-hidden",
+                className
+            )}
+        >
+            <img
+                src={src}
+                alt={alt}
+                className="absolute inset-0 h-full w-full object-cover rounded-full"
+                {...props}
+            />
+
+            <div className="absolute inset-0">{children}</div>
+        </div>
+    )
+}
+
 const AvatarImage = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Image>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Image>
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Image
     ref={ref}
-    className={cn("aspect-square h-full w-full", className)}
+    className={cn("aspect-square h-full w-full absolute ", className)}
     {...props}
   />
 ))

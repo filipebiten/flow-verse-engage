@@ -60,7 +60,7 @@ export const UserProfileModal: React.FC<Props> = ({
         <DialogHeader>
           <DialogTitle>Perfil do Usuário</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* Header */}
           <Card className="overflow-hidden">
@@ -68,15 +68,17 @@ export const UserProfileModal: React.FC<Props> = ({
               <div className="flex items-center gap-4">
                 <Avatar className="w-16 h-16 border-4 border-white">
                   {profile.profile_photo_url ? (
-                    <AvatarImage src={profile.profile_photo_url} alt={profile.name} />
+                      <AvatarImage src={profile.profile_photo_url} alt={profile.name} />
                   ) : (
-                    <AvatarFallback className="bg-white text-gray-800 text-xl font-bold">
-                      {profile.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </AvatarFallback>
+                      <AvatarFallback className="bg-white text-gray-800 text-xl font-bold">
+                        {profile.name?.charAt(0)?.toUpperCase() || "U"}
+                      </AvatarFallback>
                   )}
                 </Avatar>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold mb-1">{profile.name}</h2>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold mb-1 break-all">
+                    {profile.name}
+                  </h2>
                   <div className="flex items-center gap-3 mb-2">
                     <Badge className="bg-white text-gray-800">
                       {phaseInfo.emoji} {profile.phase}
@@ -84,10 +86,10 @@ export const UserProfileModal: React.FC<Props> = ({
                     <span className="text-white/90">{profile.points || 0} pontos</span>
                   </div>
                   {profile.pgm_number && (
-                    <p className="text-white/80">PGM {profile.pgm_number}</p>
+                      <p className="text-white/80">PGM {profile.pgm_number}</p>
                   )}
                   {profile.pgm_role && (
-                    <p className="text-white/80">{profile.pgm_role}</p>
+                      <p className="text-white/80">{profile.pgm_role}</p>
                   )}
                 </div>
               </div>
@@ -102,7 +104,7 @@ export const UserProfileModal: React.FC<Props> = ({
                 <h3 className="font-semibold mb-3">Participações</h3>
                 <div className="space-y-2">
                   {profile.participates_flow_up && (
-                    <Badge variant="secondary" className="mr-2">Flow Up</Badge>
+                      <Badge variant="secondary" className="mr-2">Flow Up</Badge>
                   )}
                   {profile.participates_irmandade && (
                     <Badge variant="secondary">Irmandade</Badge>
@@ -151,8 +153,8 @@ export const UserProfileModal: React.FC<Props> = ({
                 <h3 className="font-semibold mb-3">Conquistas</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {badges.map((badge) => (
-                    <div 
-                      key={badge.id} 
+                    <div
+                      key={badge.id}
                       className="text-center p-3 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg"
                     >
                       <div className="text-2xl mb-1">{badge.badges.icon}</div>

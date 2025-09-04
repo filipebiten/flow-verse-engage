@@ -1,34 +1,32 @@
-
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { 
-  User, 
-  Calendar, 
-  Phone, 
-  Mail, 
-  Trophy, 
-  BookOpen, 
-  Target,
-  Award,
-  Lock,
-  Star
-} from 'lucide-react';
+import React, {useEffect, useRef, useState} from 'react';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
+import {Button} from '@/components/ui/button';
+import {Badge} from '@/components/ui/badge';
+import {Avatar, AvatarContainer, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
+import {Input} from '@/components/ui/input';
+import {Label} from '@/components/ui/label';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
+import {useToast} from '@/hooks/use-toast';
+import {supabase} from '@/integrations/supabase/client';
+import {useAuth} from '@/hooks/useAuth';
 import {
-  checkBadgeEligibility
-} from '@/utils/badgeUtils';
+  Award,
+  BookOpen,
+  Calendar,
+  DeleteIcon,
+  Lock,
+  Pen,
+  Phone,
+  Star,
+  Target,
+  Trash2,
+  Trophy,
+  User
+} from 'lucide-react';
+import {checkBadgeEligibility} from '@/utils/badgeUtils';
 import {useQuery} from "@tanstack/react-query";
 import {LoadingComponent} from "@/components/LoadingComponent.tsx";
+import {deleteProfilePhoto, uploadProfilePhoto} from "@/services/profileService.ts";
 
 interface UserProfile {
   id: string;
@@ -80,6 +78,68 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
+  const [enterEditImageArea, setEnterEditImageArea] = useState<boolean>(false);
+
+  const fileInputRef = useRef(null);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+
+    if(!file)
+      return;
+
+    try{
+      if(profile.profile_photo_url){
+        await handleDeletePhoto();
+      }
+      setTimeout(() => {
+      }, 2000);
+      formData.profile_photo_url = await uploadProfilePhoto(user.id, file);
+      await handleUpdateProfile();
+      toast({
+        title: "Foto alterada",
+        description: "Foto alterada com sucesso!",
+        className: "bg-green-600",
+        variant: "destructive"
+      });
+
+    }catch (e) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível carregar a nova foto de perfil.",
+        variant: "destructive"
+      });
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+  };
+
+  const handleButtonClick = () => {
+    fileInputRef.current.click();
+  };
+
+  const handleDeletePhotoClick = async () => {
+
+    try {
+      await handleDeletePhoto();
+    } catch (e) {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao alterar foto",
+        className: "bg-red-600",
+        variant: "destructive"
+      });
+    }
+  }
+
+  const handleDeletePhoto = async () => {
+    await deleteProfilePhoto(profile.profile_photo_url.substring(profile.profile_photo_url.lastIndexOf("/") + 1));
+    formData.profile_photo_url = null;
+    await handleUpdateProfile();
+  }
 
   useEffect(() => {
     if (user) {
@@ -163,7 +223,8 @@ const Profile = () => {
   };
 
   const handleUpdateProfile = async () => {
-    if (!user || !profile) return;
+    if (!user || !profile)
+      return;
 
     try {
       const { error } = await supabase
@@ -172,7 +233,6 @@ const Profile = () => {
         .eq('id', user.id);
 
       if (error) {
-        console.error('Error updating profile:', error);
         toast({
           title: "Erro",
           description: "Não foi possível atualizar o perfil.",
@@ -245,14 +305,84 @@ const Profile = () => {
         <Card className="overflow-hidden">
           <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
             <div className="flex items-center gap-6">
-              <Avatar className="w-40 h-40 border-4 border-white">
+              <Avatar
+                  onMouseEnter={() => setEnterEditImageArea(true)}
+                  onMouseLeave={() => setEnterEditImageArea(false)}
+                  className="w-40 h-40 border-4 border-white"
+              >
                 {profile.profile_photo_url ? (
-                  <AvatarImage src={profile.profile_photo_url} alt={profile.name} />
+                    <AvatarContainer
+                        className="bg-white text-gray-800 text-2xl
+                         font-bold text-start flex cursor-pointer"
+                        src={profile.profile_photo_url ? `${profile.profile_photo_url}?t=${Date.now()}` : undefined}
+                        alt={profile.name}
+                    >
+                      {
+                        enterEditImageArea ?
+                            (<>
+                                <div className="w-full h-full flex flex-col items-center
+                                  justify-center gap-2 hover:bg-gray-500/70">
+                                  <Button
+                                      variant="link"
+                                      size="default"
+                                      className="hover:no-underline hover:text-current text-white"
+                                      onClick={() => handleButtonClick()}
+                                  >
+                                    <Pen className="w-4 h-4 mr-1"/> Atualizar
+                                  </Button>
+                                  <Button
+                                      variant="link"
+                                      size="default"
+                                      className="hover:no-underline hover:text-current text-white"
+                                      onClick={() => handleDeletePhotoClick()}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-1"/> Remover
+                                  </Button>
+                                </div>
+                              </>
+                            ) :
+                            (
+                                <>
+                                  {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                                </>
+                            )
+                      }
+                    </AvatarContainer>
                 ) : (
-                  <AvatarFallback className="bg-white text-gray-800 text-2xl font-bold">
-                    {profile.name?.charAt(0)?.toUpperCase() || 'U'}
-                  </AvatarFallback>
+                    <AvatarFallback
+                        onClick={() => handleButtonClick()}
+                        className="bg-white text-gray-800 text-2xl
+                         font-bold text-start flex cursor-pointer">
+                      {
+                        enterEditImageArea ?
+                            (<>
+                                <div>
+                                  <Button
+                                      variant="link"
+                                      size="default"
+                                      className="hover:no-underline hover:text-current"
+                                  >
+                                    <Pen/> Adicionar Imagem
+                                  </Button>
+                                </div>
+                             </>
+                            ) :
+                            (
+                                <>
+                                  {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                                </>
+                            )
+                      }
+                    </AvatarFallback>
+
                 )}
+                <input
+                    type="file"
+                    accept=".jpg, .jpeg, .png, .gif"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    className="hidden"
+                />
               </Avatar>
               <div className="flex-1">
                 <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>

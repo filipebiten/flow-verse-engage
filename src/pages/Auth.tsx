@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Eye, EyeOff, AlertTriangle, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
+import {uploadProfilePhoto} from "@/services/profileService.ts";
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -61,13 +62,24 @@ const Auth = () => {
 
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setProfilePhoto(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfilePhotoPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+
+    try{
+
+      if (file) {
+        setProfilePhoto(file);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setProfilePhotoPreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    }catch (e) {
+      toast({
+        title: "Erro ao atualizar foto",
+        className: "bg-red-600",
+        description: `Ocorreu um erro ao atualizar a foto: ${e}`,
+        variant: "destructive"
+      });
     }
   };
 
@@ -76,30 +88,6 @@ const Auth = () => {
     setProfilePhotoPreview('');
   };
 
-  const uploadProfilePhoto = async (userId: string) => {
-    if (!profilePhoto) return null;
-
-    const fileExt = profilePhoto.name.split('.').pop();
-    const fileName = `${userId}.${fileExt}`;
-
-    // Apenas o caminho dentro do bucket, sem o nome do bucket.
-    const filePath = `${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-        .from('avatars') // Nome do bucket
-        .upload(filePath, profilePhoto);
-
-    if (uploadError) {
-      console.error('Error uploading photo:', uploadError);
-      return null;
-    }
-
-    const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-    return data.publicUrl;
-  };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -185,7 +173,7 @@ const Auth = () => {
 
           let profilePhotoUrl = null;
           if (profilePhoto) {
-            profilePhotoUrl = await uploadProfilePhoto(data.user.id);
+            profilePhotoUrl = await uploadProfilePhoto(data.user.id, profilePhoto);
           }
 
           if (profilePhotoUrl) {
