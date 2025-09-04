@@ -186,7 +186,6 @@ const Missions = () => {
     if (completedItems.has(item.id) || !user) return;
 
     try {
-      // Insert completed mission
       const { error } = await supabase
         .from('missions_completed')
         .insert({

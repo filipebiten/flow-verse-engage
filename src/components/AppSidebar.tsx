@@ -96,7 +96,10 @@ export function AppSidebar() {
               onClick={handleProfileClick}
           >
             {profile?.profile_photo_url ? (
-                <AvatarImage src={profile.profile_photo_url} alt={profile.name}/>
+                <AvatarImage
+                    src={profile.profile_photo_url ? `${profile.profile_photo_url}?t=${Date.now()}` : undefined}
+                    alt={profile.name}
+                />
             ) : (
                 <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-sm font-semibold">
                   {getUserInitials(profile?.name || 'Usuário')}

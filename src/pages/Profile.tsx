@@ -27,6 +27,7 @@ import {checkBadgeEligibility} from '@/utils/badgeUtils';
 import {useQuery} from "@tanstack/react-query";
 import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 import {deleteProfilePhoto, uploadProfilePhoto} from "@/services/profileService.ts";
+import {useUserProfile} from "@/hooks/useUserProfile.tsx";
 
 interface UserProfile {
   id: string;
@@ -73,6 +74,7 @@ const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { refreshUserData } =  useUserProfile();
   const [completedMissions, setCompletedMissions] = useState<CompletedMission[]>([]);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +98,7 @@ const Profile = () => {
       }, 2000);
       formData.profile_photo_url = await uploadProfilePhoto(user.id, file);
       await handleUpdateProfile();
+      refreshUserData();
       toast({
         title: "Foto alterada",
         description: "Foto alterada com sucesso!",
@@ -139,6 +142,7 @@ const Profile = () => {
     await deleteProfilePhoto(profile.profile_photo_url.substring(profile.profile_photo_url.lastIndexOf("/") + 1));
     formData.profile_photo_url = null;
     await handleUpdateProfile();
+    await refreshUserData();
   }
 
   useEffect(() => {
