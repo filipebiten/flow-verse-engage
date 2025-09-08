@@ -13,7 +13,6 @@ export const useAuth = () => {
 
     const initializeAuth = async () => {
       try {
-        // Get initial session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (mounted) {
@@ -92,20 +91,16 @@ export const useAuth = () => {
 
   const signOut = async () => {
     try {
-      // Clear localStorage first
       localStorage.removeItem('currentUser');
-      
-      // Sign out from Supabase
+      localStorage.clear();
       const { error } = await supabase.auth.signOut();
       if (error) {
         console.error('Error signing out:', error);
       }
       
-      // Force refresh to ensure clean state
       window.location.reload();
     } catch (error) {
       console.error('Error during sign out:', error);
-      // Force refresh even if there's an error
       window.location.reload();
     }
   };

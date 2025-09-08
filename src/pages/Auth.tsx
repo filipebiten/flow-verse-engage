@@ -13,6 +13,58 @@ import { Loader2, Eye, EyeOff, AlertTriangle, Upload, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import {uploadProfilePhoto} from "@/services/profileService.ts";
+import {MaskedInput} from "@/components/maskedInput.tsx";
+
+function LoginForm(props: {
+  onSubmit: (e: React.FormEvent) => Promise<void>,
+  value: string,
+  onChange: (e) => void,
+  showPassword: boolean,
+  value1: string,
+  onChange1: (e) => void,
+  onClick: () => void,
+  disabled: boolean
+}) {
+  return <form onSubmit={props.onSubmit} className="space-y-4">
+    <div className="space-y-2">
+      <Label htmlFor="email">Email</Label>
+      <Input
+          id="email"
+          type="email"
+          value={props.value}
+          onChange={props.onChange}
+          placeholder="seu@email.com"
+          required
+      />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="password">Senha</Label>
+      <div className="relative">
+        <Input
+            id="password"
+            type={props.showPassword ? "text" : "password"}
+            value={props.value1}
+            onChange={props.onChange1}
+            placeholder="Sua senha"
+            required
+        />
+        <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+            onClick={props.onClick}
+        >
+          {props.showPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
+        </Button>
+      </div>
+    </div>
+    <Button type="submit" className="w-full" disabled={props.disabled}>
+      {props.disabled && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+      Entrar
+    </Button>
+  </form>;
+}
 
 const Auth = () => {
   const [loading, setLoading] = useState(false);
@@ -143,17 +195,19 @@ const Auth = () => {
             variant: "destructive"
           });
         } else {
-          toast({
-            title: "Erro no cadastro",
-            description: error.message,
-            variant: "destructive"
-          });
+          if(error.message.includes("is invalid")){
+            toast({
+              title: "Erro no cadastro",
+              description: "O endereço de email é inválido",
+              variant: "destructive"
+            });
+          }
         }
       } else {
         if (data.user) {
           // Espera até o perfil existir no banco antes de atualizar
           let profileExists = false;
-          for (let i = 0; i < 10; i++) { // tenta até 10 vezes
+          for (let i = 0; i < 10; i++) {
             const { data: profileData } = await supabase
                 .from('profiles')
                 .select('id')
@@ -167,7 +221,6 @@ const Auth = () => {
           }
 
           if (!profileExists) {
-            console.error('Perfil não foi criado pela trigger');
             return;
           }
 
@@ -249,26 +302,28 @@ const Auth = () => {
     }
   };
 
+  function resetPage(){
+    window.location.reload();
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <CardTitle
+              className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Rede FLOW
           </CardTitle>
           <p className="text-muted-foreground">Entre ou crie sua conta</p>
-          
+
           {/* Warning Message */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-yellow-600" />
+              <AlertTriangle className="w-4 h-4 text-yellow-600"/>
               <p className="text-sm text-yellow-800 font-medium">
-                ⚠️ Este app está em fase de testes.
+                Este app está em fase de testes.
               </p>
             </div>
-            <p className="text-xs text-yellow-700 mt-1">
-              Login administrador: filipebiten@gmail.com
-            </p>
           </div>
         </CardHeader>
         <CardContent>
@@ -277,60 +332,25 @@ const Auth = () => {
               <TabsTrigger value="login">Login</TabsTrigger>
               <TabsTrigger value="signup">Cadastro</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login" className="space-y-4">
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Sua senha"
-                      required
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Entrar
-                </Button>
-              </form>
+              <LoginForm onSubmit={handleSignIn} value={email} onChange={(e) => setEmail(e.target.value)}
+                         showPassword={showPassword} value1={password} onChange1={(e) => setPassword(e.target.value)}
+                         onClick={() => setShowPassword(!showPassword)} disabled={loading}/>
             </TabsContent>
-            
+
             <TabsContent value="signup" className="space-y-4">
               <form onSubmit={handleSignUp} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signup-name">Nome Completo</Label>
                   <Input
-                    id="signup-name"
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Seu nome completo"
-                    required
+                      id="signup-name"
+                      type="text"
+                      maxLength={50}
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Seu nome completo"
+                      required
                   />
                 </div>
 
@@ -339,85 +359,87 @@ const Auth = () => {
                   <Label>Foto do Perfil (Opcional)</Label>
                   <div className="flex items-center gap-4">
                     {profilePhotoPreview ? (
-                      <div className="relative">
-                        <img
-                          src={profilePhotoPreview}
-                          alt="Preview"
-                          className="w-16 h-16 rounded-full object-cover"
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
-                          onClick={removePhoto}
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
+                        <div className="relative">
+                          <img
+                              src={profilePhotoPreview}
+                              alt="Preview"
+                              className="w-16 h-16 rounded-full object-cover"
+                          />
+                          <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+                              onClick={removePhoto}
+                          >
+                            <X className="w-3 h-3"/>
+                          </Button>
+                        </div>
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
-                        <Upload className="w-6 h-6 text-gray-400" />
-                      </div>
+                        <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
+                          <Upload className="w-6 h-6 text-gray-400"/>
+                        </div>
                     )}
                     <div>
                       <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoUpload}
-                        className="hidden"
-                        id="photo-upload"
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePhotoUpload}
+                          className="hidden"
+                          id="photo-upload"
                       />
                       <Label
-                        htmlFor="photo-upload"
-                        className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md text-sm transition-colors"
+                          htmlFor="photo-upload"
+                          className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-md text-sm transition-colors"
                       >
                         Escolher Foto
                       </Label>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-whatsapp">WhatsApp</Label>
-                  <Input
-                    id="signup-whatsapp"
-                    type="tel"
-                    value={whatsapp}
-                    onChange={(e) => setWhatsapp(e.target.value)}
-                    placeholder="(11) 99999-9999"
-                    required
+                  <MaskedInput
+                      id="signup-whatsapp"
+                      type="tel"
+                      unmask={true}
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value)}
+                      placeholder="(11) 99999-9999"
+                      mask="(00) 00000-0000"
+                      required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>
                   <Input
-                    id="signup-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    required
+                      id="signup-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="seu@email.com"
+                      required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="birth-date">Data de Nascimento</Label>
                   <Input
-                    id="birth-date"
-                    type="date"
-                    value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
-                    required
+                      id="birth-date"
+                      type="date"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      required
                   />
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="gender">Gênero</Label>
                   <Select value={gender} onValueChange={setGender} required>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione seu gênero" />
+                      <SelectValue placeholder="Selecione seu gênero"/>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Homem">Homem</SelectItem>
@@ -427,32 +449,32 @@ const Auth = () => {
                 </div>
 
                 {isOver25 && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="flow-up"
-                      checked={participatesFlowUp}
-                      onCheckedChange={(checked) => setParticipatesFlowUp(checked === true)}
-                    />
-                    <Label htmlFor="flow-up">Participa do FLOW UP</Label>
-                  </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                          id="flow-up"
+                          checked={participatesFlowUp}
+                          onCheckedChange={(checked) => setParticipatesFlowUp(checked === true)}
+                      />
+                      <Label htmlFor="flow-up">Participa do FLOW UP</Label>
+                    </div>
                 )}
 
                 {isMale && (
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="irmandade"
-                      checked={participatesIrmandade}
-                      onCheckedChange={(checked) => setParticipatesIrmandade(checked === true)}
-                    />
-                    <Label htmlFor="irmandade">Participa da IRMANDADE</Label>
-                  </div>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                          id="irmandade"
+                          checked={participatesIrmandade}
+                          onCheckedChange={(checked) => setParticipatesIrmandade(checked === true)}
+                      />
+                      <Label htmlFor="irmandade">Participa da IRMANDADE</Label>
+                    </div>
                 )}
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="pgm-role">Situação no PGM</Label>
                   <Select value={pgmRole} onValueChange={setPgmRole}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione sua situação" />
+                      <SelectValue placeholder="Selecione sua situação"/>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Participante">Participante</SelectItem>
@@ -465,38 +487,38 @@ const Auth = () => {
                 </div>
 
                 {showPgmNumber && (
-                  <div className="space-y-2">
-                    <Label htmlFor="pgm-number">Número do PGM</Label>
-                    <Input
-                      id="pgm-number"
-                      type="text"
-                      value={pgmNumber}
-                      onChange={(e) => setPgmNumber(e.target.value)}
-                      placeholder="Ex: PGM001"
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pgm-number">Número do PGM</Label>
+                      <Input
+                          id="pgm-number"
+                          type="text"
+                          value={pgmNumber}
+                          onChange={(e) => setPgmNumber(e.target.value)}
+                          placeholder="Ex: PGM001"
+                      />
+                    </div>
                 )}
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="signup-password">Senha</Label>
                   <div className="relative">
                     <Input
-                      id="signup-password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                      required
-                      minLength={6}
+                        id="signup-password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres"
+                        required
+                        minLength={6}
                     />
                     <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowPassword(!showPassword)}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                     </Button>
                   </div>
                 </div>
@@ -505,28 +527,30 @@ const Auth = () => {
                   <Label htmlFor="confirm-password">Confirmar Senha</Label>
                   <div className="relative">
                     <Input
-                      id="confirm-password"
-                      type={showConfirmPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirme sua senha"
-                      required
-                      minLength={6}
+                        id="confirm-password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirme sua senha"
+                        required
+                        minLength={6}
                     />
                     <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4"/> : <Eye className="h-4 w-4"/>}
                     </Button>
                   </div>
                 </div>
-                
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+
+                <Button type="submit"
+                        className="w-full bg-green-500"
+                        disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                   Criar Conta
                 </Button>
               </form>
@@ -542,12 +566,18 @@ const Auth = () => {
             <AlertDialogTitle>✅ Cadastro Realizado!</AlertDialogTitle>
             <AlertDialogDescription>
               Enviamos um email de confirmação para <strong>{email}</strong>.
-              <br /><br />
+              <br/><br/>
               Acesse sua caixa de entrada e clique no link para confirmar sua conta antes de fazer login.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={() => setShowEmailConfirmation(false)}>
+            <AlertDialogAction
+                className="bg-green-500"
+                onClick={() => {
+                  setShowEmailConfirmation(false);
+                  resetPage();
+                }}
+            >
               Entendi
             </AlertDialogAction>
           </AlertDialogFooter>
