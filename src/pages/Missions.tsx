@@ -56,6 +56,7 @@ const Missions = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [newPhase, setNewPhase] = useState(null);
+  const [currentSubmitingMission, setCurrentSubmitingMission] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -185,7 +186,13 @@ const Missions = () => {
   const completeItem = async (item: Mission) => {
     if (completedItems.has(item.id) || !user) return;
 
+    if (currentSubmitingMission == item.id){
+      return;
+    }
+
     try {
+      setCurrentSubmitingMission(item.id);
+
       const { error } = await supabase
         .from('missions_completed')
         .insert({
@@ -282,13 +289,14 @@ const Missions = () => {
 
       refreshUserData();
     } catch (error) {
-      console.error('Error completing mission:', error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao completar a missão.",
         className: "bg-red-700 text-white",
         variant: "destructive"
       });
+    } finally {
+      setCurrentSubmitingMission('');
     }
   };
 
@@ -306,6 +314,7 @@ const Missions = () => {
         ) : (
           <div className="space-y-3">
             {items.map((item) => {
+
               const isCompleted = () => {
                 const completed = completedItems.get(item.id);
 
@@ -352,7 +361,7 @@ const Missions = () => {
                     </div>
                     <Button
                       onClick={() => completeItem(item)}
-                      disabled={isCompleted()}
+                      disabled={isCompleted() || currentSubmitingMission === item.id}
                       variant={isCompleted() ? "secondary" : "default"}
                       size="sm"
                     >
@@ -383,11 +392,12 @@ const Missions = () => {
 
   return (
       <>
-        <NewPhaseDialog open={openDialog}
-                        setOpenDialog={setOpenDialog}
-                        currentPhaseName={userProfile.phase}
-                        newPhase={newPhase}
-                        />
+        <NewPhaseDialog
+            open={openDialog}
+            setOpenDialog={setOpenDialog}
+            currentPhaseName={userProfile.phase}
+            newPhase={newPhase}
+        />
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
           <div className="max-w-6xl mx-auto space-y-6">
 

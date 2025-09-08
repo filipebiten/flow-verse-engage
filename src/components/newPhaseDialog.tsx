@@ -14,9 +14,13 @@ import {PhasePhrase} from "@/components/PhasePhrase.tsx";
 
 export default function NewPhaseDialog({open, setOpenDialog, currentPhaseName, newPhase}) {
     return (
-        <Dialog open={open} onOpenChange={setOpenDialog}>
+        <Dialog open={open} onOpenChange={setOpenDialog} >
             <form>
-                <DialogContent className="sm:max-w-[425px] bg-white text-gray-800">
+                <DialogContent
+                    className="sm:max-w-[425px] bg-white text-gray-800"
+                    onInteractOutside={(e) => e.preventDefault()}
+                    onEscapeKeyDown={(e) => e.preventDefault()}
+                >
                     <DialogHeader>
                         <DialogTitle className="text-black">
                             Você está em uma nova fase! 🎉

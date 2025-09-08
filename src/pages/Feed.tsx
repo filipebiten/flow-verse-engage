@@ -432,7 +432,7 @@ const Feed = () => {
                                 {item.data.user_name}
                               </span>
                                       {' '}completou o {getMissionTypeLabel((item.data as FeedActivity).mission_type)} {' '}
-                                      <span className="font-medium">{(item.data as FeedActivity).mission_name}</span>
+                                      <span className="font-bold text-indigo-800">{(item.data as FeedActivity).mission_name}</span>
                                     </p>
                                     <div className="flex items-center space-x-2 mt-1">
                                       {getMissionIcon((item.data as FeedActivity).mission_type)}
