@@ -113,7 +113,8 @@ const Missions = () => {
         name: item.name,
         description: item.description,
         points: item.points,
-        type: 'book' as const
+        type: 'book' as const,
+        image_url: item.book_image_url
       }));
 
       const transformedCourses = (coursesData || []).map(item => ({
@@ -346,6 +347,19 @@ const Missions = () => {
                   }`}
                 >
                   <div className="flex items-start justify-between">
+                    {
+                      title === 'Livros' ?
+                          (
+                              <img
+                                  src={item.image_url}
+                                  alt={item.name}
+                                  className="w-20 h-20 mr-4 rounded-md object-cover"
+                              />
+                          ) : (
+                              <>
+                              </>
+                          )
+                    }
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="font-semibold">{item.name}</h3>
