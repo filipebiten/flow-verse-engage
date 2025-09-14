@@ -77,7 +77,6 @@ const Missions = () => {
       if (profileError) {
         console.error('Error loading profile:', profileError);
       } else {
-        console.log('Profile loaded:', profile);
         setUserProfile(profile);
       }
 

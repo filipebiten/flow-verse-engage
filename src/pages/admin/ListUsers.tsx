@@ -50,7 +50,6 @@ function ListUsers(){
                 if (error) {
                     throw error;
                 }
-                console.log("Dados da pesquisa:", data);
                 return data as UserProfile[];
             }catch (e: any){
                 console.error("Erro na mutação/pesquisa:", e);

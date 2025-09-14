@@ -26,11 +26,17 @@ export const ListItems = (title, items, type, icon, onDelete, onAdd) => (
                     {items.map((item) => (
                         <div key={item.id} className="flex items-center justify-between p-3 border rounded">
                             {
-                                <img
-                                    src={item.image_url}
-                                    alt={item.name}
-                                    className="w-20 h-20 rounded-md object-cover"
-                                />
+                                title === 'Livros' ?
+                                (
+                                    <img
+                                        src={item.book_image_url}
+                                        alt={item.name}
+                                        className="w-20 h-20 mr-4 rounded-md object-cover"
+                                    />
+                                ) : (
+                                    <>
+                                    </>
+                                )
                             }
                             <div className="flex-1">
                                 <h4 className="font-medium">{item.name}</h4>
@@ -44,7 +50,7 @@ export const ListItems = (title, items, type, icon, onDelete, onAdd) => (
                             <Button
                                 variant="destructive"
                                 size="sm"
-                                onClick={() => onDelete(item.id, type)}
+                                onClick={() => onDelete(item.id, type, item.book_image_url)}
                             >
                                 <Trash2 className="w-4 h-4"/>
                             </Button>

@@ -105,10 +105,48 @@ export const useAuth = () => {
     }
   };
 
+  const updateLoginStreak = async (userId: string) => {
+    const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("last_login_date, consecutive_days")
+        .eq("id", userId)
+        .single();
+
+    if (error) return console.error("Erro ao pegar perfil:", error);
+
+    const today = new Date();
+    const lastLogin = profile?.last_login_date ? new Date(profile.last_login_date) : null;
+
+    let newStreak = 1;
+
+    if (lastLogin) {
+      const diffTime = today.getTime() - lastLogin.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        newStreak = profile.consecutive_days + 1;
+      } else if (diffDays === 0) {
+        newStreak = profile.consecutive_days;
+      } else {
+        newStreak = 1;
+      }
+    }
+
+    const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ consecutive_days: newStreak, last_login_date: today.toISOString().split("T")[0] })
+        .eq("id", userId);
+
+    if (updateError) console.error("Erro ao atualizar streak:", updateError);
+
+    return newStreak;
+  };
+
   return {
     user,
     session,
     loading,
-    signOut
+    signOut,
+    updateLoginStreak
   };
 };

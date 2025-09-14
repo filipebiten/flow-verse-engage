@@ -14,6 +14,8 @@ import { useNavigate } from 'react-router-dom';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
 import {uploadProfilePhoto} from "@/services/profileService.ts";
 import {MaskedInput} from "@/components/maskedInput.tsx";
+import {useAuth} from "@/hooks/useAuth.tsx";
+import {useAdminData} from "@/hooks/UseAdminData.tsx";
 
 function LoginForm(props: {
   onSubmit: (e: React.FormEvent) => Promise<void>,
@@ -96,6 +98,8 @@ const Auth = () => {
     };
     checkUser();
   }, [navigate]);
+
+  const {updateLoginStreak} = useAuth();
 
   const calculateAge = (birthDate: string) => {
     const today = new Date();
@@ -205,7 +209,6 @@ const Auth = () => {
         }
       } else {
         if (data.user) {
-          // Espera até o perfil existir no banco antes de atualizar
           let profileExists = false;
           for (let i = 0; i < 10; i++) {
             const { data: profileData } = await supabase
@@ -259,7 +262,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: data, error: error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -289,6 +292,38 @@ const Auth = () => {
           title: "Login realizado!",
           description: "Bem-vindo de volta!",
         });
+
+        const streak = await updateLoginStreak(data.user.id);
+
+        const { data: userBadges, error: ue } = await supabase
+            .from("user_badges")
+            .select('badge_id')
+            .eq('user_id', data.user.id);
+
+        const ownedBadgeIds = userBadges?.map(b => b.badge_id) || [];
+
+        const { data: badges, error: be } = await supabase
+            .from("badges")
+            .select('*')
+            .eq('requirement_field', 'consecutive_days')
+            .order('requirement_value', { ascending: true });
+
+        for (const badge of badges) {
+          if (streak >= badge.requirement_value && !ownedBadgeIds.includes(badge.id)) {
+            await supabase.from("user_badges").insert({
+              user_id: data.user.id,
+              badge_id: badge.id,
+              awarded_at: new Date().toISOString()
+            });
+
+            toast({
+              title: "🎉 Nova badge conquistada!",
+              description: `Você ganhou a badge "${badge.name}"`,
+              className: "bg-green-500"
+            });
+          }
+        }
+
         navigate('/');
       }
     } catch (error) {

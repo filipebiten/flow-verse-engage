@@ -12,6 +12,8 @@ import {AdminStats} from "@/pages/admin/AdminStats.tsx";
 import {useAdminData} from "@/hooks/UseAdminData.tsx";
 import {ListItems} from "@/pages/admin/ListItems.tsx";
 import ListUsers from "@/pages/admin/ListUsers.tsx";
+import {deleteBookPhoto, uploadBookPhoto} from "@/services/bookService.ts";
+import {MissionSugestions} from "@/pages/admin/missionSugestions.tsx";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -26,6 +28,7 @@ const Admin = () => {
   const [bookForm, setBookForm] = useState({ name: '', description: '', points: '' });
   const [courseForm, setCourseForm] = useState({ name: '', description: '', points: '', school: 'Escola do Discípulo' });
   const [adminEmail, setAdminEmail] = useState('');
+  const [bookImage, setBookImage] = useState(null);
 
   const handleOpenDialog = (type: string) => {
     setDialogType(type);
@@ -47,39 +50,96 @@ const Admin = () => {
       return userToPromote;
     },
     onSuccess: (userToPromote) => {
-      toast({ title: "Sucesso", description: `${userToPromote.name} agora é administrador!` });
+      toast({
+        title: "Sucesso",
+        description: `${userToPromote.name} agora é administrador!`,
+        className: "bg-green-500"
+      });
       setAdminEmail('');
       queryClient.invalidateQueries({ queryKey: ['adminData'] });
     },
     onError: (error) => {
-      toast({ title: "Erro", description: error.message || "Erro ao promover usuário", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao promover usuário",
+        variant: "destructive",
+        className: 'bg-red-500'
+      });
     },
   });
 
   const deleteItemMutation = useMutation({
-    mutationFn: async ({ id, type }: { id: string; type: 'books' | 'courses' | 'missions' }) => {
-      const { error } = await supabase.from(type).delete().eq('id', id);
-      if (error) throw error;
+    mutationFn: async ({ id, type, imageUrl }: { id: string; type: 'books' | 'courses' | 'missions'; imageUrl: string }) => {
+      if(type === 'books' && imageUrl) {
+        await deleteBookPhoto(imageUrl.substring(imageUrl.lastIndexOf("/") + 1));
+        setBookImage(null);
+      }
+
+      const { error } = await supabase
+          .from(type)
+          .delete()
+          .eq('id', id);
+
+      if (error)
+        throw error;
     },
     onSuccess: () => {
-      toast({ title: "Sucesso", description: "Item removido com sucesso!" });
+      toast({
+        title: "Sucesso",
+        description: "Item removido com sucesso!",
+        className: "bg-green-500"
+      });
       queryClient.invalidateQueries({ queryKey: ['adminData'] });
     },
     onError: () => {
-      toast({ title: "Erro", description: "Erro ao remover item", variant: "destructive" });
+      toast({
+        title: "Erro",
+        description: "Erro ao remover item",
+        variant: "destructive",
+        className: 'bg-red-500' });
     },
   });
 
   const createMutation = (tableName: 'books' | 'courses' | 'missions', form: any, setForm: any) => useMutation({
     mutationFn: async (formData: any) => {
-      if (!formData.name || !formData.description || !formData.points) throw new Error("Preencha todos os campos obrigatórios.");
-      const { error } = await supabase.from(tableName).insert({ ...formData, points: parseInt(formData.points) });
-      if (error) throw error;
+
+      if (!formData.name || !formData.description || !formData.points)
+        throw new Error("Preencha todos os campos obrigatórios.");
+
+      const { data, error } = await supabase
+          .from(tableName)
+          .insert({ ...formData, points: parseInt(formData.points) })
+          .select();
+
+      if (error)
+        throw error;
+
+      let bookImageUrl = null;
+
+      bookImageUrl = await uploadBookPhoto(data[0].id, bookImage);
+
+      if (bookImageUrl) {
+        const { error: updateError } = await supabase
+            .from('books')
+            .update({ book_image_url: bookImageUrl })
+            .eq('id', data[0].id);
+
+        if (updateError) {
+          console.error('Erro ao incluir URL da foto:', updateError);
+        }
+      }
     },
     onSuccess: () => {
-      setForm({ name: '', description: '', points: '', period: 'diário', school: 'Escola do Discípulo' });
+      if (tableName === 'courses'){
+        setForm({ name: '', description: '', points: 'diário', school: 'Escola do Discípulo' });
+      } else if (tableName === "missions"){
+        setForm({ name: '', description: '', points: '', period: 'diário' })
+      } else {
+        setForm({ name: '', description: '', points: '' })
+        setBookImage(null)
+      }
       handleCloseDialog();
-      toast({ title: "Sucesso", description: `${tableName} adicionado com sucesso!` });
+      toast({ title: "Sucesso", description: `${tableName} adicionado com sucesso!`, className: "bg-green-500" });
       queryClient.invalidateQueries({ queryKey: ['adminData'] });
     },
     onError: (error) => {
@@ -113,7 +173,14 @@ const Admin = () => {
   const bookFields = [
     { key: 'name', label: 'Nome do Livro', type: 'text', placeholder: 'Ex: O Peregrino' },
     { key: 'description', label: 'Descrição', type: 'textarea', placeholder: 'Descreva o livro...' },
-    { key: 'points', label: 'Pontos', type: 'number', placeholder: '100' }
+    { key: 'points', label: 'Pontos', type: 'number', placeholder: '100' },
+    { key: 'image', label: 'Imagem', type: 'file',
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          setBookImage(file);
+        }
+      }},
   ];
 
   const courseFields = [
@@ -206,6 +273,7 @@ const Admin = () => {
               />
           )}
 
+          <MissionSugestions></MissionSugestions>
         </div>
       </div>
   );
