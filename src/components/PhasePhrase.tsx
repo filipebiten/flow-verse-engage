@@ -7,7 +7,7 @@ export function PhasePhrase(props: { userPhase: Phase, size?: string }) {
             "Riacho": {color: "text-green-800"},
             "Correnteza": {color: "text-blue-800"},
             "Cachoeira": {color: "text-purple-800"},
-            "Oceano": {color: "text-white"}
+            "Oceano": {color: "text-blue-1000"}
         };
         return phases[phase as keyof typeof phases] || phases["Riacho"];
     };

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,17 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import {
-  Target,
-  CheckCircle,
-  BookOpen,
-  GraduationCap
-} from 'lucide-react';
-import {useUserProfile} from "@/hooks/useUserProfile.tsx";
-import { differenceInDays } from 'date-fns';
-import {definePeriodBadgeColor} from "@/helpers/colorHelper.ts";
-import {BadgeRequirement, checkBadgeEligibility} from "@/utils/badgeUtils.ts";
+import { Target, CheckCircle, BookOpen, GraduationCap } from 'lucide-react';
+import { useUserProfile } from "@/hooks/useUserProfile.tsx";
+import { definePeriodBadgeColor } from "@/helpers/colorHelper.ts";
+import { checkBadgeEligibility } from "@/utils/badgeUtils.ts";
 import NewPhaseDialog from "@/components/newPhaseDialog.tsx";
+import { differenceInDays, endOfDay } from 'date-fns';
 
 interface Mission {
   id: string;
@@ -26,6 +20,15 @@ interface Mission {
   type: 'mission' | 'book' | 'course';
   period?: string;
   school?: string;
+  image_url?: string;
+}
+
+interface MissionCompleted {
+  mission_id: string;
+  mission_type: string;
+  completed_at: string;
+  period?: string | null;
+  school?: string | null;
 }
 
 interface UserProfile {
@@ -46,16 +49,16 @@ const getUserPhase = (points: number) => {
 const Missions = () => {
   const { user } = useAuth();
   const { refreshUserData, completedMissions } = useUserProfile();
-
   const { toast } = useToast();
+
   const [missions, setMissions] = useState<Mission[]>([]);
   const [books, setBooks] = useState<Mission[]>([]);
   const [courses, setCourses] = useState<Mission[]>([]);
-  const [completedItems, setCompletedItems] = useState<Map<string, object>>(new Map());
+  const [completedItems, setCompletedItems] = useState<MissionCompleted[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
-  const [newPhase, setNewPhase] = useState(null);
+  const [newPhase, setNewPhase] = useState<ReturnType<typeof getUserPhase> | null>(null);
   const [currentSubmitingMission, setCurrentSubmitingMission] = useState('');
 
   useEffect(() => {
@@ -66,219 +69,136 @@ const Missions = () => {
 
   const loadData = async () => {
     try {
+      const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user?.id)
+          .single();
 
-      // Load user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
-      
-      if (profileError) {
-        console.error('Error loading profile:', profileError);
-      } else {
-        setUserProfile(profile);
-      }
+      if (profile) setUserProfile(profile);
 
-      // Load missions
-      const { data: missionsData, error: missionsError } = await supabase
-        .from('missions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data: missionsData } = await supabase.from('missions').select('*').order('created_at', { ascending: false });
+      const { data: booksData } = await supabase.from('books').select('*').order('created_at', { ascending: false });
+      const { data: coursesData } = await supabase.from('courses').select('*').order('created_at', { ascending: false });
 
-      // Load books
-      const { data: booksData, error: booksError } = await supabase
-        .from('books')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // Load courses
-      const { data: coursesData, error: coursesError } = await supabase
-        .from('courses')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // Transform data
-      const transformedMissions = (missionsData || []).map(item => ({
+      setMissions((missionsData || []).map(item => ({
         id: item.id,
         name: item.name,
         description: item.description,
         points: item.points,
-        type: 'mission' as const,
+        type: 'mission',
         period: item.period
-      }));
+      })));
 
-      const transformedBooks = (booksData || []).map(item => ({
+      setBooks((booksData || []).map(item => ({
         id: item.id,
         name: item.name,
         description: item.description,
         points: item.points,
-        type: 'book' as const,
+        type: 'book',
         image_url: item.book_image_url
-      }));
+      })));
 
-      const transformedCourses = (coursesData || []).map(item => ({
+      setCourses((coursesData || []).map(item => ({
         id: item.id,
         name: item.name,
         description: item.description,
         points: item.points,
-        type: 'course' as const,
+        type: 'course',
         school: item.school
-      }));
+      })));
 
-      setMissions(transformedMissions);
-      setBooks(transformedBooks);
-      setCourses(transformedCourses);
+      const { data: completed } = await supabase
+          .from('missions_completed')
+          .select('*')
+          .eq('user_id', user?.id);
 
-      // Load completed items
-      const { data: completed, error: completedError } = await supabase
-        .from('missions_completed')
-        .select('*')
-        .eq('user_id', user?.id);
-
-      if (completed) {
-        const completedIds = new Map(completed.map(item => [item.mission_id, item]));
-        setCompletedItems(completedIds);
-      }
-
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os dados.",
-        variant: "destructive"
-      });
+      if (completed) setCompletedItems(completed);
+    } catch {
+      toast({ title: "Erro", description: "Não foi possível carregar os dados.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   async function checkIfUserCompletedAnyBadge(userStats) {
+    const { data: allBadges } = await supabase.from('badges').select('*');
+    const { data: userBadges } = await supabase.from('user_badges').select('*');
 
-    const badgesAchieved: BadgeRequirement[] = [];
+    if (!allBadges || !userBadges) return [];
 
-    const {data: allBadges, error: error} = await supabase
-        .from('badges')
-        .select('*');
+    const userBadgeIds = new Set(userBadges.map(ub => ub.badge_id));
 
-    const {data: userBadges, error: badgeError } = await supabase
-        .from('user_badges')
-        .select('*');
-
-    allBadges.map((b) => {
-      return {
-        ...b,
-        requirement:{
-          type: b.requirement_field,
-          count: b.requirement_value
-        }
-      }
-    }).forEach((badge) => {
-      const res = userBadges.find((ub) => ub.badge_id === badge.id);
-
-      if (res === undefined && checkBadgeEligibility(badge, userStats)) {
-        badgesAchieved.push(badge);
-      }
-    })
-
-    return badgesAchieved;
+    return allBadges
+        .map(b => ({
+          ...b,
+          requirement: { type: b.requirement_field, count: b.requirement_value }
+        }))
+        .filter(badge => !userBadgeIds.has(badge.id) && checkBadgeEligibility(badge, userStats));
   }
 
   const completeItem = async (item: Mission) => {
-    if (completedItems.has(item.id) || !user) return;
-
-    if (currentSubmitingMission == item.id){
-      return;
-    }
+    if (currentSubmitingMission === item.id) return;
 
     try {
       setCurrentSubmitingMission(item.id);
 
-      const { error } = await supabase
-        .from('missions_completed')
-        .insert({
-          user_id: user.id,
-          mission_id: item.id,
-          mission_name: item.name,
-          mission_type: item.type,
-          points: item.points,
-          period: item.period || null,
-          school: item.school || null
-        });
+      const { data: completedItem, error: error } = await supabase.from('missions_completed').insert({
+        user_id: user.id,
+        mission_id: item.id,
+        mission_name: item.name,
+        mission_type: item.type,
+        points: item.points,
+        period: item.period || null,
+        school: item.school || null
+      }).select().single();
 
-      if (error) {
-        toast({
-          title: "Erro",
-          description: "Não foi possível salvar a missão completada.",
-          variant: "destructive"
-        });
-        return;
-      }
+      if (error) throw error;
+
+      setCompletedItems(prev => [...prev, completedItem]);
 
       const newPoints = (userProfile?.points || 0) + item.points;
-      setNewPhase(getUserPhase(newPoints));
+      const phaseCandidate = getUserPhase(newPoints);
+      setNewPhase(phaseCandidate);
 
-      if(userProfile.phase !== newPhase?.name) {
-
-        const { errorPhase } = await supabase
-            .from('phase_changes')
-            .insert({
-              user_id: userProfile.id,
-              previous_phase: userProfile.phase,
-              new_phase: newPhase?.name,
-              total_points: newPoints,
-              changed_at: new Date()
-            })
-
-        setOpenDialog(true);
-
-      }
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ 
-          points: newPoints,
-          phase: newPhase?.name
-        })
-        .eq('id', user.id);
-
-      if (updateError) {
-        toast({
-          title: "Erro",
-          description: "Não foi possível atualizar o perfil.",
-          variant: "destructive",
-          className: "bg-red-700 text-white",
+      if (userProfile?.phase !== phaseCandidate.name) {
+        await supabase.from('phase_changes').insert({
+          user_id: userProfile!.id,
+          previous_phase: userProfile!.phase,
+          new_phase: phaseCandidate.name,
+          total_points: newPoints,
+          changed_at: new Date()
         });
-        return;
+        setOpenDialog(true);
       }
 
-      setUserProfile({ ...userProfile!, points: newPoints, phase: newPhase?.name });
-      setCompletedItems(prev => new Map([...prev, [item.id, item]]));
+      await supabase.from('profiles').update({
+        points: newPoints,
+        phase: phaseCandidate.name
+      }).eq('id', user.id);
+
+      setUserProfile({ ...userProfile!, points: newPoints, phase: phaseCandidate.name });
+      setCompletedItems(prev => [...prev, item as any]);
 
       const badgesCompleted = await checkIfUserCompletedAnyBadge({
         points: newPoints,
         missions: completedMissions.find(c => c.mission_type === 'mission') || [],
         books: completedMissions.find(c => c.mission_type === 'book') || [],
         courses: completedMissions.find(c => c.mission_type === 'course') || [],
-        consecutive_days: userProfile.consecutive_days
+        consecutive_days: userProfile!.consecutive_days
       });
 
-      if(badgesCompleted.length > 0) {
-        for (const badge of badgesCompleted) {
-
-          const { error } = await supabase
-              .from('user_badges')
-              .insert({
-                user_id: userProfile.id,
-                badge_id: badge.id,
-                earned_at: new Date()
-              });
-
-          toast({
-            title: "Conquista atingida!! 🎉",
-            className: "bg-green-700 text-white",
-            description: `Parabens você acaba de atingir a conquista ${badge.name}!!!!`,
-          });
-        }
+      for (const badge of badgesCompleted) {
+        await supabase.from('user_badges').insert({
+          user_id: userProfile!.id,
+          badge_id: badge.id,
+          earned_at: new Date()
+        });
+        toast({
+          title: "Conquista atingida!! 🎉",
+          className: "bg-green-700 text-white",
+          description: `Parabéns! Você atingiu a conquista ${badge.name}!!!!`,
+        });
       }
 
       toast({
@@ -288,116 +208,95 @@ const Missions = () => {
       });
 
       refreshUserData();
-    } catch (error) {
-      toast({
-        title: "Erro",
-        description: "Ocorreu um erro ao completar a missão.",
-        className: "bg-red-700 text-white",
-        variant: "destructive"
-      });
+    } catch {
+      toast({ title: "Erro", description: "Ocorreu um erro ao completar a missão.", className: "bg-red-700 text-white", variant: "destructive" });
     } finally {
       setCurrentSubmitingMission('');
     }
   };
 
   const renderItems = (items: Mission[], title: string, icon: React.ReactNode, emptyMessage: string) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          {icon}
-          {title} ({items.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {items.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">{emptyMessage}</p>
-        ) : (
-          <div className="space-y-3">
-            {items.map((item) => {
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            {icon}
+            {title} ({items.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {items.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">{emptyMessage}</p>
+          ) : (
+              <div className="space-y-3">
+                {items.map((item) => {
 
-              const isCompleted = () => {
-                const completed = completedItems.get(item.id);
+                  const isCompleted = () => {
+                    const missionCompletions = completedItems.filter(i => i.mission_id === item.id);
+                    if (missionCompletions.length === 0) return false;
 
-                if (!completed)
-                  return false;
+                    missionCompletions.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
+                    const latestCompletion = missionCompletions[0];
 
-                if (completed.period === null) {
-                  return true;
-                }
+                    if (latestCompletion?.period === null) return true;
 
-                if (completed.period === 'diário' && differenceInDays(new Date(), new Date(completed.completed_at)) > 0)
-                  return false;
-                else if (completed.period === 'semanal' && differenceInDays(new Date(), new Date(completed.completed_at)) > 6)
-                  return false;
-                else if (completed.period === 'semestral' && differenceInDays(new Date(), new Date(completed.completed_at)) > 179)
-                  return false;
-                else if (completed.period === 'Anual' && differenceInDays(new Date(), new Date(completed.completed_at)) > 364)
-                  return false;
+                    const now = new Date();
+                    const completionEnd = endOfDay(new Date(latestCompletion.completed_at));
 
-                return true;
-              };
+                    if (latestCompletion?.period?.toLowerCase() === 'diário' && now <= completionEnd) return true;
+                    if (latestCompletion?.period?.toLowerCase() === 'semanal' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 6) return true;
+                    if (latestCompletion?.period?.toLowerCase() === 'semestral' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 179) return true;
+                    if (latestCompletion?.period?.toLowerCase() === 'anual' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 364) return true;
 
-              return (
-                <div
-                  key={item.id}
-                  className={`p-4 border rounded-lg transition-all ${
-                    isCompleted()
-                      ? 'bg-green-50 border-green-200' 
-                      : 'bg-white hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    {
-                      title === 'Livros' ?
-                          (
-                              <img
-                                  src={item.image_url}
-                                  alt={item.name}
-                                  className="w-20 h-20 mr-4 rounded-md object-cover"
-                              />
-                          ) : (
-                              <>
-                              </>
-                          )
-                    }
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold">{item.name}</h3>
-                        {isCompleted() && <CheckCircle className="w-5 h-5 text-green-600" />}
+                    return false;
+                  };
+
+                  return (
+                      <div
+                          key={item.id}
+                          className={`p-4 border rounded-lg transition-all ${isCompleted() ? 'bg-green-50 border-green-200' : 'bg-white hover:shadow-md'}`}
+                      >
+                        <div className="flex items-start justify-between">
+                          {title === 'Livros' && (
+                              <img src={item?.image_url} alt={item.name} className="w-20 h-20 mr-4 rounded-md object-cover" />
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-semibold">{item.name}</h3>
+                              {isCompleted() && <CheckCircle className="w-5 h-5 text-green-600" />}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge className='bg-green-500 text-white' variant="secondary">+{item.points} pts</Badge>
+                              {item.period && <Badge className={definePeriodBadgeColor(item.period)} variant="default">{item.period[0].toUpperCase() + item.period.slice(1)}</Badge>}
+                              {item.school && <Badge variant="outline">{item.school}</Badge>}
+                            </div>
+                          </div>
+                          <Button
+                              onClick={() => completeItem(item)}
+                              disabled={isCompleted() || currentSubmitingMission === item.id}
+                              variant={isCompleted() ? "secondary" : "default"}
+                              size="sm"
+                          >
+                            {isCompleted() ? "Concluído" : "Completar"}
+                          </Button>
+                        </div>
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">{item.description}</p>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className='bg-green-500 text-white' variant="secondary">+{item.points} pts</Badge>
-                        {item.period && <Badge className={`${definePeriodBadgeColor(item.period)}`} variant="default">{item.period[0].toUpperCase() + item.period.slice(1)}</Badge>}
-                        {item.school && <Badge variant="outline">{item.school}</Badge>}
-                      </div>
-                    </div>
-                    <Button
-                      onClick={() => completeItem(item)}
-                      disabled={isCompleted() || currentSubmitingMission === item.id}
-                      variant={isCompleted() ? "secondary" : "default"}
-                      size="sm"
-                    >
-                      {isCompleted() ? "Concluído" : "Completar"}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  );
+                })}
+              </div>
+          )}
+        </CardContent>
+      </Card>
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Carregando...</p>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Carregando...</p>
+          </div>
         </div>
-      </div>
     );
   }
 
@@ -405,16 +304,9 @@ const Missions = () => {
 
   return (
       <>
-        <NewPhaseDialog
-            open={openDialog}
-            setOpenDialog={setOpenDialog}
-            currentPhaseName={userProfile.phase}
-            newPhase={newPhase}
-        />
+        <NewPhaseDialog open={openDialog} setOpenDialog={setOpenDialog} currentPhaseName={userProfile!.phase} newPhase={newPhase} />
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
           <div className="max-w-6xl mx-auto space-y-6">
-
-            {/* Header */}
             <Card className="overflow-hidden">
               <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
                 <div className="flex items-center justify-between">
@@ -435,7 +327,7 @@ const Missions = () => {
                     <p className="text-sm text-gray-600">Pontos Totais</p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">{completedItems.size}</div>
+                    <div className="text-2xl font-bold text-green-600">{completedItems?.length}</div>
                     <p className="text-sm text-gray-600">Concluídos</p>
                   </div>
                   <div className="text-center">
@@ -446,11 +338,10 @@ const Missions = () => {
               </CardContent>
             </Card>
 
-            {/* Missions, Books, Courses */}
             <div className="space-y-6">
-              {renderItems(missions, "Missões", <Target className="w-5 h-5"/>, "Nenhuma missão disponível")}
-              {renderItems(books, "Livros", <BookOpen className="w-5 h-5"/>, "Nenhum livro disponível")}
-              {renderItems(courses, "Cursos", <GraduationCap className="w-5 h-5"/>, "Nenhum curso disponível")}
+              {renderItems(missions, "Missões", <Target className="w-5 h-5" />, "Nenhuma missão disponível")}
+              {renderItems(books, "Livros", <BookOpen className="w-5 h-5" />, "Nenhum livro disponível")}
+              {renderItems(courses, "Cursos", <GraduationCap className="w-5 h-5" />, "Nenhum curso disponível")}
             </div>
           </div>
         </div>

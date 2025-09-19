@@ -371,7 +371,7 @@ const Feed = () => {
                     <Trophy className="w-8 h-8 text-yellow-600" />
                     <div>
                       <p className="text-2xl font-bold text-yellow-600">{stats.totalPoints}</p>
-                      <p className="text-sm text-gray-600">Pontos Totais</p>
+                      <p className="text-sm text-gray-600">Pontos Totais da Rede</p>
                     </div>
                   </div>
                 </CardContent>
@@ -558,19 +558,12 @@ const Feed = () => {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <Button
-                        className="w-full"
-                        onClick={() => navigate('/missions')}
-                    >
-                      <Target className="w-4 h-4 mr-2" />
-                      Ver Missões
-                    </Button>
-                    <Button
                         variant="outline"
                         className="w-full"
                         onClick={() => setMissionSugestionFormVisible(true)}
                     >
                       <Award className="w-4 h-4 mr-2" />
-                      Sugerir Missão
+                      Sugerir Missões
                     </Button>
                   </CardContent>
                 </Card>
