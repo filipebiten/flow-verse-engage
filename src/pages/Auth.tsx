@@ -310,10 +310,10 @@ const Auth = () => {
 
         for (const badge of badges) {
           if (streak >= badge.requirement_value && !ownedBadgeIds.includes(badge.id)) {
-            await supabase.from("user_badges").insert({
+            const {error: error} = await supabase.from("user_badges").insert({
               user_id: data.user.id,
               badge_id: badge.id,
-              awarded_at: new Date().toISOString()
+              earned_at: new Date().toISOString()
             });
 
             toast({
@@ -434,9 +434,9 @@ const Auth = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-whatsapp">WhatsApp</Label>
+                  <Label htmlFor="whatsapp">WhatsApp</Label>
                   <MaskedInput
-                      id="signup-whatsapp"
+                      id="whatsapp"
                       type="tel"
                       unmask={true}
                       value={whatsapp}

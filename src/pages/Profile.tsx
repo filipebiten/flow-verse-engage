@@ -196,7 +196,6 @@ const Profile = () => {
         .order('completed_at', { ascending: false });
 
       if (missionsError) {
-        console.error('Error loading completed missions:', missionsError);
       } else {
         setCompletedMissions(missionsData || []);
       }
@@ -209,13 +208,11 @@ const Profile = () => {
         .order('earned_at', { ascending: false });
 
       if (badgesError) {
-        console.error('Error loading badges:', badgesError);
       } else {
         setUserBadges(badgesData || []);
       }
 
     } catch (error) {
-      console.error('Error loading user data:', error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao carregar os dados.",
@@ -253,7 +250,6 @@ const Profile = () => {
       });
 
     } catch (error) {
-      console.error('Error updating profile:', error);
       toast({
         title: "Erro",
         description: "Ocorreu um erro ao atualizar o perfil.",

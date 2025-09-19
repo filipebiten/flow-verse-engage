@@ -52,7 +52,6 @@ function ListUsers(){
                 }
                 return data as UserProfile[];
             }catch (e: any){
-                console.error("Erro na mutação/pesquisa:", e);
                 return [];
             }
 

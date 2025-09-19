@@ -104,7 +104,6 @@ const Feed = () => {
 
 
       if (activitiesError) {
-        console.error('Error loading activities:', activitiesError);
       }
 
       // Load all profiles to get user info
@@ -114,7 +113,6 @@ const Feed = () => {
           .order('points', { ascending: false });
 
       if (profilesError) {
-        console.error('Error loading profiles:', profilesError);
       }
 
       // Create a map of user profiles
@@ -156,7 +154,6 @@ const Feed = () => {
           .limit(10);
 
       if (phaseError) {
-        console.error('Error loading phase changes:', phaseError);
       }
 
       const formattedPhaseChanges: PhaseChange[] = [];
@@ -187,7 +184,6 @@ const Feed = () => {
           .limit(10);
 
       if (badgeError) {
-        console.error('Error loading badges:', badgeError);
       }
 
       const formattedBadges: UserBadge[] = [];
@@ -229,7 +225,6 @@ const Feed = () => {
       }
 
     } catch (error) {
-      console.error('Error loading feed data:', error);
     } finally {
       setLoading(false);
     }
@@ -265,7 +260,6 @@ const Feed = () => {
         setUserModalOpen(true);
       }
     } catch (error) {
-      console.error('Error loading user profile:', error);
     }
   };
 

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { endOfDay, startOfDay, differenceInCalendarDays } from "date-fns";
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -21,7 +22,6 @@ export const useAuth = () => {
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error getting initial session:', error);
         if (mounted) {
           setLoading(false);
         }
@@ -30,8 +30,6 @@ export const useAuth = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
@@ -47,7 +45,6 @@ export const useAuth = () => {
                   .single();
 
                 if (error && error.code !== 'PGRST116') {
-                  console.error('Error fetching profile:', error);
                 } else if (profile) {
                   localStorage.setItem('currentUser', JSON.stringify({
                     id: profile.id,
@@ -68,7 +65,6 @@ export const useAuth = () => {
                   }));
                 }
               } catch (error) {
-                console.error('Error fetching profile:', error);
               }
             }, 0);
           }
@@ -95,12 +91,10 @@ export const useAuth = () => {
       localStorage.clear();
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
       }
       
       window.location.reload();
     } catch (error) {
-      console.error('Error during sign out:', error);
       window.location.reload();
     }
   };
@@ -120,8 +114,7 @@ export const useAuth = () => {
     let newStreak = 1;
 
     if (lastLogin) {
-      const diffTime = today.getTime() - lastLogin.getTime();
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const diffDays = differenceInCalendarDays(startOfDay(today), startOfDay(lastLogin));
 
       if (diffDays === 1) {
         newStreak = profile.consecutive_days + 1;
@@ -134,7 +127,10 @@ export const useAuth = () => {
 
     const { error: updateError } = await supabase
         .from("profiles")
-        .update({ consecutive_days: newStreak, last_login_date: today.toISOString().split("T")[0] })
+        .update({
+          consecutive_days: newStreak,
+          last_login_date: startOfDay(today).toISOString(),
+        })
         .eq("id", userId);
 
     if (updateError) console.error("Erro ao atualizar streak:", updateError);

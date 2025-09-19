@@ -13,7 +13,6 @@ export const uploadProfilePhoto = async (userId: string, profilePhoto: File) => 
         .upload(filePath, profilePhoto);
 
     if (uploadError) {
-        console.error('Error uploading photo:', uploadError);
         return null;
     }
 

@@ -16,7 +16,6 @@ export const MissionSugestions = () => {
                 .select('*');
 
             if (error) {
-                console.error("Erro ao buscar mission_sugestion:", error);
                 return [];
             }
 

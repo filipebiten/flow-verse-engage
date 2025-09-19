@@ -125,7 +125,6 @@ const Admin = () => {
             .eq('id', data[0].id);
 
         if (updateError) {
-          console.error('Erro ao incluir URL da foto:', updateError);
         }
       }
     },

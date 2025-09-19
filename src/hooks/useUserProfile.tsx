@@ -86,7 +86,6 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
       setCompletedMissions(missionsData || []);
       setUserBadges(badgesData || []);
     } catch (error) {
-      console.error('Erro ao carregar dados do usuário:', error);
     } finally {
       setLoading(false);
     }

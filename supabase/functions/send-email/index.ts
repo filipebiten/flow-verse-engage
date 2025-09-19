@@ -77,9 +77,7 @@ const handler = async (req: Request): Promise<Response> => {
         from: from || "Aplicativo PGM <contato@agenciaiungo.com.br>"
       };
 
-      console.log("Email enviado com sucesso:", emailData);
-
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         success: true, 
         message: "Email enviado com sucesso" 
       }), {
@@ -91,12 +89,10 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     } catch (smtpError) {
-      console.error("Erro SMTP:", smtpError);
       throw smtpError;
     }
 
   } catch (error: any) {
-    console.error("Error in send-email function:", error);
     return new Response(
       JSON.stringify({ 
         error: error.message,

@@ -14,7 +14,6 @@ export const uploadBookPhoto = async (bookId: string, bookFile: File) => {
         .upload(filePath, bookFile);
 
     if (uploadError) {
-        console.error('Error uploading book:', uploadError);
         return null;
     }
 
