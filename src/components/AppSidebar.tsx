@@ -182,10 +182,10 @@ export function AppSidebar() {
         <Button
             variant="destructive"
             size="sm"
-            className="w-full"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
             onClick={handleLogout}
         >
-          <LogOut className="w-4 h-4 mr-2"/>
+          <LogOut className="w-4 h-4 mr-2 "/>
           Sair
         </Button>
       </SidebarFooter>

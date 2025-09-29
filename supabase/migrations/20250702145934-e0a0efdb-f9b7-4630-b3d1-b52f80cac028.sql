@@ -85,7 +85,7 @@ CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT U
 CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Users can insert their own profile" ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Missions, books, courses - public read access for all authenticated users
+-- missions, books, courses - public read access for all authenticated users
 CREATE POLICY "Authenticated users can view missions" ON public.missions FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated users can view books" ON public.books FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Authenticated users can view courses" ON public.courses FOR SELECT TO authenticated USING (true);

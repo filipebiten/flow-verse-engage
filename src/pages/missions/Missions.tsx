@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
+import { Button } from '@/components/ui/button.tsx';
+import { Badge } from '@/components/ui/badge.tsx';
+import { useToast } from '@/hooks/use-toast.ts';
+import { supabase } from '@/integrations/supabase/client.ts';
+import { useAuth } from '@/hooks/useAuth.tsx';
 import { Target, CheckCircle, BookOpen, GraduationCap } from 'lucide-react';
 import { useUserProfile } from "@/hooks/useUserProfile.tsx";
 import { definePeriodBadgeColor } from "@/helpers/colorHelper.ts";
 import { checkBadgeEligibility } from "@/utils/badgeUtils.ts";
 import NewPhaseDialog from "@/components/newPhaseDialog.tsx";
 import { differenceInDays, endOfDay } from 'date-fns';
+import {CompleteMissionDialog} from "@/pages/missions/completeMissionDialog.tsx";
 
 interface Mission {
   id: string;
@@ -50,7 +51,7 @@ const Missions = () => {
   const { user } = useAuth();
   const { refreshUserData, completedMissions } = useUserProfile();
   const { toast } = useToast();
-
+  const [ showCompleteMissionDialog, setShowCompleteMissionDialog ] = useState(false);
   const [missions, setMissions] = useState<Mission[]>([]);
   const [books, setBooks] = useState<Mission[]>([]);
   const [courses, setCourses] = useState<Mission[]>([]);
@@ -59,7 +60,7 @@ const Missions = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [newPhase, setNewPhase] = useState<ReturnType<typeof getUserPhase> | null>(null);
-  const [currentSubmitingMission, setCurrentSubmitingMission] = useState('');
+  const [currentSubmitingMission, setCurrentSubmitingMission] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -115,7 +116,11 @@ const Missions = () => {
 
       if (completed) setCompletedItems(completed);
     } catch {
-      toast({ title: "Erro", description: "Não foi possível carregar os dados.", variant: "destructive" });
+      toast({
+          title: "Erro",
+          description: "Não foi possível carregar os dados.",
+          variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -138,10 +143,11 @@ const Missions = () => {
   }
 
   const completeItem = async (item: Mission) => {
-    if (currentSubmitingMission === item.id) return;
+
+    if (currentSubmitingMission != item)
+        return;
 
     try {
-      setCurrentSubmitingMission(item.id);
 
       const { data: completedItem, error: error } = await supabase.from('missions_completed').insert({
         user_id: user.id,
@@ -209,9 +215,14 @@ const Missions = () => {
 
       refreshUserData();
     } catch {
-      toast({ title: "Erro", description: "Ocorreu um erro ao completar a missão.", className: "bg-red-700 text-white", variant: "destructive" });
+      toast({
+          title: "Erro",
+          description: "Ocorreu um erro ao completar a missão.",
+          className: "bg-red-700 text-white",
+          variant: "destructive"
+      });
     } finally {
-      setCurrentSubmitingMission('');
+      setCurrentSubmitingMission(null);
     }
   };
 
@@ -272,8 +283,11 @@ const Missions = () => {
                             </div>
                           </div>
                           <Button
-                              onClick={() => completeItem(item)}
-                              disabled={isCompleted() || currentSubmitingMission === item.id}
+                              onClick={() => {
+                                  setCurrentSubmitingMission(item);
+                                  setShowCompleteMissionDialog(true)
+                              }}
+                              disabled={isCompleted() || currentSubmitingMission?.id === item.id}
                               variant={isCompleted() ? "secondary" : "default"}
                               size="sm"
                           >
@@ -304,7 +318,25 @@ const Missions = () => {
 
   return (
       <>
-        <NewPhaseDialog open={openDialog} setOpenDialog={setOpenDialog} currentPhaseName={userProfile!.phase} newPhase={newPhase} />
+      {showCompleteMissionDialog && (
+          <CompleteMissionDialog
+              open={showCompleteMissionDialog}
+              setOpen={setShowCompleteMissionDialog}
+              onCancel={() =>{
+                  setCurrentSubmitingMission(null);
+              }}
+              onConfirm={async () => {
+                  await completeItem(currentSubmitingMission);
+                  setShowCompleteMissionDialog(false);
+              }}
+          />
+        )}
+        <NewPhaseDialog
+            open={openDialog}
+            setOpenDialog={setOpenDialog}
+            currentPhaseName={userProfile!.phase}
+            newPhase={newPhase}
+        />
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
           <div className="max-w-6xl mx-auto space-y-6">
             <Card className="overflow-hidden">
