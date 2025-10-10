@@ -1,0 +1,25 @@
+version: "1.0"
+
+services:
+  flowapp:
+    image: flowapp:latest
+    deploy:
+      replicas: 1
+      labels:
+        - "traefik.enable=true"
+
+        - "traefik.http.routers.flowapp.rule=Host(`flowapp.1b.org.br`)"
+        - "traefik.http.routers.flowapp.entrypoints=web,websecure"
+
+        - "traefik.http.services.flowapp.loadbalancer.server.port=3000"
+
+        - "traefik.http.routers.flowapp.tls=true"
+        - "traefik.http.routers.flowapp.tls.certresolver=letsencrypt"
+
+    networks:
+      - tameionrede
+    restart: always
+
+networks:
+  tameionrede:
+    external: true

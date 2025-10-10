@@ -61,7 +61,7 @@ function LoginForm(props: {
         </Button>
       </div>
     </div>
-    <Button type="submit" className="w-full" disabled={props.disabled}>
+    <Button type="submit" className="w-full bg-gradient-to-r from-blue-600 to-purple-600" disabled={props.disabled}>
       {props.disabled && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
       Entrar
     </Button>
@@ -350,7 +350,7 @@ const Auth = () => {
               className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Rede FLOW
           </CardTitle>
-          <p className="text-muted-foreground">Entre ou crie sua conta</p>
+          <p className="text-muted-foreground pb-2">Entre ou crie sua conta</p>
 
           {/* Warning Message */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
