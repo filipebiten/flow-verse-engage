@@ -171,35 +171,50 @@ const Auth = () => {
     try {
       const isAdminEmail = email === 'filipebiten@gmail.com';
 
-      const { data, error } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            name: name,
-            whatsapp: whatsapp,
-            email: email,
-            birth_date: birthDate,
-            gender: gender,
-            pgm_role: pgmRole,
-            pgm_number: pgmNumber,
-            participates_flow_up: participatesFlowUp,
-            participates_irmandade: participatesIrmandade,
-            is_admin: isAdminEmail
-          }
-        }
       });
 
-      if (error) {
-        if (error.message.includes('User already registered')) {
+      if (authError) {
+        console.error("Erro no signup:", authError);
+        return;
+      }
+
+      if (!authData.user) return;
+
+      const userId = authData.user.id;
+
+      const profileData = {
+        id: userId,
+        name: name || "",
+        whatsapp: whatsapp || "",
+        email: email,
+        birth_date: birthDate ? String(birthDate) : "1900-01-01",
+        gender: gender || "Não informado",
+        pgm_role: pgmRole || "Membro",
+        pgm_number: pgmNumber || "",
+        participates_flow_up: String(participatesFlowUp ?? false),
+        participates_irmandade: String(participatesIrmandade ?? false),
+        is_admin: String(isAdminEmail ?? false)
+      };
+
+      const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .update(profileData)
+          .eq('id', authData.user.id)
+
+      if (profileError) console.error("Erro ao criar profile:", profileError);
+
+      if (authError) {
+        if (authError.message.includes('User already registered')) {
           toast({
             title: "Conta já existe",
             description: "Esta conta já está registrada. Tente fazer login.",
             variant: "destructive"
           });
         } else {
-          if(error.message.includes("is invalid")){
+          if(authError.message.includes("is invalid")){
             toast({
               title: "Erro no cadastro",
               description: "O endereço de email é inválido",
@@ -208,13 +223,13 @@ const Auth = () => {
           }
         }
       } else {
-        if (data.user) {
+        if (authData.user) {
           let profileExists = false;
           for (let i = 0; i < 10; i++) {
             const { data: profileData } = await supabase
                 .from('profiles')
                 .select('id')
-                .eq('id', data.user.id)
+                .eq('id', authData.user.id)
                 .single();
             if (profileData) {
               profileExists = true;
@@ -229,14 +244,14 @@ const Auth = () => {
 
           let profilePhotoUrl = null;
           if (profilePhoto) {
-            profilePhotoUrl = await uploadProfilePhoto(data.user.id, profilePhoto);
+            profilePhotoUrl = await uploadProfilePhoto(authData.user.id, profilePhoto);
           }
 
           if (profilePhotoUrl) {
             const { error: updateError } = await supabase
                 .from('profiles')
                 .update({ profile_photo_url: profilePhotoUrl })
-                .eq('id', data.user.id);
+                .eq('id', authData.user.id);
 
             if (updateError) {
               console.error('Erro ao atualizar URL da foto:', updateError);
@@ -247,7 +262,6 @@ const Auth = () => {
         setShowEmailConfirmation(true);
       }
     } catch (error) {
-      console.log(error)
       toast({
         title: "Erro",
         description: `Ocorreu um erro inesperado.${error}`,
@@ -478,8 +492,8 @@ const Auth = () => {
                       <SelectValue placeholder="Selecione seu gênero"/>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Homem">Homem</SelectItem>
-                      <SelectItem value="Mulher">Mulher</SelectItem>
+                      <SelectItem value="Masculino">Masculino</SelectItem>
+                      <SelectItem value="Feminino">Feminino</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
