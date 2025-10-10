@@ -247,6 +247,7 @@ const Auth = () => {
         setShowEmailConfirmation(true);
       }
     } catch (error) {
+      console.log(error)
       toast({
         title: "Erro",
         description: `Ocorreu um erro inesperado.${error}`,
