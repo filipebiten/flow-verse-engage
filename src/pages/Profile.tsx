@@ -665,7 +665,7 @@ const Profile = () => {
               <div className="space-y-3">
                 {completedMissions.slice(0, 5).map((mission) => (
                   <div key={mission.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                    <div className='w-8/12'>
+                    <div className='sm:w-7/12 w-8/12'>
                       <h4 className="font-semibold">{mission.mission_name}</h4>
                       <p className="text-sm text-gray-600">
                         {new Date(mission.completed_at).toLocaleDateString('pt-BR')}
