@@ -13,9 +13,9 @@ export function definePeriodBadgeColor(period: string) {
         case 'Mensal':
             return 'bg-red-500';
         case 'semestral':
-            return 'bg-green-500';
+            return 'bg-purple-500';
         case 'Semestral':
-            return 'bg-green-500';
+            return 'bg-purple-500';
         case 'anual' :
             return 'bg-cyan-500';
         case 'Anual':

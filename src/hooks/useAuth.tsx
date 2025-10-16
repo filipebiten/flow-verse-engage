@@ -106,8 +106,6 @@ export const useAuth = () => {
         .eq("id", userId)
         .single();
 
-    if (error) return console.error("Erro ao pegar perfil:", error);
-
     const today = new Date();
     const lastLogin = profile?.last_login_date ? new Date(profile.last_login_date) : null;
 
@@ -132,8 +130,6 @@ export const useAuth = () => {
           last_login_date: startOfDay(today).toISOString(),
         })
         .eq("id", userId);
-
-    if (updateError) console.error("Erro ao atualizar streak:", updateError);
 
     return newStreak;
   };

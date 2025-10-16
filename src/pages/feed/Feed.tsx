@@ -435,11 +435,14 @@ const Feed = () => {
                                       <div className="flex items-center space-x-2 mt-1">
                                         {getMissionIcon((item.data as FeedActivity).mission_type)}
                                         <Badge variant="secondary" className="bg-green-100 text-green-700">
-                                          +{(item.data as FeedActivity).points} pts
+                                          +{(item.data as FeedActivity).points} Pontos
                                         </Badge>
                                         {(item.data as FeedActivity).period && (
-                                            <Badge variant="outline" className={`${definePeriodBadgeColor((item.data as FeedActivity).period)} text-xs text-white`}>
-                                              {(item.data as FeedActivity).period}
+                                            <Badge
+                                              variant="outline"
+                                              className={`${definePeriodBadgeColor((item.data as FeedActivity).period)} text-xs text-white`}
+                                            >
+                                              {(item.data as FeedActivity).period[0].toUpperCase() + (item.data as FeedActivity).period.slice(1)}
                                             </Badge>
                                         )}
                                         <span className="text-xs text-gray-500">
@@ -466,7 +469,7 @@ const Feed = () => {
                                           {(item.data as PhaseChange).new_phase}
                                         </Badge>
                                         <Badge variant="secondary">
-                                          {(item.data as PhaseChange).total_points} pts total
+                                          {(item.data as PhaseChange).total_points} Pontos totais
                                         </Badge>
                                         <span className="text-xs text-gray-500">
                                 {formatTimeAgo(item.timestamp)}

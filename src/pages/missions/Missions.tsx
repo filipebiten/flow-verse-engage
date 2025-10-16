@@ -248,13 +248,14 @@ const Missions = () => {
                     missionCompletions.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
                     const latestCompletion = missionCompletions[0];
 
-                    if (latestCompletion?.period === null) return true;
+                    if (latestCompletion?.period === null || latestCompletion?.period?.toLowerCase() === 'especial') return true;
 
                     const now = new Date();
                     const completionEnd = endOfDay(new Date(latestCompletion.completed_at));
 
                     if (latestCompletion?.period?.toLowerCase() === 'diário' && now <= completionEnd) return true;
                     if (latestCompletion?.period?.toLowerCase() === 'semanal' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 6) return true;
+                    if (latestCompletion?.period?.toLowerCase() === 'mensal' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 29) return true;
                     if (latestCompletion?.period?.toLowerCase() === 'semestral' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 179) return true;
                     if (latestCompletion?.period?.toLowerCase() === 'anual' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 364) return true;
 
@@ -264,9 +265,9 @@ const Missions = () => {
                   return (
                       <div
                           key={item.id}
-                          className={`p-4 border rounded-lg transition-all ${isCompleted() ? 'bg-green-50 border-green-200' : 'bg-white hover:shadow-md'}`}
+                          className={`border rounded-lg transition-all flex-1 items-center group: cursor-default ${isCompleted() ? 'bg-green-50 border-green-200' : 'bg-white hover:shadow-md'}`}
                       >
-                        <div className="flex items-start justify-between">
+                        <div className="p-4 flex items-center justify-between">
                           {title === 'Livros' && (
                               <img src={item?.image_url} alt={item.name} className="w-20 h-20 mr-4 rounded-md object-cover" />
                           )}
@@ -275,11 +276,11 @@ const Missions = () => {
                               <h3 className="font-semibold">{item.name}</h3>
                               {isCompleted() && <CheckCircle className="w-5 h-5 text-green-600" />}
                             </div>
-                            <p className="text-sm text-gray-600 mb-2">{item.description}</p>
+                            <p className="text-sm text-gray-600 mb-2 pr-1">{item.description}</p>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Badge className='bg-green-500 text-white' variant="secondary">+{item.points} pts</Badge>
-                              {item.period && <Badge className={definePeriodBadgeColor(item.period)} variant="default">{item.period[0].toUpperCase() + item.period.slice(1)}</Badge>}
-                              {item.school && <Badge variant="outline">{item.school}</Badge>}
+                              <Badge className='bg-green-500 hover:bg-green-500 text-white' variant="secondary">+{item.points} Pontos</Badge>
+                              {item.period && <Badge className={`hover:${definePeriodBadgeColor(item.period)} ${definePeriodBadgeColor(item.period)}`} variant="default">{item.period[0].toUpperCase() + item.period.slice(1)}</Badge>}
+                              {item.school && <Badge className="bg-blue-900 text-white">{item.school}</Badge>}
                             </div>
                           </div>
                           <Button
@@ -289,6 +290,7 @@ const Missions = () => {
                               }}
                               disabled={isCompleted() || currentSubmitingMission?.id === item.id}
                               variant={isCompleted() ? "secondary" : "default"}
+                              className={isCompleted() ? "secondary" : "bg-green-600 hover:bg-green-400"}
                               size="sm"
                           >
                             {isCompleted() ? "Concluído" : "Completar"}

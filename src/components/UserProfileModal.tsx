@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, Target, BookOpen, Award } from 'lucide-react';
 import {getPhaseInfo} from "@/utils/phaseUtils.ts";
+import {PhaseBadge} from "@/components/PhaseBadge.tsx";
 
 interface UserProfile {
   id: string;
@@ -56,7 +57,7 @@ export const UserProfileModal: React.FC<Props> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto group: select-none">
         <DialogHeader>
           <DialogTitle>Perfil do Usuário</DialogTitle>
         </DialogHeader>
@@ -66,7 +67,7 @@ export const UserProfileModal: React.FC<Props> = ({
           <Card className="overflow-hidden">
             <div className={`bg-gradient-to-r ${phaseInfo.color} p-6 text-white`}>
               <div className="flex items-center gap-4">
-                <Avatar className="w-16 h-16 border-4 border-white">
+                <Avatar className="w-40 h-40 border-4 border-white">
                   {profile.profile_photo_url ? (
                       <AvatarImage src={profile.profile_photo_url} alt={profile.name} />
                   ) : (
@@ -80,10 +81,8 @@ export const UserProfileModal: React.FC<Props> = ({
                     {profile.name}
                   </h2>
                   <div className="flex items-center gap-3 mb-2">
-                    <Badge className="bg-white text-gray-800">
-                      {phaseInfo.emoji} {profile.phase}
-                    </Badge>
-                    <span className="text-white/90">{profile.points || 0} pontos</span>
+                    <PhaseBadge userPhase={profile.phase}/>
+                    <span className="text-white/90 text-xl">{profile.points || 0} pontos</span>
                   </div>
                   {profile.pgm_number && (
                       <p className="text-white/80">PGM {profile.pgm_number}</p>
@@ -175,15 +174,15 @@ export const UserProfileModal: React.FC<Props> = ({
               ) : (
                 <div className="space-y-2">
                   {completedMissions.slice(0, 5).map((mission) => (
-                    <div key={mission.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                    <div key={mission.id} className="flex items-center justify-between p-2 bg-green-50 rounded">
                       <div>
                         <p className="font-medium text-sm">{mission.mission_name}</p>
                         <p className="text-xs text-gray-600">
                           {new Date(mission.completed_at).toLocaleDateString('pt-BR')}
                         </p>
                       </div>
-                      <Badge variant="secondary" className="text-xs">
-                        +{mission.points} pts
+                      <Badge variant="secondary" className="text-xs bg-green-500 hover:bg-green-500 text-white">
+                        +{mission.points} Pontos
                       </Badge>
                     </div>
                   ))}

@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import {Badge} from '@/components/ui/badge';
-import {Avatar, AvatarContainer, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
+import {Avatar, AvatarContainer, AvatarFallback} from '@/components/ui/avatar';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
@@ -13,7 +13,6 @@ import {
   Award,
   BookOpen,
   Calendar,
-  DeleteIcon,
   Lock,
   Pen,
   Phone,
@@ -28,6 +27,7 @@ import {useQuery} from "@tanstack/react-query";
 import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 import {deleteProfilePhoto, uploadProfilePhoto} from "@/services/profileService.ts";
 import {useUserProfile} from "@/hooks/useUserProfile.tsx";
+import {PhaseBadge} from "@/components/PhaseBadge.tsx";
 
 interface UserProfile {
   id: string;
@@ -300,15 +300,13 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
-
-        {/* Header Card */}
         <Card className="overflow-hidden">
-          <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
-            <div className="flex items-center gap-6">
+          <div className={`bg-gradient-to-r ${currentPhase.color} p-4 sm:p-6 text-white`}>
+            <div className="flex flex-col lg:flex-row lg:items-start items-center gap-6 text-center lg:text-left">
               <Avatar
                   onMouseEnter={() => setEnterEditImageArea(true)}
                   onMouseLeave={() => setEnterEditImageArea(false)}
-                  className="w-40 h-40 border-4 border-white"
+                  className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 border-4 border-white"
               >
                 {profile.profile_photo_url ? (
                     <AvatarContainer
@@ -385,25 +383,23 @@ const Profile = () => {
                 />
               </Avatar>
               <div className="flex-1">
-                <h1 className="text-3xl font-bold mb-2">{profile.name}</h1>
+                <h1 className="text-2xl sm:text-4xl font-bold mb-2">{profile.name}</h1>
                 <p className="text-white/90 mb-2">{profile.email}</p>
-                <div className="flex items-center gap-4">
-                  <Badge className="bg-white text-gray-800">
-                    {currentPhase.icon} {currentPhase.name}
-                  </Badge>
-                  <span className="text-white/90">{profile.points || 0} pontos</span>
+                <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4">
+                  <PhaseBadge userPhase={profile.phase}/>
+                  <span className="text-white/90 font-bold">{profile.points || 0} pontos</span>
                 </div>
               </div>
               <Button
-                variant="secondary"
-                onClick={() => setEditing(!editing)}
-                className="bg-white text-gray-800 hover:bg-gray-100"
+                  variant="secondary"
+                  onClick={() => setEditing(!editing)}
+                  className="mt-4 lg:mt-0 bg-white text-gray-800 hover:bg-gray-100"
               >
                 {editing ? 'Cancelar' : 'Editar Perfil'}
               </Button>
             </div>
-          </div>
-        </Card>
+        </div>
+      </Card>
 
         {/* Profile Details */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -600,7 +596,7 @@ const Profile = () => {
                       <div key={mission.id} className="p-2 bg-blue-50 rounded border">
                         <p className="font-medium text-sm">{mission.mission_name}</p>
                         <p className="text-xs text-gray-600">
-                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pts
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pontos
                         </p>
                       </div>
                     ))}
@@ -623,7 +619,7 @@ const Profile = () => {
                         <p className="font-medium text-sm">{mission.mission_name}</p>
                         <p className="text-xs text-gray-600">
                           {mission.school && `${mission.school} • `}
-                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pts
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pontos
                         </p>
                       </div>
                     ))}
@@ -646,7 +642,7 @@ const Profile = () => {
                         <p className="font-medium text-sm">{mission.mission_name}</p>
                         <p className="text-xs text-gray-600">
                           {mission.period && `${mission.period} • `}
-                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pts
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pontos
                         </p>
                       </div>
                     ))}
@@ -668,14 +664,19 @@ const Profile = () => {
             ) : (
               <div className="space-y-3">
                 {completedMissions.slice(0, 5).map((mission) => (
-                  <div key={mission.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
+                  <div key={mission.id} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div className='w-8/12'>
                       <h4 className="font-semibold">{mission.mission_name}</h4>
                       <p className="text-sm text-gray-600">
                         {new Date(mission.completed_at).toLocaleDateString('pt-BR')}
                       </p>
                     </div>
-                    <Badge variant="secondary">+{mission.points} pts</Badge>
+                    <Badge
+                      variant="secondary"
+                      className="hover:bg-green-500 bg-green-500 text-white"
+                    >
+                      +{mission.points} Pontos
+                    </Badge>
                   </div>
                 ))}
               </div>

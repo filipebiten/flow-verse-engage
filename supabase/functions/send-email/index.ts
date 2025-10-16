@@ -47,8 +47,6 @@ serve(async (req: Request) => {
     const data = await res.json();
 
     if (!res.ok) {
-      // Se a API do Resend retornar um erro
-      console.error('Erro do Resend:', data);
       throw new Error(data.message || 'Falha ao enviar o e-mail.');
     }
 

@@ -177,7 +177,6 @@ const Auth = () => {
       });
 
       if (authError) {
-        console.error("Erro no signup:", authError);
         return;
       }
 
@@ -203,8 +202,6 @@ const Auth = () => {
           .from("profiles")
           .update(profileData)
           .eq('id', authData.user.id)
-
-      if (profileError) console.error("Erro ao criar profile:", profileError);
 
       if (authError) {
         if (authError.message.includes('User already registered')) {
@@ -253,9 +250,6 @@ const Auth = () => {
                 .update({ profile_photo_url: profilePhotoUrl })
                 .eq('id', authData.user.id);
 
-            if (updateError) {
-              console.error('Erro ao atualizar URL da foto:', updateError);
-            }
           }
         }
 

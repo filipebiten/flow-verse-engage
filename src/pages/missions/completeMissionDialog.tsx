@@ -21,7 +21,7 @@ export function CompleteMissionDialog({open, setOpen, onCancel, onConfirm}: {
                     <DialogHeader>
                         <DialogTitle className="text-2xl">Confirmar Ação</DialogTitle>
                     </DialogHeader>
-                    <p className="text-2xl">Deseja confirmar esta missão?</p>
+                    <p className="text-xl">Deseja confirmar esta missão?</p>
                     <div
                         className="flex justify-between">
                         <Button
