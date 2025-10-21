@@ -108,7 +108,7 @@ const UserProfile = () => {
     if (diffInMinutes < 60) return `${diffInMinutes}m`;
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
     if (diffInMinutes < 10080) return `${Math.floor(diffInMinutes / 1440)}d`;
-    return new Date(timestamp).toLocaleDateString('pt-BR');
+    return new Date(timestamp).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
   };
 
   const formatJoinDate = (dateString: string) => {

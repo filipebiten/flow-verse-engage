@@ -128,9 +128,12 @@ const Missions = () => {
 
   async function checkIfUserCompletedAnyBadge(userStats) {
     const { data: allBadges } = await supabase.from('badges').select('*');
-    const { data: userBadges } = await supabase.from('user_badges').select('*');
+    let { data: userBadges } = await supabase.from('user_badges').select('*').eq('user_id', userStats.userId);
 
-    if (!allBadges || !userBadges) return [];
+    if (!allBadges) return [];
+
+    if(!userBadges)
+      userBadges = [];
 
     const userBadgeIds = new Set(userBadges.map(ub => ub.badge_id));
 
@@ -191,7 +194,8 @@ const Missions = () => {
         missions: completedMissions.find(c => c.mission_type === 'mission') || [],
         books: completedMissions.find(c => c.mission_type === 'book') || [],
         courses: completedMissions.find(c => c.mission_type === 'course') || [],
-        consecutive_days: userProfile!.consecutive_days
+        consecutive_days: userProfile!.consecutive_days,
+        userId: userProfile.id
       });
 
       for (const badge of badgesCompleted) {

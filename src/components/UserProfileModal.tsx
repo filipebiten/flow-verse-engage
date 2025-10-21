@@ -156,7 +156,6 @@ export const UserProfileModal: React.FC<Props> = ({
                 <Card>
                   <CardContent className="p-4">
                     <h3 className="font-semibold mb-3">Conquistas</h3>
-                    {/* MUDANÇA AQUI: Grid de conquistas responsivo */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {badges.map((badge) => (
                           <div
@@ -182,10 +181,10 @@ export const UserProfileModal: React.FC<Props> = ({
                     <div className="space-y-2">
                       {completedMissions.slice(0, 5).map((mission) => (
                           <div key={mission.id} className="flex items-center justify-between p-2 bg-green-50 rounded">
-                            <div className='sm:w-7/12 w-8/12'>
+                            <div className='sm:w-6/12 w-8/12'>
                               <p className="font-medium text-sm">{mission.mission_name}</p>
                               <p className="text-xs text-gray-600">
-                                {new Date(mission.completed_at).toLocaleDateString('pt-BR')}
+                                {new Date(mission.completed_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                               </p>
                             </div>
                             <Badge variant="secondary" className="text-xs bg-green-500 hover:bg-green-500 text-white">

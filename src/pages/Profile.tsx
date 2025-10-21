@@ -207,8 +207,7 @@ const Profile = () => {
         .eq('user_id', user.id)
         .order('earned_at', { ascending: false });
 
-      if (badgesError) {
-      } else {
+      if (!badgesError) {
         setUserBadges(badgesData || []);
       }
 
@@ -506,7 +505,7 @@ const Profile = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-gray-500" />
-                    <span>{profile.birth_date ? new Date(profile.birth_date).toLocaleDateString('pt-BR') : 'Não informado'}</span>
+                    <span>{profile.birth_date ? new Date(profile.birth_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'Não informado'}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-gray-500" />
@@ -596,7 +595,7 @@ const Profile = () => {
                       <div key={mission.id} className="p-2 bg-blue-50 rounded border">
                         <p className="font-medium text-sm">{mission.mission_name}</p>
                         <p className="text-xs text-gray-600">
-                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pontos
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} • +{mission.points} pontos
                         </p>
                       </div>
                     ))}
@@ -619,7 +618,7 @@ const Profile = () => {
                         <p className="font-medium text-sm">{mission.mission_name}</p>
                         <p className="text-xs text-gray-600">
                           {mission.school && `${mission.school} • `}
-                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pontos
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} • +{mission.points} pontos
                         </p>
                       </div>
                     ))}
@@ -642,7 +641,7 @@ const Profile = () => {
                         <p className="font-medium text-sm">{mission.mission_name}</p>
                         <p className="text-xs text-gray-600">
                           {mission.period && `${mission.period} • `}
-                          {new Date(mission.completed_at).toLocaleDateString('pt-BR')} • +{mission.points} pontos
+                          {new Date(mission.completed_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' })} • +{mission.points} pontos
                         </p>
                       </div>
                     ))}
@@ -668,7 +667,7 @@ const Profile = () => {
                     <div className='sm:w-7/12 w-8/12'>
                       <h4 className="font-semibold">{mission.mission_name}</h4>
                       <p className="text-sm text-gray-600">
-                        {new Date(mission.completed_at).toLocaleDateString('pt-BR')}
+                        {new Date(mission.completed_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                       </p>
                     </div>
                     <Badge
@@ -721,23 +720,31 @@ const Badges = ({userBadges, profile, missionsCount, booksCount, coursesCount}) 
           <CardContent>
             <div className="space-y-6">
 
-              {/*/!* Earned Badges *!/*/}
-              {/*{userBadges.length > 0 && (*/}
-              {/*    <div>*/}
-              {/*      <h3 className="font-semibold text-lg mb-3 text-green-700">Badges Conquistados</h3>*/}
-              {/*      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">*/}
-              {/*        {userBadges.map((badge) => (*/}
-              {/*            <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg">*/}
-              {/*              <div className="text-3xl mb-2">{badge.badge_icon}</div>*/}
-              {/*              <h4 className="font-semibold text-sm text-yellow-800">{badge.badge_name}</h4>*/}
-              {/*              <p className="text-xs text-yellow-700 mt-1">*/}
-              {/*                {new Date(badge.earned_at).toLocaleDateString('pt-BR')}*/}
-              {/*              </p>*/}
-              {/*            </div>*/}
-              {/*        ))}*/}
-              {/*      </div>*/}
-              {/*    </div>*/}
-              {/*)}*/}
+              {/* Earned Badges */}
+              {userBadges.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold text-lg mb-3 text-green-700">Badges Conquistados</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {userBadges.map((userBadge) => {
+                        const badgeDetails = data.find((d) => d.id === userBadge.badge_id);
+                        return (
+                            <div
+                                key={badgeDetails.id}
+                                className="text-center p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-300 rounded-lg"
+                            >
+                              <div className="text-3xl mb-2">{badgeDetails.icon}</div>
+                              <h4 className="font-semibold text-sm text-yellow-800">
+                                {badgeDetails.name}
+                              </h4>
+                              <p className="text-xs text-yellow-700 mt-1">
+                                {new Date(userBadge.earned_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                              </p>
+                            </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+              )}
 
               {(() => {
                 const userStats = {
@@ -763,21 +770,21 @@ const Badges = ({userBadges, profile, missionsCount, booksCount, coursesCount}) 
 
                 return (
                     <>
-                      {/* Available to Unlock */}
-                      {availableForUnlock.length > 0 && (
-                          <div>
-                            <h3 className="font-semibold text-lg mb-3 text-green-700">Conquistas Adquiridas</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              {availableForUnlock.map((badge) => (
-                                  <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-300 rounded-lg">
-                                    <div className="text-3xl mb-2">{badge.icon}</div>
-                                    <h4 className="font-semibold text-sm text-blue-800">{badge.name}</h4>
-                                    <p className="text-xs text-blue-700 mt-1">{badge.description}</p>
-                                  </div>
-                              ))}
-                            </div>
-                          </div>
-                      )}
+                      {/*/!* Available to Unlock *!/*/}
+                      {/*{availableForUnlock.length > 0 && (*/}
+                      {/*    <div>*/}
+                      {/*      <h3 className="font-semibold text-lg mb-3 text-green-700">Conquistas Adquiridas</h3>*/}
+                      {/*      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">*/}
+                      {/*        {availableForUnlock.map((badge) => (*/}
+                      {/*            <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-blue-50 to-green-50 border border-blue-300 rounded-lg">*/}
+                      {/*              <div className="text-3xl mb-2">{badge.icon}</div>*/}
+                      {/*              <h4 className="font-semibold text-sm text-blue-800">{badge.name}</h4>*/}
+                      {/*              <p className="text-xs text-blue-700 mt-1">{badge.description}</p>*/}
+                      {/*            </div>*/}
+                      {/*        ))}*/}
+                      {/*      </div>*/}
+                      {/*    </div>*/}
+                      {/*)}*/}
 
                       {/* Locked Badges */}
                       {lockedBadges.length > 0 && (

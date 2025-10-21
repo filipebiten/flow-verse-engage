@@ -22,7 +22,7 @@ export const MissionSugestions = () => {
             return data.map(i => {
                 return {
                     id: i.id,
-                    created_at: ((new Date(i.created_at)).toLocaleDateString("pt-BR")),
+                    created_at: ((new Date(i.created_at)).toLocaleDateString('pt-BR', { timeZone: 'UTC' })),
                     mission_description: i.mission_description
                 };
             });
