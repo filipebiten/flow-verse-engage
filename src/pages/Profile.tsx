@@ -292,9 +292,9 @@ const Profile = () => {
   }
 
   const currentPhase = getPhaseInfo(profile.points || 0);
-  const booksCount = completedMissions.filter(m => m.mission_type === 'book').length;
-  const coursesCount = completedMissions.filter(m => m.mission_type === 'course').length;
-  const missionsCount = completedMissions.filter(m => m.mission_type === 'mission').length;
+  const books = completedMissions.filter(m => m.mission_type === 'book');
+  const courses = completedMissions.filter(m => m.mission_type === 'course');
+  const missions = completedMissions.filter(m => m.mission_type === 'mission');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
@@ -550,17 +550,17 @@ const Profile = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <BookOpen className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-blue-600">{booksCount}</div>
+                  <div className="text-2xl font-bold text-blue-600">{books.length}</div>
                   <p className="text-sm text-gray-600">Livros Lidos</p>
                 </div>
                 <div className="text-center p-4 bg-green-50 rounded-lg">
                   <Target className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-green-600">{missionsCount}</div>
+                  <div className="text-2xl font-bold text-green-600">{missions.length}</div>
                   <p className="text-sm text-gray-600">Missões</p>
                 </div>
                 <div className="text-center p-4 bg-purple-50 rounded-lg">
                   <Award className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                  <div className="text-2xl font-bold text-purple-600">{coursesCount}</div>
+                  <div className="text-2xl font-bold text-purple-600">{courses.length}</div>
                   <p className="text-sm text-gray-600">Cursos</p>
                 </div>
                 <div className="text-center p-4 bg-yellow-50 rounded-lg">
@@ -587,7 +587,7 @@ const Profile = () => {
                   <BookOpen className="w-5 h-5 text-blue-600" />
                   Livros Lidos
                 </h3>
-                {completedMissions.filter(m => m.mission_type === 'book').length === 0 ? (
+                {books.length === 0 ? (
                   <p className="text-gray-500 text-sm">Nenhum livro lido ainda</p>
                 ) : (
                   <div className="space-y-2">
@@ -609,7 +609,7 @@ const Profile = () => {
                   <Award className="w-5 h-5 text-purple-600" />
                   Cursos Feitos
                 </h3>
-                {completedMissions.filter(m => m.mission_type === 'course').length === 0 ? (
+                {courses.length === 0 ? (
                   <p className="text-gray-500 text-sm">Nenhum curso feito ainda</p>
                 ) : (
                   <div className="space-y-2">
@@ -632,7 +632,7 @@ const Profile = () => {
                   <Target className="w-5 h-5 text-green-600" />
                   Missões Feitas
                 </h3>
-                {completedMissions.filter(m => m.mission_type === 'mission').length === 0 ? (
+                {missions.length === 0 ? (
                   <p className="text-gray-500 text-sm">Nenhuma missão feita ainda</p>
                 ) : (
                   <div className="space-y-2">
@@ -684,13 +684,13 @@ const Profile = () => {
         </Card>
 
         {/* Badges Section */}
-        <Badges userBadges={userBadges} profile={profile} missionsCount={missionsCount} booksCount={booksCount} coursesCount={coursesCount}/>
+        <Badges userBadges={userBadges} profile={profile} missions={missions} books={books} courses={courses}/>
         </div>
     </div>
   );
 };
 
-const Badges = ({userBadges, profile, missionsCount, booksCount, coursesCount}) => {
+const Badges = ({userBadges, profile, missions, books, courses}) => {
   const { data, isLoading } = useQuery({
     queryKey: ['get_badges'],
     staleTime: 0,
@@ -736,8 +736,9 @@ const Badges = ({userBadges, profile, missionsCount, booksCount, coursesCount}) 
                               <h4 className="font-semibold text-sm text-yellow-800">
                                 {badgeDetails.name}
                               </h4>
+                              <p className="text-xs text-yellow-700 mt-1">{badgeDetails.description}</p>
                               <p className="text-xs text-yellow-700 mt-1">
-                                {new Date(userBadge.earned_at).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
+                                {new Date(userBadge.earned_at).toLocaleDateString('pt-BR', {timeZone: 'UTC'})}
                               </p>
                             </div>
                         );
@@ -749,9 +750,9 @@ const Badges = ({userBadges, profile, missionsCount, booksCount, coursesCount}) 
               {(() => {
                 const userStats = {
                   points: profile?.points || 0,
-                  missions: missionsCount,
-                  books: booksCount,
-                  courses: coursesCount,
+                  missions: missions,
+                  books: books,
+                  courses: courses,
                   consecutive_days: profile?.consecutive_days || 0
                 };
 
@@ -791,7 +792,7 @@ const Badges = ({userBadges, profile, missionsCount, booksCount, coursesCount}) 
                           <div>
                             <h3 className="font-semibold text-lg mb-3 text-gray-700">Próximos Objetivos</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              {lockedBadges.slice(0, 8).map((badge) => (
+                              {lockedBadges.map((badge) => (
                                   <div key={badge.id} className="text-center p-4 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-300 rounded-lg opacity-75">
                                     <div className="relative">
                                       <div className="text-3xl mb-2 filter grayscale">{badge.icon}</div>

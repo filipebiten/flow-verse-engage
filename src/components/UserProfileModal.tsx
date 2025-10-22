@@ -67,9 +67,7 @@ export const UserProfileModal: React.FC<Props> = ({
             {/* Header */}
             <Card className="overflow-hidden">
               <div className={`bg-gradient-to-r ${phaseInfo.color} p-6 text-white`}>
-                {/* MUDANÇA AQUI: Layout do header responsivo */}
                 <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center text-center sm:text-left">
-                  {/* MUDANÇA AQUI: Tamanho do avatar responsivo */}
                   <Avatar className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-white">
                     {profile.profile_photo_url ? (
                         <AvatarImage src={profile.profile_photo_url} alt={profile.name} />
@@ -100,7 +98,6 @@ export const UserProfileModal: React.FC<Props> = ({
             </Card>
 
             {/* Info Cards */}
-            {/* MUDANÇA AQUI: Grid de cards responsivo */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Participações */}
               <Card>

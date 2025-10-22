@@ -187,13 +187,15 @@ const Missions = () => {
       }).eq('id', user.id);
 
       setUserProfile({ ...userProfile!, points: newPoints, phase: phaseCandidate.name });
-      setCompletedItems(prev => [...prev, item as any]);
+      const updatedCompletedItems = [...completedMissions, completedItem];
+
+      setCompletedItems(updatedCompletedItems);
 
       const badgesCompleted = await checkIfUserCompletedAnyBadge({
         points: newPoints,
-        missions: completedMissions.find(c => c.mission_type === 'mission') || [],
-        books: completedMissions.find(c => c.mission_type === 'book') || [],
-        courses: completedMissions.find(c => c.mission_type === 'course') || [],
+        missions: updatedCompletedItems.filter(c => c.mission_type === 'mission'),
+        books: updatedCompletedItems.filter(c => c.mission_type === 'book'),
+        courses: updatedCompletedItems.filter(c => c.mission_type === 'course'),
         consecutive_days: userProfile!.consecutive_days,
         userId: userProfile.id
       });

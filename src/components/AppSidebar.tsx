@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import {LogOut, Shield, Target, User, Users} from 'lucide-react';
+import {LogOut, LucideStore, Shield, Target, User, Users} from 'lucide-react';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -40,6 +40,12 @@ const menuItems = [
     url: "/profile",
     icon: User,
   },
+  {
+    title: "Loja - Em breve",
+    url: "/store",
+    icon: LucideStore,
+    disabled: true
+  },
 ];
 
 const adminItems = [
@@ -53,7 +59,7 @@ const adminItems = [
 function UserHeaderInfo(props: { onClick: () => void, profile: UserProfile, userInitials: string, userPhase: Phase }) {
   return (<>
     {/* Phase Info */}
-    <div className="space-y-2 mb-4">
+    <div className="space-y-2 mb-4 group: select-none">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">Fase Atual</span>
         <PhaseBadge userPhase={props.userPhase.name}/>
@@ -88,7 +94,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className="p-4 group: select-none">
         {/* User Info moved to top */}
         <div className="flex items-center gap-3 mb-4">
           <Avatar
@@ -125,12 +131,12 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navegação</SidebarGroupLabel>
+          <SidebarGroupLabel className='group: select-none'>Navegação</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton asChild isActive={location.pathname === item.url}>
+                  <SidebarMenuItem key={item.title} className='group: select-none'>
+                    <SidebarMenuButton aria-disabled={item.disabled} asChild isActive={location.pathname === item.url} >
                       <Link to={item.url}>
                         <item.icon className="w-4 h-4"/>
                         <span>{item.title}</span>
@@ -164,7 +170,7 @@ export function AppSidebar() {
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-4 space-y-3">
+      <SidebarFooter className="p-4 space-y-3 group: select-none">
         {/* REDE FLOW branding moved to bottom */}
         <div className="flex items-center gap-3">
           <div

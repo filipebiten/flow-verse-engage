@@ -101,6 +101,8 @@ const Feed = () => {
       const { data: activitiesData, error: activitiesError } = await supabase
           .from('missions_completed')
           .select('*')
+          .order('completed_at', { ascending: false })
+          .limit(50)
 
 
       if (activitiesError) {
@@ -151,7 +153,7 @@ const Feed = () => {
           .from('phase_changes')
           .select('*')
           .order('changed_at', { ascending: false })
-          .limit(10);
+          .limit(30);
 
       if (phaseError) {
       }
@@ -181,7 +183,7 @@ const Feed = () => {
           .from('user_badges')
           .select('*, badges ( id, name, icon, description)')
           .order('earned_at', { ascending: false })
-          .limit(10);
+          .limit(30);
 
       if (badgeError) {
       }

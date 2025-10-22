@@ -14,9 +14,9 @@ export const checkBadgeEligibility = (
   badge: BadgeRequirement,
   userStats: {
     points: number;
-    missions: number;
-    books: number;
-    courses: number;
+    missions: any[];
+    books: any[];
+    courses: any[];
     consecutive_days: number;
   }
 ): boolean => {
@@ -25,11 +25,11 @@ export const checkBadgeEligibility = (
     case 'points':
       return userStats.points >= count;
     case 'missions':
-      return userStats.missions >= count;
+      return userStats.missions.length >= count;
     case 'books':
-      return userStats.books >= count;
+      return userStats.books.length >= count;
     case 'courses':
-      return userStats.courses >= count;
+      return userStats.courses.length >= count;
     case 'consecutive_days':
       return userStats.consecutive_days >= count;
     default:
