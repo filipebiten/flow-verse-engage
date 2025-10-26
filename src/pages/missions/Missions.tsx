@@ -13,7 +13,7 @@ import NewPhaseDialog from "@/components/newPhaseDialog.tsx";
 import { differenceInDays, endOfDay } from 'date-fns';
 import {CompleteMissionDialog} from "@/pages/missions/completeMissionDialog.tsx";
 
-interface Mission {
+export interface Mission {
   id: string;
   name: string;
   description: string;
@@ -22,6 +22,7 @@ interface Mission {
   period?: string;
   school?: string;
   image_url?: string;
+  comment?: string;
 }
 
 interface MissionCompleted {
@@ -60,7 +61,8 @@ const Missions = () => {
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
   const [newPhase, setNewPhase] = useState<ReturnType<typeof getUserPhase> | null>(null);
-  const [currentSubmitingMission, setCurrentSubmitingMission] = useState(null);
+  const [currentSubmitingMission, setCurrentSubmitingMission] = useState<Mission>(null);
+
 
   useEffect(() => {
     if (user) {
@@ -159,7 +161,8 @@ const Missions = () => {
         mission_type: item.type,
         points: item.points,
         period: item.period || null,
-        school: item.school || null
+        school: item.school || null,
+        comment: item.comment || null
       }).select().single();
 
       if (error) throw error;
@@ -326,18 +329,20 @@ const Missions = () => {
 
   return (
       <>
-      {showCompleteMissionDialog && (
-          <CompleteMissionDialog
-              open={showCompleteMissionDialog}
-              setOpen={setShowCompleteMissionDialog}
-              onCancel={() =>{
-                  setCurrentSubmitingMission(null);
-              }}
-              onConfirm={async () => {
-                  await completeItem(currentSubmitingMission);
-                  setShowCompleteMissionDialog(false);
-              }}
-          />
+        {showCompleteMissionDialog && (
+            <CompleteMissionDialog
+                open={showCompleteMissionDialog}
+                setOpen={setShowCompleteMissionDialog}
+                onCancel={() =>{
+                    setCurrentSubmitingMission(null);
+                }}
+                onConfirm={async () => {
+                    await completeItem(currentSubmitingMission);
+                    setShowCompleteMissionDialog(false);
+                }}
+                mission={currentSubmitingMission}
+                setMission={setCurrentSubmitingMission}
+            />
         )}
         <NewPhaseDialog
             open={openDialog}

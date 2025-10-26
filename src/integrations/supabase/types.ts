@@ -112,6 +112,7 @@ export type Database = {
           points: number
           school: string | null
           user_id: string
+          comment?: string
         }
         Insert: {
           completed_at?: string
@@ -123,6 +124,7 @@ export type Database = {
           points?: number
           school?: string | null
           user_id: string
+          comment?: string
         }
         Update: {
           completed_at?: string
@@ -134,6 +136,7 @@ export type Database = {
           points?: number
           school?: string | null
           user_id?: string
+          comment?: string
         }
         Relationships: []
       }
