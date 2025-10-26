@@ -413,9 +413,9 @@ const Feed = () => {
                             </AvatarFallback>
                           </Avatar>
 
-                          <div className="flex-1 space-y-1">
+                          <div className="flex-1 h-full justify-between items-stretch">
                             {item.type === 'mission' && (
-                                <>
+                                <div>
                                   <p className="text-sm text-gray-800">
                                   <span
                                       className="font-semibold text-blue-900 cursor-pointer hover:text-blue-600 transition-colors"
@@ -434,7 +434,7 @@ const Feed = () => {
                                   </p>
 
                                   {item.data?.comment && (
-                                      <p className="text-gray-600 text-sm italic">
+                                      <p className="text-gray-600 text-sm italic break-all w-full">
                                         “{item.data.comment}”
                                       </p>
                                   )}
@@ -452,11 +452,11 @@ const Feed = () => {
                                     )}
                                     <span className="text-xs text-gray-600 whitespace-nowrap">{timeAgo}</span>
                                   </div>
-                                </>
+                                </div>
                             )}
 
                             {item.type === 'phase' && (
-                                <>
+                                <div className="flex-1 h-full justify-between items-stretch">
                                   <p className="text-sm text-gray-800">
                                     <span
                                         className="font-semibold text-blue-900 cursor-pointer hover:text-blue-600 transition-colors"
@@ -475,14 +475,15 @@ const Feed = () => {
                                     </Badge>
                                     <span className="text-xs text-gray-600">{timeAgo}</span>
                                   </div>
-                                </>
+                                </div>
                             )}
 
                             {item.type === 'badge' && (
                                 <>
                                   <p className="text-sm text-gray-800">
                                     <span
-                                        className="font-semibold text-blue-900 cursor-pointer hover:text-blue-600 transition-colors"
+                                        className="font-semibold text-blue-900 cursor-pointer
+                                          hover:text-blue-600 transition-colors"
                                         onClick={() => openUserProfile(item.data.user_id)}
                                     >
                                       {user}
