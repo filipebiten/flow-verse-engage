@@ -439,16 +439,18 @@ const Feed = () => {
                                       </p>
                                   )}
 
-                                  <div className="flex items-center space-x-2 mt-2">
-                                    <Badge className="bg-green-100 hover:bg-green-100 text-green-700 text-xs">
+                                  <div className="flex flex-wrap items-center gap-1 mt-2 text-center">
+                                    <Badge
+                                        className="bg-green-100 hover:bg-green-100 text-green-700 text-xs whitespace-nowrap">
                                       +{(item.data as FeedActivity).points} pontos
                                     </Badge>
                                     {(item.data as FeedActivity).mission_type === 'course' && (
-                                        <Badge className="bg-blue-700 hover:bg-blue-700 text-xs">
+                                        <Badge
+                                            className="bg-blue-700 hover:bg-blue-700 text-xs text-white whitespace-nowrap">
                                           {(item.data as FeedActivity).school}
                                         </Badge>
                                     )}
-                                    <span className="text-xs text-gray-600">{timeAgo}</span>
+                                    <span className="text-xs text-gray-600 whitespace-nowrap">{timeAgo}</span>
                                   </div>
                                 </>
                             )}
