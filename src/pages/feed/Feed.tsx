@@ -312,7 +312,6 @@ const Feed = () => {
         <MissionSugestionsForm open={missionSugestionFormVisible} onOpenChange={setMissionSugestionFormVisible}></MissionSugestionsForm>
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-50 p-4">
           <div className="max-w-6xl mx-auto flex flex-1 flex-col space-y-6">
-
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
@@ -370,121 +369,141 @@ const Feed = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
+              <div className="lg:col-span-2 space-y-1 flex flex-col p-2">
+                {allActivities.map((item, index) => {
+                  const user = item.data.user_name;
+                  const photo = item.data.user_photo || '';
+                  const timeAgo = formatTimeAgo(item.timestamp);
 
-              {/* Main Feed */}
-              <div className="lg:col-span-2 space-y-1 flex flex-col">
+                  return (
+                      <div key={`${item.type}-${index}`} className="relative pb-4">
+                        <div
+                            className="relative bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md
+                              transition-all duration-200 p-4 pl-6 flex space-x-3 items-center"
+                        >
+                          <div
+                              className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white
+                                 rounded-full w-10 h-10 flex items-center justify-center"
+                          >
+                            {item.type === 'phase' && <Trophy className="w-5 h-5 text-amber-500" />}
+                            {item.type === 'badge' && <Award className="w-5 h-5 text-pink-500" />}
+                            {item.type === 'mission' && (
+                                <>
+                                  {(item.data as FeedActivity).mission_type === 'mission' && (
+                                      <Target className="w-5 h-5 text-purple-500" />
+                                  )}
+                                  {(item.data as FeedActivity).mission_type === 'book' && (
+                                      <BookOpen className="w-5 h-5 text-green-500" />
+                                  )}
+                                  {(item.data as FeedActivity).mission_type === 'course' && (
+                                      <GraduationCap className="w-5 h-5 text-blue-500" />
+                                  )}
+                                </>
+                            )}
+                          </div>
 
-                  {allActivities.map((item, index) => {
-                    const isLast = index === allActivities.length - 1;
-                    const user = item.data.user_name;
-                    const photo = item.data.user_photo || '';
-                    const timeAgo = formatTimeAgo(item.timestamp);
+                          {/* Avatar */}
+                          <Avatar
+                              className="w-14 h-14 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                              onClick={() => openUserProfile(item.data.user_id)}
+                          >
+                            <AvatarImage src={photo} />
+                            <AvatarFallback className="bg-blue-100 text-blue-700">
+                              {user.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
 
-                    return (
-                        <div key={`${item.type}-${index}`} className="pb-2">
-                          <div className="bg-white border border-gray-100 rounded-xl shadow-sm
-                            hover:shadow-md transition-all duration-200 p-4 flex space-x-3 items-center">
-                            <div className="absolute left-1 bg-white rounded-full p-2">
-                              {item.type === 'phase' && <Trophy className="w-5 h-5 text-amber-500"/>}
-                              {item.type === 'badge' && <Award className="w-5 h-5 text-pink-500"/>}
-                              {(item.data as FeedActivity).mission_type === 'mission' && <Target className="w-5 h-5 text-purple-500"/>}
-                              {(item.data as FeedActivity).mission_type === 'book' && <BookOpen className="w-5 h-5 text-green-500"/>}
-                              {(item.data as FeedActivity).mission_type === 'course' && <GraduationCap className="w-5 h-5 text-blue-500"/>}
-                            </div>
-                            <Avatar
-                                className="w-14 h-14 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
-                                onClick={() => openUserProfile(item.data.user_id)}
-                            >
-                              <AvatarImage src={photo}/>
-                              <AvatarFallback className="bg-blue-100 text-blue-700">
-                                {user.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
+                          <div className="flex-1 space-y-1">
+                            {item.type === 'mission' && (
+                                <>
+                                  <p className="text-sm text-gray-800">
+                                  <span
+                                      className="font-semibold text-blue-900 cursor-pointer hover:text-blue-600 transition-colors"
+                                      onClick={() => openUserProfile(item.data.user_id)}
+                                  >
+                                    {user}
+                                  </span>{' '}
+                                    completou uma missão:{" "}
+                                    <span
+                                        className={`font-bold ${selectMissionTypeColor(
+                                            (item.data as FeedActivity).mission_type
+                                        )}`}
+                                    >
+                                    {(item.data as FeedActivity).mission_name}
+                                  </span>
+                                  </p>
 
-                            <div className="flex-1 space-y-1">
-                              {item.type === 'mission' && (
-                                  <>
-                                    <p className="text-sm text-gray-800">
-                                      <span
-                                          className="font-semibold text-blue-900 cursor-pointer hover:text-blue-600 transition-colors"
-                                          onClick={() => openUserProfile(item.data.user_id)}
-                                      >
-                                        {user}
-                                      </span>{' '}
-                                      completou uma missão:{" "}
-                                      <span className={`font-bold ${selectMissionTypeColor((item.data as FeedActivity).mission_type)}`}>
-                                        {(item.data as FeedActivity).mission_name}
-                                      </span>
-                                    </p>
-                                    {item.data?.comment && (
-                                        <p className="text-gray-600 text-sm italic">
-                                          “{item.data.comment}”
-                                        </p>
+                                  {item.data?.comment && (
+                                      <p className="text-gray-600 text-sm italic">
+                                        “{item.data.comment}”
+                                      </p>
+                                  )}
+
+                                  <div className="flex items-center space-x-2 mt-2">
+                                    <Badge className="bg-green-100 hover:bg-green-100 text-green-700 text-xs">
+                                      +{(item.data as FeedActivity).points} pontos
+                                    </Badge>
+                                    {(item.data as FeedActivity).mission_type === 'course' && (
+                                        <Badge className="bg-blue-700 hover:bg-blue-700 text-xs">
+                                          {(item.data as FeedActivity).school}
+                                        </Badge>
                                     )}
-                                    <div className="flex items-center space-x-2 mt-2">
-                                      <Badge className="bg-green-100 hover:bg-green-100 text-green-700 text-xs">
-                                        +{(item.data as FeedActivity).points} pontos
-                                      </Badge>
-                                      {(item.data as FeedActivity).mission_type === 'course' && (
-                                          <Badge className="bg-blue-700 hover:bg-blue-700 text-xs">
-                                            {(item.data as FeedActivity).school}
-                                          </Badge>
-                                      )}
-                                      <span className="text-xs text-gray-600">{timeAgo}</span>
-                                    </div>
-                                  </>
-                              )}
+                                    <span className="text-xs text-gray-600">{timeAgo}</span>
+                                  </div>
+                                </>
+                            )}
 
-                              {item.type === 'phase' && (
-                                  <>
-                                    <p className="text-sm text-gray-800">
-                                      <span
-                                          className="font-semibold text-blue-900 cursor-pointer hover:text-blue-600 transition-colors"
-                                          onClick={() => openUserProfile(item.data.user_id)}
-                                      >
-                                        {user}
-                                      </span>{' '}
-                                      avançou para a fase{" "}
-                                      <span className="font-bold text-amber-600">
-                                        {(item.data as PhaseChange).new_phase}
-                                      </span> 🎉
-                                    </p>
-                                    <div className="flex items-center space-x-2 mt-2">
-                                      <Badge className="bg-amber-100 text-amber-700 text-xs">
-                                        {(item.data as PhaseChange).total_points} pontos totais
-                                      </Badge>
-                                      <span className="text-xs text-gray-600">{timeAgo}</span>
-                                    </div>
-                                  </>
-                              )}
-
-                              {item.type === 'badge' && (
-                                  <>
-                                    <p className="text-sm text-gray-800">
+                            {item.type === 'phase' && (
+                                <>
+                                  <p className="text-sm text-gray-800">
                                     <span
                                         className="font-semibold text-blue-900 cursor-pointer hover:text-blue-600 transition-colors"
                                         onClick={() => openUserProfile(item.data.user_id)}
                                     >
                                       {user}
                                     </span>{' '}
-                                      conquistou o título{" "}
-                                      <span className="font-bold text-pink-600">
+                                    avançou para a fase{" "}
+                                    <span className="font-bold text-amber-600">
+                                      {(item.data as PhaseChange).new_phase}
+                                    </span> 🎉
+                                  </p>
+                                  <div className="flex items-center space-x-2 mt-2">
+                                    <Badge className="bg-amber-100 text-amber-700 text-xs">
+                                      {(item.data as PhaseChange).total_points} pontos totais
+                                    </Badge>
+                                    <span className="text-xs text-gray-600">{timeAgo}</span>
+                                  </div>
+                                </>
+                            )}
+
+                            {item.type === 'badge' && (
+                                <>
+                                  <p className="text-sm text-gray-800">
+                                    <span
+                                        className="font-semibold text-blue-900 cursor-pointer hover:text-blue-600 transition-colors"
+                                        onClick={() => openUserProfile(item.data.user_id)}
+                                    >
+                                      {user}
+                                    </span>{' '}
+                                    conquistou o título:{" "}
+                                    <span className="font-bold text-pink-600">
                                       {(item.data as UserBadge).badge_name}
-                                    </span> 🏅
-                                    </p>
-                                    <div className="flex items-center space-x-2 mt-2">
-                                      <Badge className="bg-pink-100 hover:bg-pink-100 text-pink-700 text-xs">
-                                        Novo título
-                                      </Badge>
-                                      <span className="text-xs text-gray-600">{timeAgo}</span>
-                                    </div>
-                                  </>
-                              )}
-                            </div>
+                                    </span>{' '}
+                                    🏅
+                                  </p>
+                                  <div className="flex items-center space-x-2 mt-2">
+                                    <Badge className="bg-pink-100 hover:bg-pink-100 text-pink-700 text-xs">
+                                      Novo título
+                                    </Badge>
+                                    <span className="text-xs text-gray-600">{timeAgo}</span>
+                                  </div>
+                                </>
+                            )}
                           </div>
                         </div>
-                    );
-                  })}
+                      </div>
+                  );
+                })}
 
               </div>
 
