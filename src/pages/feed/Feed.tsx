@@ -203,9 +203,13 @@ const Feed = () => {
           photo: profile.profile_photo_url
         }));
 
+        const { count: missionsTotalPoints } = await supabase
+            .from('missions_completed')
+            .select('id', { count: 'exact' });
+
         setStats({
           totalUsers,
-          totalActivities: formattedActivities.length,
+          totalActivities: missionsTotalPoints,
           totalPoints,
           topUsers
         });
@@ -355,7 +359,7 @@ const Feed = () => {
                     <p className="text-lg font-bold text-purple-600">Top Usuários</p>
                     <div className="flex -space-x-2 justify-center mt-2">
                       {stats.topUsers.slice(0, 5).map((user, index) => (
-                          <Avatar key={index} className="w-12 h-12 border-2 border-white">
+                          <Avatar key={index} className="w-11 h-11 border-2 border-white">
                             <AvatarImage src={user.photo || ''} />
                             <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
                               {user.name.charAt(0)}
