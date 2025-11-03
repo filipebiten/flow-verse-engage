@@ -442,7 +442,7 @@ const Profile = () => {
                         />
                         <InputGroupAddon align="block-end">
                           <InputGroupText className="text-muted-foreground text-xs">
-                            {150 - formData.bio.length} Caracteres
+                            {150 - (formData.bio?.length || 0) } Caracteres
                           </InputGroupText>
                         </InputGroupAddon>
                       </InputGroup>
