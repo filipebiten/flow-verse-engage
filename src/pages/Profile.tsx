@@ -386,7 +386,9 @@ const Profile = () => {
               <div className="flex-1">
                 <h1 className="text-2xl sm:text-4xl font-bold mb-2">{profile.name}</h1>
                 <p className="text-white/90 mb-2">{profile.email}</p>
-                <p className="text-white/90 mb-2 break-words">“{profile.bio}”</p>
+                {profile.bio && (
+                    <p className="text-white/90 mb-2 break-words">“{profile.bio}”</p>
+                )}
                 <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4">
                   <PhaseBadge userPhase={profile.phase}/>
                   <span className="text-white/90 font-bold">{profile.points || 0} pontos</span>

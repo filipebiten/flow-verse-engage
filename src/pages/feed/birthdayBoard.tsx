@@ -28,7 +28,8 @@ export default function BirthdayBoard({openUserProfile}) {
                         return {
                             ...p,
                             nextBirthday: next,
-                            monthDay: birth.toISOString().slice(5, 10).replace('-', '/')
+                            month: birth.toISOString().slice(5, 7),
+                            day: birth.toISOString().slice(8, 10),
                         };
                     })
                     .sort((a, b) => a.nextBirthday - b.nextBirthday)
@@ -84,8 +85,9 @@ export default function BirthdayBoard({openUserProfile}) {
                                     >
                                       {user.name}
                                     </span>
-                                    <span className="text-sm text-muted-foreground/90 font-medium">
-                                        {user.monthDay}
+                                    <span className="text-muted-foreground/90 text-lg">
+                                        {user.day}/
+                                        {user.month}
                                     </span>
                                 </div>
                             </div>
