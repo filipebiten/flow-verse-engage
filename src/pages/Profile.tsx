@@ -28,6 +28,7 @@ import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 import {deleteProfilePhoto, uploadProfilePhoto} from "@/services/profileService.ts";
 import {useUserProfile} from "@/hooks/useUserProfile.tsx";
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
+import {InputGroup, InputGroupAddon, InputGroupText, InputGroupTextarea} from "@/components/ui/input-group.tsx";
 
 interface UserProfile {
   id: string;
@@ -44,6 +45,7 @@ interface UserProfile {
   participates_irmandade: boolean;
   profile_photo_url?: string;
   consecutive_days?: number;
+  bio: string;
 }
 
 interface CompletedMission {
@@ -384,6 +386,7 @@ const Profile = () => {
               <div className="flex-1">
                 <h1 className="text-2xl sm:text-4xl font-bold mb-2">{profile.name}</h1>
                 <p className="text-white/90 mb-2">{profile.email}</p>
+                <p className="text-white/90 mb-2 break-words">“{profile.bio}”</p>
                 <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4">
                   <PhaseBadge userPhase={profile.phase}/>
                   <span className="text-white/90 font-bold">{profile.points || 0} pontos</span>
@@ -413,98 +416,118 @@ const Profile = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {editing ? (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome</Label>
-                    <Input
-                      id="name"
-                      value={formData.name || ''}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="whatsapp">WhatsApp</Label>
-                    <Input
-                      id="whatsapp"
-                      value={formData.whatsapp || ''}
-                      onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
-                      placeholder="(11) 99999-9999"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="birth_date">Data de Nascimento</Label>
-                    <Input
-                      id="birth_date"
-                      type="date"
-                      value={formData.birth_date || ''}
-                      onChange={(e) => setFormData({...formData, birth_date: e.target.value})}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gender">Gênero</Label>
-                    <Select value={formData.gender || ''} onValueChange={(value) => setFormData({...formData, gender: value})}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="masculino">Masculino</SelectItem>
-                        <SelectItem value="feminino">Feminino</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pgm_role">Cargo no PGM</Label>
-                    <Input
-                      id="pgm_role"
-                      value={formData.pgm_role || ''}
-                      onChange={(e) => setFormData({...formData, pgm_role: e.target.value})}
-                      placeholder="Ex: Líder, Auxiliar, Participante"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="pgm_number">Número PGM</Label>
-                    <Input
-                      id="pgm_number"
-                      value={formData.pgm_number || ''}
-                      onChange={(e) => setFormData({...formData, pgm_number: e.target.value})}
-                      placeholder="Ex: PGM 01"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Participações</Label>
+                  <>
                     <div className="space-y-2">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={formData.participates_flow_up || false}
-                          onChange={(e) => setFormData({...formData, participates_flow_up: e.target.checked})}
-                          className="rounded border-gray-300"
-                        />
-                        <span className="text-sm">Participa do Flow Up</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={formData.participates_irmandade || false}
-                          onChange={(e) => setFormData({...formData, participates_irmandade: e.target.checked})}
-                          className="rounded border-gray-300"
-                        />
-                        <span className="text-sm">Participa da Irmandade</span>
-                      </label>
+                      <Label htmlFor="name">Nome</Label>
+                      <Input
+                          id="name"
+                          value={formData.name || ''}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                      />
                     </div>
-                  </div>
-                  <Button onClick={handleUpdateProfile} className="w-full">
-                    Salvar Alterações
-                  </Button>
-                </>
+                    <div className="space-y-2">
+                      <InputGroup>
+                        <InputGroupTextarea
+                            placeholder="Escreva sua bio aqui"
+                            id="bio"
+                            value={formData.bio || ''}
+                            onChange={(e) =>
+                                setFormData({ ...formData, bio: e.target.value })
+                            }
+                            className="focus-visible:ring-0 focus-visible:ring-offset-0
+                             focus-visible:outline-none focus:ring-0 focus:outline-none resize-none"
+                        />
+                        <InputGroupAddon align="block-end">
+                          <InputGroupText className="text-muted-foreground text-xs">
+                            {150 - formData.bio.length} Caracteres
+                          </InputGroupText>
+                        </InputGroupAddon>
+                      </InputGroup>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsapp">WhatsApp</Label>
+                      <Input
+                          id="whatsapp"
+                          value={formData.whatsapp || ''}
+                          onChange={(e) => setFormData({...formData, whatsapp: e.target.value})}
+                          placeholder="(11) 99999-9999"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="birth_date">Data de Nascimento</Label>
+                      <Input
+                          id="birth_date"
+                          type="date"
+                          value={formData.birth_date || ''}
+                          onChange={(e) => setFormData({...formData, birth_date: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="gender">Gênero</Label>
+                      <Select value={formData.gender || ''}
+                              onValueChange={(value) => setFormData({...formData, gender: value})}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione..."/>
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="masculino">Masculino</SelectItem>
+                          <SelectItem value="feminino">Feminino</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pgm_role">Cargo no PGM</Label>
+                      <Input
+                          id="pgm_role"
+                          value={formData.pgm_role || ''}
+                          onChange={(e) => setFormData({...formData, pgm_role: e.target.value})}
+                          placeholder="Ex: Líder, Auxiliar, Participante"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="pgm_number">Número PGM</Label>
+                      <Input
+                          id="pgm_number"
+                          value={formData.pgm_number || ''}
+                          onChange={(e) => setFormData({...formData, pgm_number: e.target.value})}
+                          placeholder="Ex: PGM 01"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Participações</Label>
+                      <div className="space-y-2">
+                        <label className="flex items-center space-x-2">
+                          <input
+                              type="checkbox"
+                              checked={formData.participates_flow_up || false}
+                              onChange={(e) => setFormData({...formData, participates_flow_up: e.target.checked})}
+                              className="rounded border-gray-300"
+                          />
+                          <span className="text-sm">Participa do Flow Up</span>
+                        </label>
+                        <label className="flex items-center space-x-2">
+                          <input
+                              type="checkbox"
+                              checked={formData.participates_irmandade || false}
+                              onChange={(e) => setFormData({...formData, participates_irmandade: e.target.checked})}
+                              className="rounded border-gray-300"
+                          />
+                          <span className="text-sm">Participa da Irmandade</span>
+                        </label>
+                      </div>
+                    </div>
+                    <Button onClick={handleUpdateProfile} className="w-full">
+                      Salvar Alterações
+                    </Button>
+                  </>
               ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-gray-500" />
-                    <span>{profile.whatsapp || 'Não informado'}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-gray-500" />
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-gray-500"/>
+                      <span>{profile.whatsapp || 'Não informado'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-gray-500" />
                     <span>{profile.birth_date ? new Date(profile.birth_date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'Não informado'}</span>
                   </div>
                   <div className="flex items-center gap-2">

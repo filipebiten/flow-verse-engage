@@ -1,25 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.tsx';
-import { Badge } from '@/components/ui/badge.tsx';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
-import { Button } from '@/components/ui/button.tsx';
-import { supabase } from '@/integrations/supabase/client.ts';
-import { useAuth } from '@/hooks/useAuth.tsx';
-import { useNavigate } from 'react-router-dom';
-import { UserProfileModal } from '@/components/UserProfileModal.tsx';
-import {
-  Trophy,
-  Target,
-  BookOpen,
-  GraduationCap,
-  TrendingUp,
-  Users,
-  Award
-} from 'lucide-react';
+import React, {useEffect, useState} from 'react';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card.tsx';
+import {Badge} from '@/components/ui/badge.tsx';
+import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar.tsx';
+import {Button} from '@/components/ui/button.tsx';
+import {supabase} from '@/integrations/supabase/client.ts';
+import {useAuth} from '@/hooks/useAuth.tsx';
+import {useNavigate} from 'react-router-dom';
+import {UserProfileModal} from '@/components/UserProfileModal.tsx';
+import {Award, BookOpen, Bug, GraduationCap, Target, TrendingUp, Trophy, Users} from 'lucide-react';
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
-import {definePeriodBadgeColor} from "@/helpers/colorHelper.ts";
-import {getPhaseInfo} from "@/utils/phaseUtils.ts";
 import {MissionSugestionsForm} from "@/pages/feed/missionSugestionsForm.tsx";
+import {SugestionForm} from "@/pages/feed/sugestionForm.tsx";
+import BirthdayBoard from "@/pages/feed/birthdayBoard.tsx";
+import {UpdatesCard} from "@/pages/feed/UpdatesCard.tsx";
 
 interface FeedActivity {
   id: string;
@@ -71,6 +64,58 @@ interface FeedStats {
   }>;
 }
 
+function BestScoresCard({users, openUserProfile}) {
+  return <Card className="overflow-hidden transition-all duration-300 bg-card">
+
+    <CardHeader className="pb-3 border-b border-border/70">
+      <CardTitle className="flex items-center text-lg font-bold text-primary">
+        <Trophy className="w-6 h-6 mr-3 text-yellow-500 fill-yellow-500/80"/>
+        <p className="text-lg font-bold text-yellow-600">Maiores Pontuações</p>
+      </CardTitle>
+    </CardHeader>
+
+    <CardContent className="space-y-1 p-4">
+      {users?.map((user, index) => (
+          <div
+              key={index}
+              className="flex items-center space-x-4 p-3 rounded-xl transition-all duration-200 hover:bg-accent/50 hover:shadow-sm"
+          >
+
+            <div
+                className="flex items-center justify-center w-6 h-6 rounded-full text-sm font-bold shrink-0"
+                style={{
+                  backgroundColor: index === 0 ? 'var(--primary-foreground)' : index === 1 ? 'var(--secondary)' : index === 2 ? 'var(--muted)' : 'var(--muted)',
+                  color: index === 0 ? 'var(--primary)' : index === 1 ? 'var(--secondary-foreground)' : 'var(--muted-foreground)'
+                }}
+            >
+              {index + 1}
+            </div>
+
+            <Avatar
+                className="w-10 h-10 ring-2 ring-primary/20 cursor-pointer hover:ring-primary transition-all duration-200 shrink-0"
+                onClick={() => openUserProfile(user.id)}
+            >
+              <AvatarImage src={user.photo || ''}/>
+              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-base">
+                {user.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className={`flex-1 min-w-0 ${user.name.includes(" ") ? "break-words" : "break-all"}`}>
+              <p
+                  className="text-base font-semibold cursor-pointer hover:text-primary transition-colors"
+                  onClick={() => openUserProfile(user.id)}
+              >
+                {user.name}
+              </p>
+              <PhaseBadge userPhase={user.phase}></PhaseBadge>
+            </div>
+          </div>
+      ))}
+    </CardContent>
+  </Card>
+}
+
 const Feed = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -90,6 +135,7 @@ const Feed = () => {
   const [userBadges, setUserBadges] = useState<any[]>([]);
   const [userMissions, setUserMissions] = useState<any[]>([]);
   const [missionSugestionFormVisible, setMissionSugestionFormVisible] = useState<boolean>(false);
+  const [sugestionFormVisible, setSugestionFormVisible] = useState<boolean>(false);
 
   useEffect(() => {
     loadFeedData();
@@ -180,12 +226,12 @@ const Feed = () => {
           if (userProfile) {
             formattedBadges.push({
               id: badge.id,
-              user_id: badge.badges.user_id,
+              user_id: badge.user_id,
               badge_name: badge.badges.name,
               badge_icon: badge.badges.icon,
               earned_at: badge.earned_at,
               user_name: userProfile.name,
-              user_photo: userProfile.profile_photo_url
+              user_photo: userProfile.profile_photo_url,
             });
           }
         });
@@ -266,17 +312,6 @@ const Feed = () => {
     return new Date(timestamp).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
   };
 
-  const getMissionIcon = (type: string) => {
-    switch (type) {
-      case 'book':
-        return <BookOpen className="w-4 h-4 text-green-600" />;
-      case 'course':
-        return <GraduationCap className="w-4 h-4 text-blue-600" />;
-      default:
-        return <Target className="w-4 h-4 text-purple-600" />;
-    }
-  };
-
   if (loading) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
@@ -313,14 +348,16 @@ const Feed = () => {
 
   return (
       <>
-        <MissionSugestionsForm open={missionSugestionFormVisible} onOpenChange={setMissionSugestionFormVisible}></MissionSugestionsForm>
+        <MissionSugestionsForm open={missionSugestionFormVisible}
+                               onOpenChange={setMissionSugestionFormVisible}></MissionSugestionsForm>
+        <SugestionForm open={sugestionFormVisible} onOpenChange={setSugestionFormVisible}></SugestionForm>
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-50 p-4">
           <div className="max-w-6xl mx-auto flex flex-1 flex-col space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <Users className="w-8 h-8 text-blue-600" />
+                    <Users className="w-8 h-8 text-blue-600"/>
                     <div>
                       <p className="text-2xl font-bold text-blue-600">{stats.totalUsers}</p>
                       <p className="text-sm text-gray-600">Membros</p>
@@ -332,7 +369,7 @@ const Feed = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <TrendingUp className="w-8 h-8 text-green-600" />
+                    <TrendingUp className="w-8 h-8 text-green-600"/>
                     <div>
                       <p className="text-2xl font-bold text-green-600">{stats.totalActivities}</p>
                       <p className="text-sm text-gray-600">Atividades</p>
@@ -344,7 +381,7 @@ const Feed = () => {
               <Card>
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-2">
-                    <Trophy className="w-8 h-8 text-yellow-600" />
+                    <Trophy className="w-8 h-8 text-yellow-600"/>
                     <div>
                       <p className="text-2xl font-bold text-yellow-600">{stats.totalPoints}</p>
                       <p className="text-sm text-gray-600">Pontos Totais da Rede</p>
@@ -360,7 +397,7 @@ const Feed = () => {
                     <div className="flex -space-x-2 justify-center mt-2">
                       {stats.topUsers.slice(0, 5).map((user, index) => (
                           <Avatar key={index} className="w-11 h-11 border-2 border-white">
-                            <AvatarImage src={user.photo || ''} />
+                            <AvatarImage src={user.photo || ''}/>
                             <AvatarFallback className="text-xs bg-purple-100 text-purple-700">
                               {user.name.charAt(0)}
                             </AvatarFallback>
@@ -370,6 +407,10 @@ const Feed = () => {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+
+            <div className="grid flex-1">
+              <UpdatesCard/>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1">
@@ -382,25 +423,25 @@ const Feed = () => {
                   return (
                       <div key={`${item.type}-${index}`} className="relative pb-4">
                         <div
-                            className="relative bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md
+                            className="relative bg-white border border-gray-100 rounded-xl
                               transition-all duration-200 p-4 pl-6 flex space-x-3 items-center"
                         >
                           <div
                               className="absolute -left-4 top-1/2 -translate-y-1/2 bg-white
                                  rounded-full w-10 h-10 flex items-center justify-center"
                           >
-                            {item.type === 'phase' && <Trophy className="w-5 h-5 text-amber-500" />}
-                            {item.type === 'badge' && <Award className="w-5 h-5 text-pink-500" />}
+                            {item.type === 'phase' && <Trophy className="w-5 h-5 text-amber-500"/>}
+                            {item.type === 'badge' && <Award className="w-5 h-5 text-pink-500"/>}
                             {item.type === 'mission' && (
                                 <>
                                   {(item.data as FeedActivity).mission_type === 'mission' && (
-                                      <Target className="w-5 h-5 text-purple-500" />
+                                      <Target className="w-5 h-5 text-purple-500"/>
                                   )}
                                   {(item.data as FeedActivity).mission_type === 'book' && (
-                                      <BookOpen className="w-5 h-5 text-green-500" />
+                                      <BookOpen className="w-5 h-5 text-green-500"/>
                                   )}
                                   {(item.data as FeedActivity).mission_type === 'course' && (
-                                      <GraduationCap className="w-5 h-5 text-blue-500" />
+                                      <GraduationCap className="w-5 h-5 text-blue-500"/>
                                   )}
                                 </>
                             )}
@@ -411,7 +452,7 @@ const Feed = () => {
                               className="w-14 h-14 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
                               onClick={() => openUserProfile(item.data.user_id)}
                           >
-                            <AvatarImage src={photo} />
+                            <AvatarImage src={photo}/>
                             <AvatarFallback className="bg-blue-100 text-blue-700">
                               {user.charAt(0)}
                             </AvatarFallback>
@@ -438,8 +479,8 @@ const Feed = () => {
                                   </p>
 
                                   {item.data?.comment && (
-                                      <p className="text-gray-600 text-sm italic break-all w-full">
-                                        “{item.data.comment}”
+                                      <p className="text-gray-600 text-lg break-all w-full">
+                                        {item.data.comment}
                                       </p>
                                   )}
 
@@ -517,44 +558,13 @@ const Feed = () => {
               {/* Sidebar */}
               <div className="space-y-4">
 
-                {/* Top Users */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Trophy className="w-5 h-5 mr-2"/>
-                      Top Membros
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {stats.topUsers.map((user, index) => (
-                        <div key={index} className="flex items-center space-x-3">
-                          <div className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-700 text-sm font-bold">
-                            {index + 1}
-                          </div>
-                          <Avatar
-                              className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
-                              onClick={() => openUserProfile(user.id)}
-                          >
-                            <AvatarImage src={user.photo || ''} />
-                            <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
-                              {user.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className={`flex-1 ${user.name.includes(" ") ? "break-words" : "break-all"}`}>
-                            <p
-                                className="text-sm font-medium cursor-pointer hover:text-blue-600 transition-colors"
-                                onClick={() => openUserProfile(user.id)}
-                            >
-                              {user.name}
-                            </p>
-                            <PhaseBadge userPhase={user.phase}></PhaseBadge>
-                          </div>
-                        </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                <BirthdayBoard openUserProfile={openUserProfile} />
 
-                {/* Quick Actions */}
+                <BestScoresCard
+                    users={stats.topUsers}
+                    openUserProfile={openUserProfile}
+                />
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Ações Rápidas</CardTitle>
@@ -562,11 +572,19 @@ const Feed = () => {
                   <CardContent className="space-y-2">
                     <Button
                         variant="outline"
-                        className="w-full"
+                        className="w-full justify-start"
                         onClick={() => setMissionSugestionFormVisible(true)}
                     >
-                      <Award className="w-4 h-4 mr-2" />
+                      <Award className="w-4 h-4 mr-2"/>
                       Sugerir Missões
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="w-full justify-start"
+                        onClick={() => setSugestionFormVisible(true)}
+                    >
+                      <Bug className="w-4 h-4 mr-2"/>
+                      Reportar Bug ou Sugestão
                     </Button>
                   </CardContent>
                 </Card>

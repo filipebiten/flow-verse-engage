@@ -189,6 +189,7 @@ export type Database = {
           profile_photo_url: string | null
           updated_at: string | null
           whatsapp: string | null
+          bio: string | null
         }
         Insert: {
           birth_date?: string | null
@@ -208,6 +209,7 @@ export type Database = {
           profile_photo_url?: string | null
           updated_at?: string | null
           whatsapp?: string | null
+          bio: string | null
         }
         Update: {
           birth_date?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           profile_photo_url?: string | null
           updated_at?: string | null
           whatsapp?: string | null
+          bio: string | null
         }
         Relationships: []
       }
@@ -265,7 +268,28 @@ export type Database = {
         requiredment_field: string,
         requirement_value: string,
         badge_id: number
-      }
+      },
+      sugestion: {
+        id: number,
+        created_at: string | null,
+        sugestion: string | null
+        Row: {
+          id: number,
+          created_at: string | null,
+          sugestion: string | null,
+        }
+        Insert: {
+          id: number,
+          created_at: string | null,
+          sugestion: string | null,
+        }
+        Update: {
+          id: number,
+          created_at: string | null,
+          sugestion: string | null,
+        }
+        Relationships: []
+      },
     }
     Views: {
       [_ in never]: never

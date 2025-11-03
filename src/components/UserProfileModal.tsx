@@ -18,6 +18,7 @@ interface UserProfile {
   participates_flow_up: boolean;
   participates_irmandade: boolean;
   profile_photo_url?: string;
+  bio: string;
 }
 
 interface UserBadge {
@@ -81,7 +82,11 @@ export const UserProfileModal: React.FC<Props> = ({
                     <h2 className="text-2xl font-bold mb-1 break-words">
                       {profile.name}
                     </h2>
-                    {/* Centraliza os badges e pontos no mobile */}
+
+                    {profile.bio && (
+                        <p className="text-white/90 mb-2 break-words">“{profile.bio}”</p>
+                    )}
+
                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
                       <PhaseBadge userPhase={profile.phase}/>
                       <span className="text-white/90 text-xl">{profile.points || 0} pontos</span>
