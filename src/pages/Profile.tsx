@@ -434,6 +434,7 @@ const Profile = () => {
                             onChange={(e) =>
                                 setFormData({ ...formData, bio: e.target.value })
                             }
+                            maxLength={150}
                             className="focus-visible:ring-0 focus-visible:ring-offset-0
                              focus-visible:outline-none focus:ring-0 focus:outline-none resize-none"
                         />
