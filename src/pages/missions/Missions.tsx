@@ -15,6 +15,7 @@ import {CompleteMissionDialog} from "@/pages/missions/completeMissionDialog.tsx"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import MissionsList from './missionsList';
+import { cn } from '@/lib/utils';
 
 export interface Mission {
   id: string;
@@ -56,19 +57,19 @@ const tabsDisponible = [
     icon: <Target className="w-4 h-4 mr-1" />,
     value: "missions", 
     label: "Missões",
-    color: "green" 
+    color: "data-[state=active]:bg-green-600"
   },
   { 
     icon: <BookOpen className="w-4 h-4 mr-1" />, 
     value: "books", 
     label: "Livros",
-    color: "red" 
+    color: "data-[state=active]:bg-red-600"
   },
   { 
     icon: <GraduationCap className="w-4 h-4 mr-1" />, 
     value: "courses", 
     label: "Cursos",
-    color: "blue"
+    color: "data-[state=active]:bg-blue-600"
   }, 
 ]
 
@@ -334,17 +335,18 @@ const Missions = () => {
                 > 
                   <TabsList> 
                     {tabsDisponible.map((t) => { 
+                      const selectColor = t.value === 'missions' ? 'green': t.value === 'books' ? 'blue' : 'red';
                       return ( 
                         <> 
                           <TabsTrigger 
                             key={t.value} 
                             value={t.value}
-                            className={`
-                              data-[state=active]:bg-${t.color}-600
-                              data-[state=active]:text-white
-                              data-[state=inactive]:text-gray-500
-                              data-[state=inactive]:hover:bg-gray-100
-                            `}
+                            className={cn(
+                              t.color,
+                              "data-[state=active]:text-white",
+                              "data-[state=inactive]:text-gray-500",
+                              "data-[state=inactive]:hover:bg-gray-100"
+                            )}
                           > 
                             {t.icon} {t.label} 
                           </TabsTrigger> 
