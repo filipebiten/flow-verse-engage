@@ -12,6 +12,9 @@ import { checkBadgeEligibility } from "@/utils/badgeUtils.ts";
 import NewPhaseDialog from "@/components/newPhaseDialog.tsx";
 import { differenceInDays, endOfDay } from 'date-fns';
 import {CompleteMissionDialog} from "@/pages/missions/completeMissionDialog.tsx";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Separator } from '@/components/ui/separator';
+import MissionsList from './missionsList';
 
 export interface Mission {
   id: string;
@@ -47,6 +50,27 @@ const getUserPhase = (points: number) => {
   if (points >= 250) return { name: 'Correnteza', icon: '🌊', phrase: 'Sendo levado por algo maior', color: 'from-blue-500 to-teal-500' };
   return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
 };
+
+const tabsDisponible = [
+  { 
+    icon: <Target className="w-4 h-4 mr-1" />,
+    value: "missions", 
+    label: "Missões",
+    color: "green" 
+  },
+  { 
+    icon: <BookOpen className="w-4 h-4 mr-1" />, 
+    value: "books", 
+    label: "Livros",
+    color: "red" 
+  },
+  { 
+    icon: <GraduationCap className="w-4 h-4 mr-1" />, 
+    value: "courses", 
+    label: "Cursos",
+    color: "blue"
+  }, 
+]
 
 const Missions = () => {
   const { user } = useAuth();
@@ -235,85 +259,6 @@ const Missions = () => {
     }
   };
 
-  const renderItems = (items: Mission[], title: string, icon: React.ReactNode, emptyMessage: string) => (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {icon}
-            {title} ({items.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {items.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">{emptyMessage}</p>
-          ) : (
-              <div className="space-y-3">
-                {items.map((item) => {
-
-                  const isCompleted = () => {
-                    const missionCompletions = completedItems.filter(i => i.mission_id === item.id);
-                    if (missionCompletions.length === 0) return false;
-
-                    missionCompletions.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
-                    const latestCompletion = missionCompletions[0];
-
-                    if (latestCompletion?.period === null || latestCompletion?.period?.toLowerCase() === 'especial') return true;
-
-                    const now = new Date();
-                    const completionEnd = endOfDay(new Date(latestCompletion.completed_at));
-
-                    if (latestCompletion?.period?.toLowerCase() === 'diário' && now <= completionEnd) return true;
-                    if (latestCompletion?.period?.toLowerCase() === 'semanal' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 6) return true;
-                    if (latestCompletion?.period?.toLowerCase() === 'mensal' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 29) return true;
-                    if (latestCompletion?.period?.toLowerCase() === 'semestral' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 179) return true;
-                    if (latestCompletion?.period?.toLowerCase() === 'anual' && differenceInDays(now, new Date(latestCompletion.completed_at)) <= 364) return true;
-
-                    return false;
-                  };
-
-                  return (
-                      <div
-                          key={item.id}
-                          className={`border rounded-lg transition-all flex-1 items-center group: cursor-default ${isCompleted() ? 'bg-green-50 border-green-200' : 'bg-white hover:shadow-md'}`}
-                      >
-                        <div className="p-4 flex items-center justify-between">
-                          {title === 'Livros' && (
-                              <img src={item?.image_url} alt={item.name} className="w-20 h-20 mr-4 rounded-md object-cover" />
-                          )}
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold">{item.name}</h3>
-                              {isCompleted() && <CheckCircle className="w-5 h-5 text-green-600" />}
-                            </div>
-                            <p className="text-sm text-gray-600 mb-2 pr-1">{item.description}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge className='bg-green-500 hover:bg-green-500 text-white' variant="secondary">+{item.points} Pontos</Badge>
-                              {item.period && <Badge className={`hover:${definePeriodBadgeColor(item.period)} ${definePeriodBadgeColor(item.period)}`} variant="default">{item.period[0].toUpperCase() + item.period.slice(1)}</Badge>}
-                              {item.school && <Badge className="bg-blue-900 text-white">{item.school}</Badge>}
-                            </div>
-                          </div>
-                          <Button
-                              onClick={() => {
-                                  setCurrentSubmitingMission(item);
-                                  setShowCompleteMissionDialog(true)
-                              }}
-                              disabled={isCompleted() || currentSubmitingMission?.id === item.id}
-                              variant={isCompleted() ? "secondary" : "default"}
-                              className={isCompleted() ? "secondary" : "bg-green-600 hover:bg-green-400"}
-                              size="sm"
-                          >
-                            {isCompleted() ? "Concluído" : "Completar"}
-                          </Button>
-                        </div>
-                      </div>
-                  );
-                })}
-              </div>
-          )}
-        </CardContent>
-      </Card>
-  );
-
   if (loading) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
@@ -382,11 +327,57 @@ const Missions = () => {
                 </div>
               </CardContent>
             </Card>
-
             <div className="space-y-6">
-              {renderItems(missions, "Missões", <Target className="w-5 h-5" />, "Nenhuma missão disponível")}
-              {renderItems(books, "Livros", <BookOpen className="w-5 h-5" />, "Nenhum livro disponível")}
-              {renderItems(courses, "Cursos", <GraduationCap className="w-5 h-5" />, "Nenhum curso disponível")}
+              <Card>
+                <Tabs 
+                  defaultValue='missions'
+                > 
+                  <TabsList> 
+                    {tabsDisponible.map((t) => { 
+                      return ( 
+                        <> 
+                          <TabsTrigger 
+                            key={t.value} 
+                            value={t.value}
+                            className={`
+                              data-[state=active]:bg-${t.color}-600
+                              data-[state=active]:text-white
+                              data-[state=inactive]:text-gray-500
+                              data-[state=inactive]:hover:bg-gray-100
+                            `}
+                          > 
+                            {t.icon} {t.label} 
+                          </TabsTrigger> 
+                        </>) 
+                        })
+                    } 
+                  </TabsList> 
+                  <Separator/> 
+                    {tabsDisponible.map((t) => { 
+                      const selectArray = (value: string): Mission[] => {
+                         return value === 'missions' ? missions : value === 'books' ? books : courses; 
+                      } 
+                      
+                      return ( 
+                        <TabsContent 
+                          value={t.value} 
+                          key={t.value}
+                          className='p-2'
+                        > 
+                          <MissionsList 
+                            items={selectArray(t.value)}
+                            type={t.value}
+                            title={t.label}
+                            icon={t.icon}
+                            emptyMessage={`Nenhum(a) ${t.value} disponível.`}
+                            completedItems={completedItems}
+                            setCurrentSubmitingMission={setCurrentSubmitingMission}
+                            setShowCompleteMissionDialog={setShowCompleteMissionDialog}
+                            currentSubmitingMission={currentSubmitingMission}
+                          />
+                        </TabsContent> ) })} 
+                  </Tabs>
+              </Card>
             </div>
           </div>
         </div>

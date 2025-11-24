@@ -12,9 +12,8 @@ export function UpdatesCard() {
         <CardContent className="p-4">
             <p className="">
                 <ul className="list-inside list-disc text-sm">
-                    <li>Card de Próximos Aniversariantes</li>
-                    <li>Agora é possível adicionar uma Bio no seu perfil ao editar o perfil</li>
-                    <li>Reporte bugs ou sugira novas funções em "Ações Rápidas"</li>
+                    <li>Novos Filtros para missões</li>
+                    <li>Melhor organização de missões</li>
                 </ul>
             </p>
         </CardContent>
