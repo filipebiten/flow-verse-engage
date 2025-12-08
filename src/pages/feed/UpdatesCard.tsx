@@ -12,8 +12,8 @@ export function UpdatesCard() {
         <CardContent className="p-4">
             <p className="">
                 <ul className="list-inside list-disc text-sm">
-                    <li>Novos Filtros para missões</li>
-                    <li>Melhor organização de missões</li>
+                    <li>Citações de Versículos da Bíblia podem ser feitas via comentário seguindo o padrão: Nome do Livro Capítulo:Versículo inicial-Versículo final - Exemplo: Apocalipse 16:15;</li>
+                    <li>Card de Versículo aleatório.</li>
                 </ul>
             </p>
         </CardContent>

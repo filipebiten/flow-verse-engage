@@ -13,6 +13,28 @@ import {MissionSugestionsForm} from "@/pages/feed/missionSugestionsForm.tsx";
 import {SugestionForm} from "@/pages/feed/sugestionForm.tsx";
 import BirthdayBoard from "@/pages/feed/birthdayBoard.tsx";
 import {UpdatesCard} from "@/pages/feed/UpdatesCard.tsx";
+import { getRandomBibleVerse } from '@/services/bibleService';
+import BibleRandomVerse from '@/components/bibleRandomVerse';
+import BibleReference from '@/components/bibleReference';
+
+export function extractBibleReferences(text: string) {
+  const regex = /\b([1-3]?\s?[A-Za-zÀ-ÿ]+)\s+(\d+):(\d+)(?:-(\d+))?/gi;
+
+  const refs: string[] = [];
+
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const book = match[1];
+    const chapter = match[2];
+    const startVerse = match[3];
+    const endVerse = match[4] || startVerse;
+
+    const ref = `${book} ${chapter}:${startVerse}${match[4] ? `-${endVerse}` : ""}`;
+    refs.push(ref);
+  }
+
+  return refs;
+}
 
 interface FeedActivity {
   id: string;
@@ -323,7 +345,6 @@ const Feed = () => {
     );
   }
 
-  // Combine all activities for timeline
   const allActivities = [
     ...activities.map(activity => ({
       type: 'mission' as const,
@@ -348,9 +369,14 @@ const Feed = () => {
 
   return (
       <>
-        <MissionSugestionsForm open={missionSugestionFormVisible}
-                               onOpenChange={setMissionSugestionFormVisible}></MissionSugestionsForm>
-        <SugestionForm open={sugestionFormVisible} onOpenChange={setSugestionFormVisible}></SugestionForm>
+        <MissionSugestionsForm 
+          open={missionSugestionFormVisible}
+          onOpenChange={setMissionSugestionFormVisible}
+        ></MissionSugestionsForm>
+        <SugestionForm 
+          open={sugestionFormVisible} 
+          onOpenChange={setSugestionFormVisible}
+        ></SugestionForm>
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 to-purple-50 p-4">
           <div className="max-w-6xl mx-auto flex flex-1 flex-col space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -409,6 +435,8 @@ const Feed = () => {
               </Card>
             </div>
 
+            <BibleRandomVerse></BibleRandomVerse>
+            
             <div className="grid flex-1">
               <UpdatesCard/>
             </div>
@@ -419,6 +447,8 @@ const Feed = () => {
                   const user = item.data.user_name;
                   const photo = item.data.user_photo || '';
                   const timeAgo = formatTimeAgo(item.timestamp);
+
+                  const refs = extractBibleReferences(item?.data?.comment);
 
                   return (
                       <div key={`${item.type}-${index}`} className="relative pb-4">
@@ -479,9 +509,21 @@ const Feed = () => {
                                   </p>
 
                                   {item.data?.comment && (
-                                      <p className="text-gray-600 text-lg break-all w-full">
+                                    <div className="mt-2">
+                                      <p className="text-gray-600 text-lg break-words w-full">
                                         {item.data.comment}
                                       </p>
+
+                                    {refs.length > 0 && (
+                                      <div className="border-t pt-2 mt-3">
+                                        {refs.map((ref) => (
+                                          <div key={ref} className="mt-2">
+                                            <BibleReference reference={ref} />
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                    </div>
                                   )}
 
                                   <div className="flex flex-wrap items-center gap-1 mt-2 text-center">
