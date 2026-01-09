@@ -130,7 +130,7 @@ function BestScoresCard({users, openUserProfile}) {
               >
                 {user.name}
               </p>
-              <PhaseBadge userPhase={user.phase}></PhaseBadge>
+              <PhaseBadge phaseName={user.phase}></PhaseBadge>
             </div>
           </div>
       ))}
@@ -510,7 +510,7 @@ const Feed = () => {
 
                                   {item.data?.comment && (
                                     <div className="mt-2">
-                                      <p className="text-gray-600 text-lg break-words w-full">
+                                      <p className="text-gray-600 text-sm font-bold break-words w-full">
                                         {item.data.comment}
                                       </p>
 
@@ -557,7 +557,7 @@ const Feed = () => {
                                     </span> 🎉
                                   </p>
                                   <div className="flex items-center space-x-2 mt-2">
-                                    <Badge className="bg-amber-100 text-amber-700 text-xs">
+                                    <Badge className="bg-amber-100 hover:bg-amber-100 text-amber-700 text-xs">
                                       {(item.data as PhaseChange).total_points} pontos totais
                                     </Badge>
                                     <span className="text-xs text-gray-600">{timeAgo}</span>

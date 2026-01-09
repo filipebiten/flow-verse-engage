@@ -15,6 +15,7 @@ import Admin from "./pages/admin/Admin.tsx";
 import { UserProfileProvider } from "@/hooks/useUserProfile.tsx";
 import { LoadingComponent } from "@/components/LoadingComponent.tsx";
 import { useSessionGuard } from "@/hooks/useSessionGuard.tsx";
+import { PhaseProvider } from "./contexts/phaseContext.tsx";
 
 const queryClient = new QueryClient();
 
@@ -33,23 +34,24 @@ const App = () => {
                 <UserProfileProvider>
                     <BrowserRouter>
                         <SessionGuardWrapper user={user} />
-
                         {!user ? (
                             <Routes>
                                 <Route path="/auth" element={<Auth />} />
                                 <Route path="*" element={<Index />} />
                             </Routes>
                         ) : (
-                            <Layout>
-                                <Routes>
-                                    <Route path="/" element={<Feed />} />
-                                    <Route path="/feed" element={<Feed />} />
-                                    <Route path="/missions" element={<Missions />} />
-                                    <Route path="/profile" element={<Profile />} />
-                                    <Route path="/user/:userId" element={<UserProfile />} />
-                                    <Route path="/admin" element={<Admin />} />
-                                </Routes>
-                            </Layout>
+                            <PhaseProvider>
+                                <Layout>
+                                    <Routes>
+                                        <Route path="/" element={<Feed />} />
+                                        <Route path="/feed" element={<Feed />} />
+                                        <Route path="/missions" element={<Missions />} />
+                                        <Route path="/profile" element={<Profile />} />
+                                        <Route path="/user/:userId" element={<UserProfile />} />
+                                        <Route path="/admin" element={<Admin />} />
+                                    </Routes>
+                                </Layout>
+                            </PhaseProvider>
                         )}
                     </BrowserRouter>
                 </UserProfileProvider>

@@ -11,6 +11,7 @@ const PERIODS = [
   { label: "Semestral", value: "semestral" },
   { label: "Anual", value: "anual" },
   { label: "Especial", value: "especial" },
+  { label: "Sequência", value: "sequencia" },
 ];
 
 interface PeriodFilterProps {

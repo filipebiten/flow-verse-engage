@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, CheckSquare, BookOpen, GraduationCap, Award, Clock, Target } from "lucide-react";
+import { PhaseBadge } from "@/components/PhaseBadge";
+import { useUserProfile } from "@/hooks/useUserProfile";
 
 interface User {
   id: string;
@@ -44,6 +46,8 @@ interface MissionActivity {
 
 const UserProfile = () => {
   const navigate = useNavigate();
+  const { profile } = useUserProfile();
+
   const { userId } = useParams();
   const [user, setUser] = useState<User | null>(null);
   const [userActivities, setUserActivities] = useState<MissionActivity[]>([]);
@@ -89,16 +93,6 @@ const UserProfile = () => {
     setUserActivities(userActivities);
   };
 
-  const getPhaseInfo = (phase: string) => {
-    const phases = {
-      "Riacho": { emoji: "🌀", color: "bg-green-100 text-green-800", phrase: "Começando a fluir" },
-      "Correnteza": { emoji: "🌊", color: "bg-blue-100 text-blue-800", phrase: "Sendo levado por algo maior" },
-      "Cachoeira": { emoji: "💥", color: "bg-purple-100 text-purple-800", phrase: "Entregue ao movimento de Deus" },
-      "Oceano": { emoji: "🌌", color: "bg-gray-900 text-white", phrase: "Profundamente imerso em Deus" }
-    };
-    return phases[phase as keyof typeof phases] || phases["Riacho"];
-  };
-
   const formatTimeAgo = (timestamp: string) => {
     const now = new Date();
     const time = new Date(timestamp);
@@ -134,8 +128,6 @@ const UserProfile = () => {
   };
 
   if (!user) return null;
-
-  const phaseInfo = getPhaseInfo(user.phase);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50">
@@ -179,9 +171,7 @@ const UserProfile = () => {
                 </div>
                 
                 <div className="flex items-center space-x-3 flex-wrap">
-                  <Badge className={phaseInfo.color}>
-                    {phaseInfo.emoji} {user.phase}
-                  </Badge>
+                  <PhaseBadge phaseName={profile.phase}></PhaseBadge>
                   <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
                     {user.points} pontos
                   </Badge>
@@ -221,7 +211,9 @@ const UserProfile = () => {
                   if (!badge) return null;
                   
                   return (
-                    <div key={badgeId} className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                    <div 
+                      key={badgeId} 
+                      className="flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
                       <div className="text-2xl">{badge.icon}</div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-purple-700">{badge.name}</h4>

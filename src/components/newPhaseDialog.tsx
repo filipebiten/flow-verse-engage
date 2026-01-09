@@ -27,12 +27,12 @@ export default function NewPhaseDialog({open, setOpenDialog, currentPhaseName, n
                         </DialogTitle>
                         <DialogDescription className="text-black space-y-4 pt-6 pb-6 text-center">
                             <div className="flex items-center justify-center gap-1">
-                                <PhaseBadge userPhase={currentPhaseName} />
+                                <PhaseBadge phaseName={currentPhaseName} />
                                 <span className="mx-1">→</span>
-                                <PhaseBadge userPhase={newPhase?.name} />
+                                <PhaseBadge phaseName={newPhase?.name} />
                             </div>
                             <div className="flex items-center justify-center gap-1">
-                                <PhasePhrase size="text-xl" userPhase={newPhase}/>
+                                <PhasePhrase size="text-xl" phaseName={newPhase.name}/>
                             </div>
                         </DialogDescription>
                     </DialogHeader>

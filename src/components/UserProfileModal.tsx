@@ -4,8 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, Target, BookOpen, Award } from 'lucide-react';
-import {getPhaseInfo} from "@/utils/phaseUtils.ts";
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
+import { usePhases } from '@/contexts/phaseContext';
+import resolvePhaseColor, { resolvePhaseGradient } from '@/utils/colorUtil';
 
 interface UserProfile {
   id: string;
@@ -45,21 +46,28 @@ interface Props {
 }
 
 export const UserProfileModal: React.FC<Props> = ({
-                                                    isOpen,
-                                                    onClose,
-                                                    profile,
-                                                    badges,
-                                                    completedMissions
-                                                  }) => {
-  const phaseInfo = getPhaseInfo(profile.phase);
+  isOpen,
+  onClose,
+  profile,
+  badges,
+  completedMissions
+}) => {
+
+  const { getPhaseByPhaseName } = usePhases();
+  
+  const phaseInfo = getPhaseByPhaseName(profile.phase);
+  
   const booksCount = completedMissions.filter(m => m.mission_type === 'book').length;
   const coursesCount = completedMissions.filter(m => m.mission_type === 'course').length;
   const missionsCount = completedMissions.filter(m => m.mission_type === 'mission').length;
 
   return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        {/* O componente DialogContent do shadcn/ui já é bastante responsivo, mas garantimos que não ultrapasse a tela */}
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto group: select-none">
+      <Dialog 
+        open={isOpen} 
+        onOpenChange={onClose}
+      >
+        <DialogContent 
+          className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto group: select-none">
           <DialogHeader>
             <DialogTitle>Perfil do Usuário</DialogTitle>
           </DialogHeader>
@@ -67,7 +75,7 @@ export const UserProfileModal: React.FC<Props> = ({
           <div className="space-y-6">
             {/* Header */}
             <Card className="overflow-hidden">
-              <div className={`bg-gradient-to-r ${phaseInfo.color} p-6 text-white`}>
+              <div className={`bg-gradient-to-r ${resolvePhaseGradient(phaseInfo.color)} p-6 text-white`}>
                 <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center text-center sm:text-left">
                   <Avatar className="w-24 h-24 sm:w-32 sm:h-32 border-4 border-white">
                     {profile.profile_photo_url ? (
@@ -87,8 +95,9 @@ export const UserProfileModal: React.FC<Props> = ({
                         <p className="text-white/90 mb-2 break-words">“{profile.bio}”</p>
                     )}
 
-                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-                      <PhaseBadge userPhase={profile.phase}/>
+                    <div 
+                      className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
+                      <PhaseBadge phaseName={profile.phase}/>
                       <span className="text-white/90 text-xl">{profile.points || 0} pontos</span>
                     </div>
                     {profile.pgm_number && (

@@ -24,5 +24,9 @@ export function definePeriodBadgeColor(period: string) {
             return 'bg-purple-500';
         case 'Especial':
             return 'bg-purple-500';
+        case 'sequencia':
+            return 'bg-orange-500';
+        case 'Sequencia':
+            return 'bg-orange-500';
     }
 }

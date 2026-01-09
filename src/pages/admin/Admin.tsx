@@ -24,7 +24,7 @@ const Admin = () => {
 
   const { data, isLoading } = useAdminData();
 
-  const [missionForm, setMissionForm] = useState({ name: '', description: '', points: '', period: 'diário' });
+  const [missionForm, setMissionForm] = useState({ name: '', description: '', points: '', period: 'diário', mission_reference: '', sequencia: 0 });
   const [bookForm, setBookForm] = useState({ name: '', description: '', points: '' });
   const [courseForm, setCourseForm] = useState({ name: '', description: '', points: '', school: 'Escola do Discípulo' });
   const [adminEmail, setAdminEmail] = useState('');
@@ -164,9 +164,16 @@ const Admin = () => {
         { value: 'mensal', label: 'Mensal' },
         { value: 'semestral', label: 'Semestral' },
         { value: 'anual', label: 'Anual' },
-        { value: 'especial', label: 'Missão Especial' }
+        { value: 'especial', label: 'Missão Especial' },
+        { value: 'sequencia', label: 'Sequência' },
       ]
-    }
+    },
+    {
+      key: "mission_reference",
+      label: "Missão",
+      type: "select",
+    },
+    { key: 'sequencia', label: 'Sequência', type: 'number', placeholder: '1' },
   ];
 
   const bookFields = [

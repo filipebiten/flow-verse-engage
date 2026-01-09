@@ -16,7 +16,6 @@ import {LogOut, LucideStore, Shield, Target, User, Users} from 'lucide-react';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
-import {getUserPhase, Phase} from '@/utils/phaseUtils';
 import {useUserProfile} from "@/hooks/useUserProfile.tsx";
 import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
@@ -56,18 +55,18 @@ const adminItems = [
   },
 ];
 
-function UserHeaderInfo(props: { onClick: () => void, profile: UserProfile, userInitials: string, userPhase: Phase }) {
+function UserHeaderInfo(props: { onClick?: () => void, profile: UserProfile, userInitials: string }) {
   return (<>
     {/* Phase Info */}
     <div className="space-y-2 mb-4 group: select-none">
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">Fase Atual</span>
-        <PhaseBadge userPhase={props.userPhase.name}/>
+        <PhaseBadge phaseName={props.profile.phase}/>
       </div>
       <div className="text-xs text-muted-foreground">
-        <span className="font-medium">{props.profile?.points || 0}</span> pontos
+        <span className="font-medium">{props.profile.points || 0}</span> pontos
       </div>
-      <PhasePhrase userPhase={props.userPhase}/>
+      <PhasePhrase phaseName={props.profile.phase}/>
     </div>
   </>)
 }
@@ -76,8 +75,6 @@ export function AppSidebar() {
   const { profile, loading } =  useUserProfile();
   const { signOut } = useAuth();
   const location = useLocation();
-
-  const userPhase = getUserPhase(profile?.points || 0);
 
   const getUserInitials = (name: string) => {
     if (!name) return 'U';
@@ -88,10 +85,6 @@ export function AppSidebar() {
     signOut();
   };
 
-  const handleProfileClick = () => {
-    // Use Link component or navigate programmatically
-  };
-
   return (
     <Sidebar className="border-r">
       <SidebarHeader className="p-4 group: select-none">
@@ -99,7 +92,6 @@ export function AppSidebar() {
         <div className="flex items-center gap-3 mb-4">
           <Avatar
               className="w-10 h-10 cursor-pointer"
-              onClick={handleProfileClick}
           >
             {profile?.profile_photo_url ? (
                 <AvatarImage
@@ -115,7 +107,6 @@ export function AppSidebar() {
           <div className="flex-1 min-w-0">
             <p
                 className="text-sm font-medium truncate cursor-pointer hover:text-blue-600"
-                onClick={handleProfileClick}
             >
               {profile?.name || "Usuário"}
             </p>
@@ -126,8 +117,8 @@ export function AppSidebar() {
         </div>
         { loading ?
             <LoadingComponent></LoadingComponent> :
-            (<UserHeaderInfo onClick={handleProfileClick} profile={profile}
-                             userInitials={getUserInitials(profile?.name || 'Usuário')} userPhase={userPhase}/>)}
+            (<UserHeaderInfo profile={profile}
+                             userInitials={getUserInitials(profile?.name || 'Usuário')}/>)}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

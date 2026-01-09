@@ -5,17 +5,18 @@ import { Badge } from '@/components/ui/badge.tsx';
 import { useToast } from '@/hooks/use-toast.ts';
 import { supabase } from '@/integrations/supabase/client.ts';
 import { useAuth } from '@/hooks/useAuth.tsx';
-import { Target, CheckCircle, BookOpen, GraduationCap } from 'lucide-react';
+import { Target, BookOpen, GraduationCap } from 'lucide-react';
 import { useUserProfile } from "@/hooks/useUserProfile.tsx";
-import { definePeriodBadgeColor } from "@/helpers/colorHelper.ts";
 import { checkBadgeEligibility } from "@/utils/badgeUtils.ts";
 import NewPhaseDialog from "@/components/newPhaseDialog.tsx";
-import { differenceInDays, endOfDay } from 'date-fns';
 import {CompleteMissionDialog} from "@/pages/missions/completeMissionDialog.tsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import MissionsList from './missionsList';
 import { cn } from '@/lib/utils';
+import { resolveFontColor, resolvePhaseGradient } from '@/utils/colorUtil';
+import { usePhases } from '@/contexts/phaseContext';
+import { profile } from 'console';
 
 export interface Mission {
   id: string;
@@ -27,6 +28,8 @@ export interface Mission {
   school?: string;
   image_url?: string;
   comment?: string;
+  mission_reference?: string;
+  sequencia?: number;
 }
 
 interface MissionCompleted {
@@ -44,13 +47,6 @@ interface UserProfile {
   points: number;
   phase: string;
 }
-
-const getUserPhase = (points: number) => {
-  if (points >= 1000) return { name: 'Oceano', icon: '🌊', phrase: 'Profundamente imerso em Deus', color: 'from-blue-900 to-indigo-900' };
-  if (points >= 500) return { name: 'Cachoeira', icon: '💥', phrase: 'Entregue ao movimento de Deus', color: 'from-purple-600 to-blue-600' };
-  if (points >= 250) return { name: 'Correnteza', icon: '🌊', phrase: 'Sendo levado por algo maior', color: 'from-blue-500 to-teal-500' };
-  return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
-};
 
 const tabsDisponible = [
   { 
@@ -75,7 +71,7 @@ const tabsDisponible = [
 
 const Missions = () => {
   const { user } = useAuth();
-  const { refreshUserData, completedMissions } = useUserProfile();
+  const { refreshUserData } = useUserProfile();
   const { toast } = useToast();
   const [ showCompleteMissionDialog, setShowCompleteMissionDialog ] = useState(false);
   const [missions, setMissions] = useState<Mission[]>([]);
@@ -85,9 +81,11 @@ const Missions = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [openDialog, setOpenDialog] = useState(false);
-  const [newPhase, setNewPhase] = useState<ReturnType<typeof getUserPhase> | null>(null);
   const [currentSubmitingMission, setCurrentSubmitingMission] = useState<Mission>(null);
-
+  const completingMissionRef = React.useRef<string | null>(null);
+  const {getPhaseByPoints} = usePhases();
+  const [newPoints, setNewPoints] = useState<number>(0); 
+  const [currentPhaseName, setCurrentPhaseName] =  useState<string>("");
 
   useEffect(() => {
     if (user) {
@@ -115,7 +113,9 @@ const Missions = () => {
         description: item.description,
         points: item.points,
         type: 'mission',
-        period: item.period
+        period: item.period,
+        sequencia: item.sequencia,
+        mission_reference: item.mission_reference
       })));
 
       setBooks((booksData || []).map(item => ({
@@ -172,74 +172,68 @@ const Missions = () => {
         .filter(badge => !userBadgeIds.has(badge.id) && checkBadgeEligibility(badge, userStats));
   }
 
-  const completeItem = async (item: Mission) => {
+  const completeItem = async (
+    item: Mission
+  ): Promise<MissionCompleted[] | null> => {
+    if (completingMissionRef.current === item.id) {
+      return null;
+    }
 
-    if (currentSubmitingMission != item)
-        return;
+    completingMissionRef.current = item.id;
 
     try {
-
-      const { data: completedItem, error: error } = await supabase.from('missions_completed').insert({
-        user_id: user.id,
-        mission_id: item.id,
-        mission_name: item.name,
-        mission_type: item.type,
-        points: item.points,
-        period: item.period || null,
-        school: item.school || null,
-        comment: item.comment || null
-      }).select().single();
+      const { data: completedItem, error } = await supabase
+        .from('missions_completed')
+        .insert({
+          user_id: user.id,
+          mission_id: item.id,
+          mission_name: item.name,
+          mission_type: item.type,
+          points: item.points,
+          period: item.period || null,
+          school: item.school || null,
+          comment: item.comment || null
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setCompletedItems(prev => [...prev, completedItem]);
+      const updatedCompletedItems = [...completedItems, completedItem];
+      setCompletedItems(updatedCompletedItems);
 
-      const newPoints = (userProfile?.points || 0) + item.points;
-      const phaseCandidate = getUserPhase(newPoints);
-      setNewPhase(phaseCandidate);
+      const updatedPoints = (userProfile?.points || 0) + item.points;
 
-      if (userProfile?.phase !== phaseCandidate.name) {
+      setNewPoints(updatedPoints);
+
+      const phaseCandidate = getPhaseByPoints(updatedPoints);
+
+      if (phaseCandidate && userProfile?.phase !== phaseCandidate.name) {
+
+        setCurrentPhaseName(userProfile?.phase);
+
         await supabase.from('phase_changes').insert({
           user_id: userProfile!.id,
           previous_phase: userProfile!.phase,
           new_phase: phaseCandidate.name,
-          total_points: newPoints,
+          total_points: updatedPoints,
           changed_at: new Date()
         });
+
         setOpenDialog(true);
       }
 
       await supabase.from('profiles').update({
-        points: newPoints,
-        phase: phaseCandidate.name
+        points: updatedPoints,
+        phase: phaseCandidate?.name
       }).eq('id', user.id);
 
-      setUserProfile({ ...userProfile!, points: newPoints, phase: phaseCandidate.name });
-      const updatedCompletedItems = [...completedMissions, completedItem];
+      setUserProfile(prev =>
+        prev
+          ? { ...prev, points: updatedPoints, phase: phaseCandidate?.name }
+          : prev
+      );
 
-      setCompletedItems(updatedCompletedItems);
-
-      const badgesCompleted = await checkIfUserCompletedAnyBadge({
-        points: newPoints,
-        missions: updatedCompletedItems.filter(c => c.mission_type === 'mission'),
-        books: updatedCompletedItems.filter(c => c.mission_type === 'book'),
-        courses: updatedCompletedItems.filter(c => c.mission_type === 'course'),
-        consecutive_days: userProfile!.consecutive_days,
-        userId: userProfile.id
-      });
-
-      for (const badge of badgesCompleted) {
-        await supabase.from('user_badges').insert({
-          user_id: userProfile!.id,
-          badge_id: badge.id,
-          earned_at: new Date()
-        });
-        toast({
-          title: "Conquista atingida!! 🎉",
-          className: "bg-green-700 text-white",
-          description: `Parabéns! Você atingiu a conquista ${badge.name}!!!!`,
-        });
-      }
 
       toast({
         title: "Parabéns! 🎉",
@@ -248,18 +242,53 @@ const Missions = () => {
       });
 
       refreshUserData();
+      return updatedCompletedItems;
+
     } catch {
       toast({
-          title: "Erro",
-          description: "Ocorreu um erro ao completar a missão.",
-          className: "bg-red-700 text-white",
-          variant: "destructive"
+        title: "Erro",
+        description: "Ocorreu um erro ao completar a missão.",
+        variant: "destructive"
       });
+      return null;
     } finally {
-      setCurrentSubmitingMission(null);
+      completingMissionRef.current = null;
     }
   };
 
+
+  async function checkIfSequenceHasBeenCompleted(
+    updatedCompletedItems: MissionCompleted[]
+  ) {
+    if (!Array.isArray(updatedCompletedItems)) 
+      return;
+
+    const sequenceMissions = missions.filter(
+      m => m.period === 'sequencia' && m.mission_reference
+    );
+
+    for (const mission of sequenceMissions) {
+      const alreadyCompleted = updatedCompletedItems.some(
+        c => c.mission_id === mission.id
+      );
+      if (alreadyCompleted)
+         continue;
+
+      const sequenceCompletions = updatedCompletedItems.filter(
+        c =>
+          c.mission_id === mission.mission_reference &&
+          c.mission_type === 'mission'
+      );
+
+      if (sequenceCompletions.length >= (mission.sequencia || 0)) {
+        const newCompletedItems = await completeItem(mission);
+        if (newCompletedItems) {
+          updatedCompletedItems = newCompletedItems;
+        }
+      }
+    }
+  }
+    
   if (loading) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
@@ -271,7 +300,7 @@ const Missions = () => {
     );
   }
 
-  const currentPhase = getUserPhase(userProfile?.points || 0);
+  const currentPhase = getPhaseByPoints(userProfile.points || 0);
 
   return (
       <>
@@ -283,8 +312,14 @@ const Missions = () => {
                     setCurrentSubmitingMission(null);
                 }}
                 onConfirm={async () => {
-                    await completeItem(currentSubmitingMission);
-                    setShowCompleteMissionDialog(false);
+                  if (!currentSubmitingMission) return;
+
+                  const updatedCompletedItems = await completeItem(currentSubmitingMission);
+                  if (!updatedCompletedItems) return;
+
+                  await checkIfSequenceHasBeenCompleted(updatedCompletedItems);
+
+                  setShowCompleteMissionDialog(false);
                 }}
                 mission={currentSubmitingMission}
                 setMission={setCurrentSubmitingMission}
@@ -293,21 +328,21 @@ const Missions = () => {
         <NewPhaseDialog
             open={openDialog}
             setOpenDialog={setOpenDialog}
-            currentPhaseName={userProfile!.phase}
-            newPhase={newPhase}
+            currentPhaseName={currentPhaseName}
+            newPhase={getPhaseByPoints(newPoints)}
         />
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
           <div className="max-w-6xl mx-auto space-y-6">
             <Card className="overflow-hidden">
-              <div className={`bg-gradient-to-r ${currentPhase.color} p-6 text-white`}>
+              <div className={`bg-gradient-to-r ${resolvePhaseGradient(currentPhase?.color)} p-6 text-white`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h1 className="text-3xl font-bold mb-2">Missões e Desafios</h1>
                     <p className="text-white/90">Continue sua jornada de crescimento</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-4xl mb-2">{currentPhase.icon}</div>
-                    <Badge className="bg-white text-gray-800">{currentPhase.name}</Badge>
+                    <div className="text-4xl mb-2">{currentPhase?.icon}</div>
+                    <Badge className="bg-white text-gray-800">{currentPhase?.name}</Badge>
                   </div>
                 </div>
               </div>
@@ -322,7 +357,7 @@ const Missions = () => {
                     <p className="text-sm text-gray-600">Concluídos</p>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">{currentPhase.name}</div>
+                    <div className={`text-2xl font-bold ${resolveFontColor(currentPhase?.color)}`}>{currentPhase?.name}</div>
                     <p className="text-sm text-gray-600">Fase Atual</p>
                   </div>
                 </div>

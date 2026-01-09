@@ -21,18 +21,19 @@ const MissionsList = ({
 }) => {
 
     const [filter, setFilter] = useState<"all" | "completed" | "pending">("all");
-    const [periodFilter, setPeriodFilter] = useState<"all" | "diário" | "semanal" | "mensal" | "semestral" | "anual" | "especial">("all");
+    const [periodFilter, setPeriodFilter] = useState<"all" | "diário" | "semanal" | "mensal" | "semestral" | "anual" | "especial" | "sequencia">("all");
 
     const isCompleted = (item: Mission) => {
         const missionCompletions = completedItems.filter(i => i.mission_id === item.id);
-
+        
         if (missionCompletions.length === 0) 
             return false;
 
         missionCompletions.sort((a, b) => new Date(b.completed_at).getTime() - new Date(a.completed_at).getTime());
         const latestCompletion = missionCompletions[0];
 
-        if (!latestCompletion.period || latestCompletion.period.toLowerCase() === "especial") {
+        if (!latestCompletion.period || latestCompletion.period.toLowerCase() === "especial" 
+            || latestCompletion.period.toLowerCase() === "sequencia") {
             return true;
         }
 
@@ -67,6 +68,16 @@ const MissionsList = ({
         return true;
     });
 
+    function getButtonMessage(item: any) {
+        const completed = isCompleted(item);
+
+        if (item.period === 'sequencia') {
+            return completed ? "Concluída" : "Complete a Sequência";
+        } else {
+            return completed ? "Concluído": "Completar";
+        }
+    }
+
     return (
         <div>
             <div className="flex justify-between"> 
@@ -85,7 +96,7 @@ const MissionsList = ({
             ) : (
                 <div className="space-y-3">
                 {filteredItems.map(item => {
-                    const completed = isCompleted(item);
+
                     return (
                         <div
                             key={item.id}
@@ -112,12 +123,12 @@ const MissionsList = ({
                                     setCurrentSubmitingMission(item);
                                     setShowCompleteMissionDialog(true)
                                 }}
-                                disabled={isCompleted(item) || currentSubmitingMission?.id === item.id}
+                                disabled={isCompleted(item) || currentSubmitingMission?.id === item.id || item.period === 'sequencia'}
                                 variant={isCompleted(item) ? "secondary" : "default"}
                                 className={isCompleted(item) ? "secondary" : "bg-green-600 hover:bg-green-400"}
                                 size="sm"
                             >
-                                {isCompleted(item) ? "Concluído" : "Completar"}
+                                {getButtonMessage(item)}
                             </Button>
                             </div>
                         </div>

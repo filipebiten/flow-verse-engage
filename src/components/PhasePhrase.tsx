@@ -1,16 +1,21 @@
-import {Phase} from "@/utils/phaseUtils.ts";
-import React from "react";
+import { usePhases } from "@/contexts/phaseContext";
+import resolvePhaseColor, { resolveFontColor } from "@/utils/colorUtil";
 
-export function PhasePhrase(props: { userPhase: Phase, size?: string }) {
-    const getPhaseInfo = (phase: string) => {
-        const phases = {
-            "Riacho": {color: "text-green-800"},
-            "Correnteza": {color: "text-blue-800"},
-            "Cachoeira": {color: "text-purple-800"},
-            "Oceano": {color: "text-blue-1000"}
-        };
-        return phases[phase as keyof typeof phases] || phases["Riacho"];
+interface PhasePhraseProps {
+    phaseName: string;
+    size?: string;
+}
+
+export function PhasePhrase({ phaseName, size }: PhasePhraseProps) {
+    
+    const { phases, loading } = usePhases();
+
+    const getPhaseInfo = () => {
+        return phases.find(phase => phase.name === phaseName);
     };
+
     return <p
-        className={`italic text-center ${!props.size ? 'text-sm' : props.size} ${getPhaseInfo(props.userPhase.name).color}`}>´´{props.userPhase.phrase}´´</p>;
+        className={`italic text-center ${!size ? 'text-sm' : size} ${resolveFontColor(getPhaseInfo()?.color)}`}>
+            ´´{getPhaseInfo()?.description}´´
+    </p>;
 }

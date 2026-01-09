@@ -79,7 +79,9 @@ export type Database = {
           mission_type: string | null
           name: string
           period: string | null
-          points: number
+          points: number,
+          mission_reference?: string | null
+          sequencia?: number | null
         }
         Insert: {
           created_at?: string | null
@@ -88,7 +90,9 @@ export type Database = {
           mission_type?: string | null
           name: string
           period?: string | null
-          points: number
+          points: number,
+          mission_reference?: string | null
+          sequencia?: number | null
         }
         Update: {
           created_at?: string | null
@@ -97,7 +101,9 @@ export type Database = {
           mission_type?: string | null
           name?: string
           period?: string | null
-          points?: number
+          points?: number,
+          mission_reference?: string | null
+          sequencia?: number | null
         }
         Relationships: []
       }

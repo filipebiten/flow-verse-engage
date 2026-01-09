@@ -60,7 +60,9 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true);
 
   const loadUserData = async () => {
-    if (!user) return;
+    if (!user) 
+      return;
+
     setLoading(true);
 
     try {
@@ -85,6 +87,7 @@ export const UserProfileProvider = ({ children }: { children: React.ReactNode })
       setProfile(profileData);
       setCompletedMissions(missionsData || []);
       setUserBadges(badgesData || []);
+
     } catch (error) {
     } finally {
       setLoading(false);

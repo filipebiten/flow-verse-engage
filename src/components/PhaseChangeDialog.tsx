@@ -54,7 +54,6 @@ const PhaseChangeDialog = ({ isOpen, onClose, newPoints, previousPoints }: Phase
     if (isOpen && hasPhaseChanged) {
       setShowConfetti(true);
       
-      // Apply phase colors to body
       const root = document.documentElement;
       root.style.setProperty('--phase-gradient', `linear-gradient(135deg, ${newPhase.color.replace('from-', '').replace('to-', ', ')})`);
       
@@ -77,15 +76,15 @@ const PhaseChangeDialog = ({ isOpen, onClose, newPoints, previousPoints }: Phase
           <div className="text-6xl mb-4">{newPhase.icon}</div>
           
           <Badge className={`text-lg px-4 py-2 bg-gradient-to-r ${newPhase.color} text-white`}>
-            {newPhase.name}
+            {newPhase?.name}
           </Badge>
           
           <h3 className="text-xl font-semibold text-primary">
-            "{newPhase.phrase}"
+            "{newPhase?.phrase}"
           </h3>
           
           <p className="text-gray-600 text-sm">
-            {newPhase.description}
+            {newPhase?.description}
           </p>
           
           <div className="bg-primary/10 p-4 rounded-lg">
