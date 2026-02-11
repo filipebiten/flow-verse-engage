@@ -29,8 +29,6 @@ import {deleteProfilePhoto, uploadProfilePhoto} from "@/services/profileService.
 import {useUserProfile} from "@/hooks/useUserProfile.tsx";
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
 import {InputGroup, InputGroupAddon, InputGroupText, InputGroupTextarea} from "@/components/ui/input-group.tsx";
-import { resolvePhaseGradient } from '@/utils/colorUtil';
-import { usePhases } from '@/contexts/phaseContext';
 
 interface UserProfile {
   id: string;
@@ -67,6 +65,13 @@ interface UserBadge {
   earned_at: string;
 }
 
+const getPhaseInfo = (points: number) => {
+  if (points >= 1000) return { name: 'Oceano', icon: '🌊', phrase: 'Profundamente imerso em Deus', color: 'from-blue-900 to-indigo-900' };
+  if (points >= 500) return { name: 'Cachoeira', icon: '💥', phrase: 'Entregue ao movimento de Deus', color: 'from-purple-600 to-blue-600' };
+  if (points >= 250) return { name: 'Correnteza', icon: '🌊', phrase: 'Sendo levado por algo maior', color: 'from-blue-500 to-teal-500' };
+  return { name: 'Riacho', icon: '🌀', phrase: 'Começando a fluir', color: 'from-green-400 to-blue-400' };
+};
+
 const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -78,7 +83,6 @@ const Profile = () => {
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [enterEditImageArea, setEnterEditImageArea] = useState<boolean>(false);
-  const {getPhaseByPhaseName} = usePhases();
 
   const fileInputRef = useRef(null);
 
@@ -155,6 +159,7 @@ const Profile = () => {
     if (!user) return;
     
     setLoading(true);
+    
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -185,7 +190,6 @@ const Profile = () => {
       setProfile(profileData);
       setFormData(profileData);
 
-      // Load completed missions
       const { data: missionsData, error: missionsError } = await supabase
         .from('missions_completed')
         .select('*')
@@ -197,7 +201,6 @@ const Profile = () => {
         setCompletedMissions(missionsData || []);
       }
 
-      // Load user badges
       const { data: badgesData, error: badgesError } = await supabase
         .from('user_badges')
         .select('*')
@@ -288,7 +291,7 @@ const Profile = () => {
     );
   }
 
-  const currentPhase = getPhaseByPhaseName(profile?.phase);
+  const currentPhase = getPhaseInfo(profile.points || 0);
   const books = completedMissions.filter(m => m.mission_type === 'book');
   const courses = completedMissions.filter(m => m.mission_type === 'course');
   const missions = completedMissions.filter(m => m.mission_type === 'mission');
@@ -297,7 +300,7 @@ const Profile = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
       <div className="max-w-4xl mx-auto space-y-6">
         <Card className="overflow-hidden">
-          <div className={`bg-gradient-to-r ${resolvePhaseGradient(currentPhase.color)} p-4 sm:p-6 text-white`}>
+          <div className={`bg-gradient-to-r ${currentPhase.color} p-4 sm:p-6 text-white`}>
             <div className="flex flex-col lg:flex-row lg:items-start items-center gap-6 text-center lg:text-left">
               <Avatar
                   onMouseEnter={() => setEnterEditImageArea(true)}
@@ -385,7 +388,7 @@ const Profile = () => {
                     <p className="text-white/90 mb-2 break-words">“{profile.bio}”</p>
                 )}
                 <div className="flex flex-wrap justify-center lg:justify-start items-center gap-4">
-                  <PhaseBadge phaseName={profile.phase}/>
+                  <PhaseBadge userPhase={profile.phase}/>
                   <span className="text-white/90 font-bold">{profile.points || 0} pontos</span>
                 </div>
               </div>
@@ -422,7 +425,7 @@ const Profile = () => {
                           onChange={(e) => setFormData({...formData, name: e.target.value})}
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2">1
                       <InputGroup>
                         <InputGroupTextarea
                             placeholder="Escreva sua bio aqui"

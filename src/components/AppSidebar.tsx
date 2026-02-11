@@ -12,7 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import {LogOut, LucideStore, Shield, Target, User, Users} from 'lucide-react';
+import {LogOut, LucideBook, LucideBookOpen, LucideStore, Shield, Target, User, Users} from 'lucide-react';
 import {Avatar, AvatarFallback, AvatarImage} from '@/components/ui/avatar';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -21,7 +21,6 @@ import {LoadingComponent} from "@/components/LoadingComponent.tsx";
 import {PhaseBadge} from "@/components/PhaseBadge.tsx";
 import {PhasePhrase} from "@/components/PhasePhrase.tsx";
 import {useAuth} from "@/hooks/useAuth.tsx";
-import UserProfile from "@/pages/UserProfile.tsx";
 
 const menuItems = [
   {
@@ -38,6 +37,12 @@ const menuItems = [
     title: "Perfil",
     url: "/profile",
     icon: User,
+  },
+  {
+    title: "Devocionais",
+    url: "/devocionais",
+    icon: LucideBookOpen,
+    disabled: false
   },
   {
     title: "Loja - Em breve",

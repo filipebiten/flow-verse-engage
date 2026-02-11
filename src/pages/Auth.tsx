@@ -15,7 +15,6 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import {uploadProfilePhoto} from "@/services/profileService.ts";
 import {MaskedInput} from "@/components/maskedInput.tsx";
 import {useAuth} from "@/hooks/useAuth.tsx";
-import {useAdminData} from "@/hooks/UseAdminData.tsx";
 
 function LoginForm(props: {
   onSubmit: (e: React.FormEvent) => Promise<void>,

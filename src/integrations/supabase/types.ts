@@ -41,6 +41,27 @@ export type Database = {
         }
         Relationships: []
       }
+      devotionals: {
+        Row: {
+          id: number | null
+          devotional_date: string
+          title: string | null
+          text: string
+        }
+        Insert: {
+          id: number | null
+          devotional_date: string
+          title: string | null
+          text: string
+        }
+        Update: {
+          id: number | null
+          devotional_date: string
+          title: string | null
+          text: string
+        }
+        Relationships: []
+      }
       courses: {
         Row: {
           created_at: string | null

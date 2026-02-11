@@ -58,7 +58,7 @@ const Admin = () => {
       setAdminEmail('');
       queryClient.invalidateQueries({ queryKey: ['adminData'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({
         title: "Erro",
         description: error.message || "Erro ao promover usuário",
@@ -106,42 +106,59 @@ const Admin = () => {
       if (!formData.name || !formData.description || !formData.points)
         throw new Error("Preencha todos os campos obrigatórios.");
 
-      const { data, error } = await supabase
+      // CORREÇÃO: Filtramos os dados para enviar apenas o que a tabela específica aceita
+      const payload: any = {
+        name: formData.name,
+        description: formData.description,
+        points: parseInt(formData.points)
+      };
+
+      if (tableName === 'missions') {
+        payload.period = formData.period;
+        payload.mission_reference = formData.mission_reference === "" ? null : formData.mission_reference;
+        payload.sequencia = formData.sequencia;
+      } else if (tableName === 'courses') {
+        payload.school = formData.school;
+      }
+
+      const { data: insertData, error } = await supabase
           .from(tableName)
-          .insert({ ...formData, points: parseInt(formData.points) })
+          .insert(payload)
           .select();
 
       if (error)
         throw error;
 
-      let bookImageUrl = null;
+      // Upload de imagem apenas se for livro
+      if (tableName === 'books' && insertData && insertData[0]) {
+        const bookImageUrl = await uploadBookPhoto(insertData[0].id, bookImage);
 
-      bookImageUrl = await uploadBookPhoto(data[0].id, bookImage);
+        if (bookImageUrl) {
+          const { error: updateError } = await supabase
+              .from('books')
+              .update({ book_image_url: bookImageUrl })
+              .eq('id', insertData[0].id);
 
-      if (bookImageUrl) {
-        const { error: updateError } = await supabase
-            .from('books')
-            .update({ book_image_url: bookImageUrl })
-            .eq('id', data[0].id);
-
-        if (updateError) {
+          if (updateError) {
+             console.error("Erro ao atualizar URL da imagem");
+          }
         }
       }
     },
     onSuccess: () => {
       if (tableName === 'courses'){
-        setForm({ name: '', description: '', points: 'diário', school: 'Escola do Discípulo' });
+        setForm({ name: '', description: '', points: '', school: 'Escola do Discípulo' });
       } else if (tableName === "missions"){
-        setForm({ name: '', description: '', points: '', period: 'diário' })
+        setForm({ name: '', description: '', points: '', period: 'diário', mission_reference: '', sequencia: 0 });
       } else {
-        setForm({ name: '', description: '', points: '' })
-        setBookImage(null)
+        setForm({ name: '', description: '', points: '' });
+        setBookImage(null);
       }
       handleCloseDialog();
       toast({ title: "Sucesso", description: `${tableName} adicionado com sucesso!`, className: "bg-green-500" });
       queryClient.invalidateQueries({ queryKey: ['adminData'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast({ title: "Erro", description: error.message || `Erro ao adicionar ${tableName}`, variant: "destructive" });
     },
   });
@@ -214,7 +231,7 @@ const Admin = () => {
     courses: { title: "Novo Curso", form: courseForm, setForm: setCourseForm, onSubmit: () => addCourseMutation.mutate(courseForm), fields: courseFields },
   };
 
-  const currentForm = dialogType ? formsMap[dialogType] : null;
+  const currentForm = dialogType ? (formsMap as any)[dialogType] : null;
 
   return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4">
@@ -261,9 +278,9 @@ const Admin = () => {
 
           {/* Listas com botões de adicionar */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {ListItems("Livros", data.books, "books", <BookOpen className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('books'))}
-            {ListItems("Cursos", data.courses, "courses", <GraduationCap className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('courses'))}
-            {ListItems("Missões", data.missions, "missions", <Target className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type }), () => handleOpenDialog('missions'))}
+            {ListItems("Livros", data.books, "books", <BookOpen className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type, imageUrl: '' }), () => handleOpenDialog('books'))}
+            {ListItems("Cursos", data.courses, "courses", <GraduationCap className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type, imageUrl: '' }), () => handleOpenDialog('courses'))}
+            {ListItems("Missões", data.missions, "missions", <Target className="w-5 h-5" />, (id: string, type: 'books' | 'courses' | 'missions') => deleteItemMutation.mutate({ id, type, imageUrl: '' }), () => handleOpenDialog('missions'))}
           </div>
 
           {/* Dialog de Adição */}

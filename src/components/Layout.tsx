@@ -2,8 +2,6 @@
 import React from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from './AppSidebar';
-import { Button } from '@/components/ui/button';
-import { Menu } from 'lucide-react';
 
 interface LayoutProps {
   children: React.ReactNode;
