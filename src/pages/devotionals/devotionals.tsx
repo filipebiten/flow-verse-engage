@@ -63,14 +63,18 @@ export default function Devotionals() {
                     <CardContent className="p-6 overflow-y-scroll">
                     {data && !openNewDevotional ? (
                         <>
-                            <div className="items-end flex justify-end mb-4">
-                                <Button
-                                    className="bg-green-700"
-                                    onClick={() => setOpenNewDevotional(true)}
-                                >
-                                    Editar
-                                </Button>
-                            </div>
+                            {
+                                profile?.is_admin && (
+                                    <div className="items-end flex justify-end mb-4">
+                                        <Button
+                                            className="bg-green-700"
+                                            onClick={() => setOpenNewDevotional(true)}
+                                        >
+                                            Editar
+                                        </Button>
+                                    </div>
+                                )
+                            }
                             <h2 className="scroll-m-20 text-center border-b
                                 pb-4 text-4xl text-gray-900 font-semibold tracking-tight">
                                 {data.title}
